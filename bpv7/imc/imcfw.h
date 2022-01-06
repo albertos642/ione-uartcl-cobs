@@ -4,6 +4,11 @@
 
 	Author: Scott Burleigh, JPL
 
+	This CGR-based multicast system is built on research
+	performed by Olivier de Jonckere as a visiting researcher
+	at the Jet Propulsion Laboratory, California Institute of
+	Technology.
+
 	Modification History:
 	Date      Who   What
 

@@ -4,7 +4,7 @@ UTILS = ../utils
 TEST = ../test
 DAEMON = ../daemon
 CGR = ../cgr
-IRR = ../irr
+IRF = ../irf
 IPN = ../ipn
 IMC = ../imc
 BSSP = ../bssp
@@ -50,7 +50,7 @@ BPINCLS = \
 BPLIBS = \
 	libbp.so
 
-BPOBJS = libbpP.o libirr.o bibe.o bpsec.o eureka.o saga.o bei.o pnb.o bpq.o meb.o bae.o hcb.o snw.o imc.o ipt.o bpsec_util.o bpsec_instr.o profiles.o bib.o bcb.o bpsec_policy.o bpsec_policy_event.o bpsec_policy_eventset.o bpsec_policy_rule.o
+BPOBJS = libbpP.o libirf.o bibe.o bpsec.o eureka.o saga.o bei.o pnb.o bpq.o meb.o bae.o hcb.o snw.o imc.o ipt.o bpsec_util.o bpsec_instr.o profiles.o bib.o bcb.o bpsec_policy.o bpsec_policy_event.o bpsec_policy_eventset.o bpsec_policy_rule.o
 
 IPNDOBJS = ipnd.o beacon.o helper.o bpa.o
 
@@ -59,7 +59,7 @@ CGROBJS = libcgr.o
 
 LBP = -lbp -limcfw -lipnfw -ldtn2fw
 
-RUNTIMES = bpadmin bpsecadmin bpsink bpsource bpdriver bpecho bpcounter bpsendfile bprecvfile bpclock bptransit bpclm ipnadmin ipnfw ipnadminep dtn2admin dtn2fw dtn2adminep tcpcli tcpclo stcpcli stcpclo brsscla brsccla udpcli udpclo dgrcli dgrclo ltpcli ltpclo lgsend lgagent bptrace bpstats bplist bpcancel hmackeys bping bpstats2 bpchat imcfw imcadminep bsspcli bsspclo bibeclo bibeadmin bpnmtest ipnd cgrfetch bpversion cpsd irradmin irrd 
+RUNTIMES = bpadmin bpsecadmin bpsink bpsource bpdriver bpecho bpcounter bpsendfile bprecvfile bpclock bptransit bpclm ipnadmin ipnfw ipnadminep dtn2admin dtn2fw dtn2adminep tcpcli tcpclo stcpcli stcpclo brsscla brsccla udpcli udpclo dgrcli dgrclo ltpcli ltpclo lgsend lgagent bptrace bpstats bplist bpcancel hmackeys bping bpstats2 bpchat imcfw imcadminep bsspcli bsspclo bibeclo bibeadmin bpnmtest ipnd cgrfetch bpversion cpsd irfadmin irfd 
 # dccpcli dccpclo
 
 ALL = check $(BPLIBS) libcgr.so libipnfw.so libimcfw.so libdtn2fw.so libstcpcla.so libudpcla.so $(RUNTIMES)
@@ -101,9 +101,9 @@ cpsd:		cpsd.o $(BPLIBS)
 		$(CC) -o cpsd cpsd.o -L./lib -L$(ROOT)/lib $(LBP) -lici -lpthread -lm
 		cp cpsd ./bin
 
-irrd:		irrd.o $(BPLIBS)
-		$(CC) -o irrd irrd.o -L./lib -L$(ROOT)/lib $(LBP) -lici -lpthread -lm
-		cp irrd ./bin
+irfd:		irfd.o $(BPLIBS)
+		$(CC) -o irfd irfd.o -L./lib -L$(ROOT)/lib $(LBP) -lici -lpthread -lm
+		cp irfd ./bin
 
 #	-	-	Utility executables	-	-	-	-
 
@@ -175,9 +175,9 @@ bpversion:	bpversion.o
 		$(CC) -o bpversion bpversion.o -L./lib -L$(ROOT)/lib $(LBP) -lici -lpthread -lm
 		cp bpversion ./bin
 
-irradmin:	irradmin.o $(BPLIBS)
-		$(CC) -o irradmin irradmin.o -L./lib -L$(ROOT)/lib $(LBP) -lici -lpthread -lm
-		cp irradmin ./bin
+irfadmin:	irfadmin.o $(BPLIBS)
+		$(CC) -o irfadmin irfadmin.o -L./lib -L$(ROOT)/lib $(LBP) -lici -lpthread -lm
+		cp irfadmin ./bin
 
 #	-	-	IPN executables	-	-	-	-	-
 
@@ -450,7 +450,7 @@ ifdef UNIBO_CGR
 		$(CC) -c $<
 endif
 
-%.o:		$(IRR)/%.c
+%.o:		$(IRF)/%.c
 		$(CC) -c $<
 
 %.o:		$(DNAC)/%.c

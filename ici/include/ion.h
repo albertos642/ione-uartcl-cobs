@@ -256,7 +256,7 @@ typedef struct
 	float		confidence;	/*	Confidence in contact.	*/
 } CpsNotice;
 
-/*	PwsNotice objects are consumed by irrd, which uses their
+/*	PwsNotice objects are consumed by irfd, which uses their
  *	parameters to revise the viaPassageways lists of potential
  *	bundle destinations.						*/
 
@@ -361,7 +361,7 @@ typedef struct
 	 *	is *NOT* usable.	  				*/
 
 	time_t		confirmTime;
-} IrrCandidate;
+} IrfCandidate;
 
 typedef struct
 {
@@ -379,7 +379,7 @@ typedef struct
 	 *	all potential candidate passageways have been tested
 	 *	and found unusable.					*/
 
-	PsmAddress	viaPassageways;	/*	SM list: IrrCandidate	*/
+	PsmAddress	viaPassageways;	/*	SM list: IrfCandidate	*/
 } IonNode;		/*	A potential bundle destination.		*/
 
 typedef struct

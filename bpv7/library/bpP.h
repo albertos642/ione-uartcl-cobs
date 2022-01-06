@@ -303,9 +303,9 @@ typedef struct
 #define BDL_IS_ADMIN		(2)	/* 0000 00000000 00000010	*/
 #define BDL_DOES_NOT_FRAGMENT	(4)	/* 0000 00000000 00000100	*/
 
-	/*	ION innovations for IRR.			*/
+	/*	ION innovations for IRF.			*/
 #define BDL_IS_NODE_LOCATOR	(8)	/* 0000 00000000 00001000	*/
-	/*	End of ION innovations for IRR.			*/
+	/*	End of ION innovations for IRF.			*/
 
 #define BDL_APP_ACK_REQUEST	(32)	/* 0000 00000000 00100000	*/
 #define BDL_STATUS_TIME_REQ	(64)	/* 0000 00000000 01000000	*/
@@ -362,7 +362,7 @@ typedef struct
 
 	Object		destinations;	/*	SDR list of node nbrs.	*/
 
-	/*	Stuff in the IRR passageways trace extension block.	*/
+	/*	Stuff in the IRF passageways trace extension block.	*/
 
 	Object		passageways;	/*	SDR list of node nbrs	*/
 
@@ -873,7 +873,7 @@ typedef struct
 	int		bundleCounter;
 	int		clockPid;	/*	For stopping bpclock.	*/
 	int		cpsdPid;	/*	For stopping cpsd.	*/
-	int		irrdPid;	/*	For stopping irrd.	*/
+	int		irfdPid;	/*	For stopping irfd.	*/
 	int		transitPid;	/*	For stopping bptransit.	*/
 	sm_SemId	transitSemaphore;
 	int		watching;	/*	Activity watch switch.	*/

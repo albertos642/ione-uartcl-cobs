@@ -18,7 +18,7 @@
 
 #include "bpP.h"
 #include "cgr.h"
-#include "irr.h"
+#include "irf.h"
 
 #ifdef __cplusplus
 extern "C" {

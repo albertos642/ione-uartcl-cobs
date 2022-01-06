@@ -193,9 +193,9 @@ static void	bindOverride(Bundle *bundle, Object bundleObj, uvast nodeNbr)
 	}
 }
 
-/*		IRR invocation functions.				*/
+/*		IRF invocation functions.				*/
 
-static int 	tryIRR(Bundle *bundle, Object bundleObj, IonNode *terminusNode)
+static int 	tryIRF(Bundle *bundle, Object bundleObj, IonNode *terminusNode)
 {
 	Sdr		sdr = getIonsdr();
 	Object		iptblkElt;
@@ -218,20 +218,20 @@ static int 	tryIRR(Bundle *bundle, Object bundleObj, IonNode *terminusNode)
 	CHKERR(bundle && bundleObj && terminusNode);
 	if (bundle->id.source.schemeCodeNbr != ipn)
         {
-                /*      IRR is all based on node numbers; can't be
+                /*      IRF is all based on node numbers; can't be
                  *      done if source node's ID is not ipn scheme.     */
 
                 return 0;
         }
 
 	CHKERR(bundle->passageways);
-	iptblkElt = findExtensionBlock(bundle, IrrPassagewaysBlk, 0);
+	iptblkElt = findExtensionBlock(bundle, IrfPassagewaysBlk, 0);
 	if (iptblkElt == 0)
 	{
-		/*	Absence of IRR extension block makes
+		/*	Absence of IRF extension block makes
 		 *	Inter-regional routing infeasible.		*/
 
-		writeMemo("[?] IRR extension block is missing.");
+		writeMemo("[?] IRF extension block is missing.");
 		return 0;
 	}
 
@@ -244,7 +244,7 @@ static int 	tryIRR(Bundle *bundle, Object bundleObj, IonNode *terminusNode)
 	nextPassagewayElt = sdr_list_last(sdr, bundle->passageways);
 	if (nextPassagewayElt == 0)
 	{
-		/*	Since the bundle has an IRR extension block,
+		/*	Since the bundle has an IRF extension block,
 		 *	all passageways listed in that block have
 		 *	been loaded into the passageways list.  If
 		 *	that list is nonetheless empty, then this
@@ -281,14 +281,14 @@ static int 	tryIRR(Bundle *bundle, Object bundleObj, IonNode *terminusNode)
 	nominees = lyst_create_using(getIonMemoryMgr());
 	if (nominees == NULL)
 	{
-		putErrmsg("Can't create list for IRR nominees.", NULL);
+		putErrmsg("Can't create list for IRF nominees.", NULL);
 		return -1;
 	}
 
 	/*	Consult region topology to identify the passageway
 	 *	node(s) to forward the bundle to.			*/
 
-	if (irr_identify_passageways(terminusNode, bundle, nominees) < 0)
+	if (irf_identify_passageways(terminusNode, bundle, nominees) < 0)
 	{
 		putErrmsg("Can't identify best passageways for bundle.", NULL);
 		lyst_destroy(nominees);
@@ -305,9 +305,9 @@ static int 	tryIRR(Bundle *bundle, Object bundleObj, IonNode *terminusNode)
 		 *	in the path back to the source node including
 		 *	self.						*/
 
-		if (irr_source_msg(bundle, 0) < 0)
+		if (irf_source_msg(bundle, 0) < 0)
 		{
-			putErrmsg("Failed sending IRR message.", NULL);
+			putErrmsg("Failed sending IRF message.", NULL);
 			return -1;
 		}
 
@@ -968,7 +968,7 @@ static int 	tryCGR(Bundle *bundle, Object bundleObj, IonNode *terminusNode,
 	 *
 	 *	Note that CGR can be used to compute a route to an
 	 *	intermediate "station" node selected by another
-	 *	routing mechanism (such as static routing or IRR),
+	 *	routing mechanism (such as static routing or IRF),
 	 *	not only to the bundle's final destination node.
 	 *	In the simplest case, the bundle's destination is
 	 *	the only "station" selected for the bundle.  To
@@ -1127,7 +1127,7 @@ static int 	tryCGR(Bundle *bundle, Object bundleObj, IonNode *terminusNode,
 	return 0;
 }
 
-/*		Contingency functions for when CGR and IRR don't work.	*/
+/*		Contingency functions for when CGR and IRF don't work.	*/
 
 static int	enqueueToNeighbor(Bundle *bundle, Object bundleObj,
 			uvast nodeNbr)
@@ -1272,7 +1272,7 @@ static int	enqueueBundle(Bundle *bundle, Object bundleObj, CgrSAP sap)
 		}
 	}
 
-	/*	Load passageways trace from IRR extension block, if
+	/*	Load passageways trace from IRF extension block, if
 	 *	provided.						*/
 
 	CHKERR(bundle->passageways);
@@ -1287,9 +1287,9 @@ static int	enqueueBundle(Bundle *bundle, Object bundleObj, CgrSAP sap)
 		 *	block's content has not yet been loaded into
 		 *	the passageways list.				*/
 
-	 	if (irr_load_passageways(bundle, bundleObj) < 0)
+	 	if (irf_load_passageways(bundle, bundleObj) < 0)
 		{
-		 	putErrmsg("Can't load IRR passageways.", NULL);
+		 	putErrmsg("Can't load IRF passageways.", NULL);
 		 	return -1;
 	 	}
 	}
@@ -1300,10 +1300,10 @@ static int	enqueueBundle(Bundle *bundle, Object bundleObj, CgrSAP sap)
 		 *	the local node is in.  Try to forward
 		 *	through other regions via passageway(s).	*/
 
-		switch (tryIRR(bundle, bundleObj, node))
+		switch (tryIRF(bundle, bundleObj, node))
 		{
 		case -1:
-			putErrmsg("IRR failed.", NULL);
+			putErrmsg("IRF failed.", NULL);
 			return -1;
 
 		case 0:

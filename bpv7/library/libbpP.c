@@ -28,7 +28,7 @@
 /*	Interfaces to other BP-related components of ION	*	*/
 
 #include "imcfw.h"
-#include "irr.h"
+#include "irf.h"
 #include "saga.h"
 #include "bpsec_instr.h"
 #include "bpsec_util.h"
@@ -1275,7 +1275,7 @@ static BpVdb	*_bpvdb(char **name)
 		vdb->bundleCounter = 0;
 		vdb->clockPid = ERROR;
 		vdb->cpsdPid = ERROR;
-		vdb->irrdPid = ERROR;
+		vdb->irfdPid = ERROR;
 		vdb->transitSemaphore = SM_SEM_NONE;
 		vdb->transitPid = ERROR;
 		vdb->watching = db->watching;
@@ -1625,9 +1625,9 @@ int	bpStart()
 
 	/*	Start inter-regional routing if necessary.		*/
 
-	if (bpvdb->irrdPid == ERROR || sm_TaskExists(bpvdb->irrdPid) == 0)
+	if (bpvdb->irfdPid == ERROR || sm_TaskExists(bpvdb->irfdPid) == 0)
 	{
-		bpvdb->irrdPid = pseudoshell("irrd");
+		bpvdb->irfdPid = pseudoshell("irfd");
 	}
 
 	/*	Start the bundle transit daemon if necessary.		*/
@@ -1737,9 +1737,9 @@ void	bpStop()		/*	Reverses bpStart.		*/
 		sm_TaskKill(bpvdb->cpsdPid, SIGTERM);
 	}
 
-	if (bpvdb->irrdPid != ERROR)
+	if (bpvdb->irfdPid != ERROR)
 	{
-		sm_TaskKill(bpvdb->irrdPid, SIGTERM);
+		sm_TaskKill(bpvdb->irfdPid, SIGTERM);
 	}
 
 	sm_SemEnd(bpvdb->transitSemaphore);
@@ -1799,9 +1799,9 @@ void	bpStop()		/*	Reverses bpStart.		*/
 		}
 	}
 
-	if (bpvdb->irrdPid != ERROR)
+	if (bpvdb->irfdPid != ERROR)
 	{
-		while (sm_TaskExists(bpvdb->irrdPid))
+		while (sm_TaskExists(bpvdb->irfdPid))
 		{
 			microsnooze(100000);
 		}
@@ -1820,7 +1820,7 @@ void	bpStop()		/*	Reverses bpStart.		*/
 	CHKVOID(sdr_begin_xn(sdr));
 	bpvdb->clockPid = ERROR;
 	bpvdb->cpsdPid = ERROR;
-	bpvdb->irrdPid = ERROR;
+	bpvdb->irfdPid = ERROR;
 	bpvdb->transitPid = ERROR;
 	for (elt = sm_list_first(bpwm, bpvdb->schemes); elt;
 			elt = sm_list_next(bpwm, elt))
@@ -5792,14 +5792,14 @@ int	bpClone(Bundle *oldBundle, Bundle *newBundle, Object *newBundleObj,
 		}
 	}
 
-	/*	Copy IRR passageways trace list as needed.		*/
+	/*	Copy IRF passageways trace list as needed.		*/
 
 	if (oldBundle->passageways)
 	{
 		newBundle->passageways = sdr_list_create(sdr);
 		if (newBundle->passageways == 0)
 		{
-			putErrmsg("Can't copy IRR passageways list.", NULL);
+			putErrmsg("Can't copy IRF passageways list.", NULL);
 			return -1;
 		}
 
@@ -5810,7 +5810,7 @@ int	bpClone(Bundle *oldBundle, Bundle *newBundle, Object *newBundleObj,
 			if (sdr_list_insert_last(sdr, newBundle->passageways,
 					nodeNbr) == 0)
 			{
-				putErrmsg("Can't copy IRR passageway.", NULL);
+				putErrmsg("Can't copy IRF passageway.", NULL);
 				return -1;
 			}
 		}
@@ -6977,7 +6977,7 @@ static int	dispatchUnicast(Bundle *bundle, Object bundleObj,
 	Sdr	sdr = getIonsdr();
 
 	/*	If source of bundle is in another region, may need
-	 *	to send a "whitelist" IRR status message back through
+	 *	to send a "whitelist" IRF status message back through
 	 *	the sequence of passageway nodes that succeeded in
 	 *	getting the bundle to its destination.			*/
 
@@ -6985,9 +6985,9 @@ static int	dispatchUnicast(Bundle *bundle, Object bundleObj,
 	{
 		if (sdr_list_length(sdr, bundle->passageways) > 0)
 		{
-			if (irr_source_msg(bundle, 1) < 0)
+			if (irf_source_msg(bundle, 1) < 0)
 			{
-				putErrmsg("Failed sending IRR message.", NULL);
+				putErrmsg("Failed sending IRF message.", NULL);
 				return -1;
 			}
 		}
@@ -7045,9 +7045,9 @@ static int	dispatchBundle(Object bundleObj, Bundle *bundle,
 
 	if (sdr_list_length(sdr, bundle->passageways) == 0)
 	{
-		if (irr_load_passageways(bundle, bundleObj) < 0)
+		if (irf_load_passageways(bundle, bundleObj) < 0)
 		{
-			putErrmsg("Can't load IRR passageways.", NULL);
+			putErrmsg("Can't load IRF passageways.", NULL);
 			return -1;
 		}
 	}

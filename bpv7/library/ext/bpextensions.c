@@ -194,7 +194,7 @@ static ExtensionDef	extensionDefs[] =
 				imc_record,
 				imc_clear
 		},
-		{ "ipt", IrrPassagewaysBlk,
+		{ "ipt", IrfPassagewaysBlk,
 				ipt_offer,
 				ipt_serialize,
 				{0,
@@ -262,7 +262,7 @@ static ExtensionSpec		extensionSpecs[] =
 					{ BundleAgeBlk, 0, NoCRC },
 					{ SnwPermitsBlk, 0, NoCRC },
 					{ ImcDestinationsBlk, 0, NoCRC },
-					{ IrrPassagewaysBlk, 0, NoCRC },
+					{ IrfPassagewaysBlk, 0, NoCRC },
 #if RGREB
 					{ RGRBlk, 0, NoCRC },
 #endif

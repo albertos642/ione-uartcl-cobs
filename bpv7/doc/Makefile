@@ -44,8 +44,8 @@ MANFILES = \
 	./man/man1/ipnadminep.1 \
 	./man/man1/ipnfw.1 \
 	./man/man1/ipnd.1 \
-	./man/man1/irrd.1 \
-	./man/man1/irradmin.1 \
+	./man/man1/irfd.1 \
+	./man/man1/irfadmin.1 \
 	./man/man1/lgagent.1 \
 	./man/man1/lgsend.1 \
 	./man/man1/ltpcli.1 \
@@ -61,7 +61,7 @@ MANFILES = \
 	./man/man5/bpsecrc.5 \
 	./man/man5/dtn2rc.5 \
 	./man/man5/ipnrc.5 \
-	./man/man5/irrrc.5 \
+	./man/man5/irfrc.5 \
 	./man/man5/lgfile.5 \
 	./man/man3/bpextensions.3 \
 	./man/man3/bp.3
@@ -110,8 +110,8 @@ HTMLFILES = \
 	./html/man1/ipnadminep.html \
 	./html/man1/ipnfw.html \
 	./html/man1/ipnd.html \
-	./html/man1/irrd.html \
-	./html/man1/irradmin.html \
+	./html/man1/irfd.html \
+	./html/man1/irfadmin.html \
 	./html/man1/lgagent.html \
 	./html/man1/lgsend.html \
 	./html/man1/ltpcli.html \
@@ -127,7 +127,7 @@ HTMLFILES = \
 	./html/man5/bpsecrc.html \
 	./html/man5/dtn2rc.html \
 	./html/man5/ipnrc.html \
-	./html/man5/irrrc.html \
+	./html/man5/irfrc.html \
 	./html/man5/lgfile.html \
 	./html/man3/bpextensions.html \
 	./html/man3/bp.html
