@@ -882,6 +882,13 @@ int	main(int argc, char **argv)
 			tcaStop(_blocksGroupNbr(NULL));
 		}
 	}
+	else if (strcmp(cmdFileName, "!") == 0)	/*	Resume.		*/
+	{
+		if (tcaAttach(_blocksGroupNbr(NULL)) == 0)
+		{
+			tcaStart(_blocksGroupNbr(NULL));
+		}
+	}
 	else					/*	Scripted.	*/
 	{
 		cmdFile = iopen(cmdFileName, O_RDONLY, 0777);

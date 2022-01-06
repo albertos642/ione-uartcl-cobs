@@ -87,6 +87,7 @@ typedef enum
 	HopCountBlk = 10,
 	BlockIntegrityBlk = 11,
 	BlockConfidentialityBlk = 12,
+	IrrPassagewaysBlk = 191,
 	DataLabelBlk = 192,
 	QualityOfServiceBlk = 193,
 	SnwPermitsBlk = 194,

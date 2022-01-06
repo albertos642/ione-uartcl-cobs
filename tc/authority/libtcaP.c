@@ -176,8 +176,8 @@ int	tcaInit(int blocksGroupNbr, int bulletinsGroupNbr, int recordsGroupNbr,
 	db.authorities = sdr_list_create(sdr);
 	db.currentRecords = sdr_list_create(sdr);
 	db.pendingRecords = sdr_list_create(sdr);
-	sdr_write(sdr, dbobj, (char *) &db,
-			sizeof(TcaDB));
+	db.archive = sdr_list_create(sdr);
+	sdr_write(sdr, dbobj, (char *) &db, sizeof(TcaDB));
 	sdr_catlg(sdr, dbname, 0, dbobj);
 
 	/*	Initialize list of authorities.				*/
@@ -325,4 +325,61 @@ int	tcaAttach(int blocksGroupNbr)
 	}
 
 	return -1;
+}
+
+unsigned short	tcaFetchRecord(Object recordsList, uvast nodeNbr,
+			time_t effectiveTime, Object *recordElt,
+			Object *nextRecordElt)
+{
+	Sdr		sdr = getIonsdr();
+	Object		elt;
+	TcaRecord	record;
+
+	CHKERR(recordsList);
+	CHKERR(nodeNbr);
+	CHKERR(effectiveTime);
+	CHKERR(recordElt);
+	*recordElt = 0;			/*	Not found.  (Default)	*/
+	if (nextRecordElt)
+	{
+		*nextRecordElt = 0;	/*	None.  (Default)	*/
+	}
+
+	for (elt = sdr_list_first(sdr, recordsList); elt;
+			elt = sdr_list_next(sdr, elt))
+	{
+		sdr_read(sdr, (char *) &record, sdr_list_data(sdr, elt),
+				TC_HDR_LEN);
+		if (record.nodeNbr < nodeNbr)
+		{
+			continue;
+		}
+		
+		if (record.nodeNbr > nodeNbr)
+		{
+			break;
+		}
+
+		if (record.effectiveTime < effectiveTime)
+		{
+			continue;
+		}
+		
+		if (record.effectiveTime > effectiveTime)
+		{
+			break;
+		}
+
+		/*	Found it.					*/
+
+		*recordElt = elt;
+		return record.datLength;
+	}
+
+	if (nextRecordElt)
+	{
+		*nextRecordElt = elt;
+	}
+
+	return 0;			/*	Not found.		*/
 }

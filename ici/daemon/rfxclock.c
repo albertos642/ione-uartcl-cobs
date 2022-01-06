@@ -301,13 +301,30 @@ static int	dispatchEvent(IonVdb *vdb, IonEvent *event, int *forecastNeeded)
 
 	case IonPurgeContact:
 		cxref = (IonCXref *) psp(ionwm, event->ref);
+		iondbObj = getIonDbObject();
+		sdr_read(getIonsdr(), (char *) &iondb, iondbObj, sizeof(IonDB));
 
 		/*	rfx_remove_contact deletes all contact events
 		 *	from timeline including the one that invoked
 		 *	this function.					*/
 
-		return rfx_remove_contact(cxref->regionNbr, &(cxref->fromTime),
-				cxref->fromNode, cxref->toNode, 0);
+		if (rfx_remove_contact(iondb.regions[0].regionNbr, &(cxref->
+			fromTime), cxref->fromNode, cxref->toNode, 0) < 0)
+		{
+			return -1;
+		}
+
+		if (iondb.regions[1].regionNbr > 0)
+		{
+			if (rfx_remove_contact(iondb.regions[1].regionNbr,
+				&(cxref->fromTime), cxref->fromNode,
+				cxref->toNode, 0) < 0)
+			{
+				return -1;
+			}
+		}
+
+		return 0;
 
 	case IonAlarmTimeout:
 		alarmAddr = event->ref;

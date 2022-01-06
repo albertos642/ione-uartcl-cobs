@@ -322,6 +322,7 @@ int	bp_send(BpSAP sap, char *destEid, char *reportToEid, int lifespan,
 {
 	BpAncillaryData	defaultAncillaryData = { 0, 0, 0, 0, 0, "\0" };
 	MetaEid		*sourceMetaEid;
+	uvast		ttl;
 
 	if (adu == 0)
 	{
@@ -374,9 +375,11 @@ int	bp_send(BpSAP sap, char *destEid, char *reportToEid, int lifespan,
 	/*	Note: lifespan must be converted from seconds to
 	 *	millisecnods for BP processing.				*/
 
-	return bpSend(sourceMetaEid, destEid, reportToEid, (uvast) lifespan * 1000,
-			classOfService, custodySwitch, srrFlags, ackRequested,
-			ancillaryData, adu, bundleObj, 0);
+	ttl = lifespan;
+	ttl *= 1000;
+	return bpSend(sourceMetaEid, destEid, reportToEid, ttl, classOfService,
+			custodySwitch, srrFlags, ackRequested, ancillaryData,
+			adu, bundleObj, 0);
 }
 
 int	bp_track(Object bundleObj, Object trackingElt)

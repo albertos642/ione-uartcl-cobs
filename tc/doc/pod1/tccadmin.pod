@@ -4,7 +4,7 @@ tccadmin - DTKA node administration interface
 
 =head1 SYNOPSIS
 
-B<tccadmin> I<blocks_group_number> [ I<commands_filename> ]
+B<tccadmin> I<blocks_group_number> [ I<commands_filename>  | . | ! ]
 
 =head1 DESCRIPTION
 
@@ -22,7 +22,11 @@ subscribe to TC "blocks" published for that application.
 B<tccadmin> configures and manages a TC client database in response to client
 configuration commands found in I<commands_filename>, if provided; if not,
 B<tccadmin> prints a simple prompt (:) so that the user may type commands
-directly into standard input.
+directly into standard input.  If commands_filename is a period (.), the
+effect is the same as if a command file containing the single command 'x'
+were passed to tccadmin -- that is, all of the TC application's daemon
+tasks are stopped.  If commands_filename is an exclamation point (!),
+that effect is reversed: the TC application's daemon tasks are restarted.
 
 The format of commands for I<commands_filename> can be queried from
 B<tccadmin> by entering the command 'h' or '?' at the prompt.  The

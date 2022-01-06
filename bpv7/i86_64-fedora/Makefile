@@ -4,6 +4,7 @@ UTILS = ../utils
 TEST = ../test
 DAEMON = ../daemon
 CGR = ../cgr
+IRR = ../irr
 IPN = ../ipn
 IMC = ../imc
 BSSP = ../bssp
@@ -24,7 +25,7 @@ UNIBO_CGR = 0
 # OPT = -O -Dlinux
 OPT = -g -Wall -Werror -Dlinux -fPIC -DSPACE_ORDER=3 -DENABLE_IMC -DBPSEC
 # OPT = -g -Wall -Werror -Dlinux -fPIC -DSPACE_ORDER=3 -DENABLE_IMC -DBPSEC -DUNIBO_CGR -DUNIBO_CGR_ENH_WITHOUT_EXP_EXTENSIONS
-CC = gcc $(OPT) -I$(IPN) -I$(IMC) -I$(SAGA) -I$(DTN2) -I$(API) -I$(API)/ext -I$(API)/ext/pnb -I$(API)/ext/bpq -I$(API)/ext/meb -I$(API)/ext/bae -I$(API)/ext/hcb -I$(API)/ext/bpsec -I$(API)/ext/snw -I$(API)/ext/imc -I$(BIBE) -I$(STCP) -I$(UDP) -I$(INCL) -I$(ROOT)/include -DBP_EXTENDED
+CC = gcc $(OPT) -I$(IPN) -I$(IMC) -I$(SAGA) -I$(DTN2) -I$(API) -I$(API)/ext -I$(API)/ext/pnb -I$(API)/ext/bpq -I$(API)/ext/meb -I$(API)/ext/bae -I$(API)/ext/hcb -I$(API)/ext/bpsec -I$(API)/ext/snw -I$(API)/ext/imc -I$(API)/ext/ipt -I$(BIBE) -I$(STCP) -I$(UDP) -I$(INCL) -I$(ROOT)/include -DBP_EXTENDED
 LDFLAGS = -fPIC -shared
 LD = gcc $(LDFLAGS)
 
@@ -37,6 +38,7 @@ BPINCLS = \
 	$(SAGA)/saga.h \
 	$(IPN)/ipnfw.h \
 	$(IMC)/imcfw.h \
+	$(IMC)/imcfwP.h \
 	$(BSSP)/bsspcla.h \
 	$(DTN2)/dtn2fw.h \
 	$(BRS)/brscla.h \
@@ -48,7 +50,7 @@ BPINCLS = \
 BPLIBS = \
 	libbp.so
 
-BPPOBJS = libbpP.o bibe.o bpsec.o eureka.o saga.o bei.o pnb.o bpq.o meb.o bae.o hcb.o snw.o imc.o bpsec_util.o bpsec_instr.o profiles.o bib.o bcb.o bpsec_policy.o bpsec_policy_event.o bpsec_policy_eventset.o bpsec_policy_rule.o
+BPOBJS = libbpP.o libirr.o bibe.o bpsec.o eureka.o saga.o bei.o pnb.o bpq.o meb.o bae.o hcb.o snw.o imc.o ipt.o bpsec_util.o bpsec_instr.o profiles.o bib.o bcb.o bpsec_policy.o bpsec_policy_event.o bpsec_policy_eventset.o bpsec_policy_rule.o
 
 IPNDOBJS = ipnd.o beacon.o helper.o bpa.o
 
@@ -57,7 +59,7 @@ CGROBJS = libcgr.o
 
 LBP = -lbp -limcfw -lipnfw -ldtn2fw
 
-RUNTIMES = bpadmin bpsecadmin bpsink bpsource bpdriver bpecho bpcounter bpsendfile bprecvfile bpclock bptransit bpclm ipnadmin ipnfw ipnadminep dtn2admin dtn2fw dtn2adminep tcpcli tcpclo stcpcli stcpclo brsscla brsccla udpcli udpclo dgrcli dgrclo ltpcli ltpclo lgsend lgagent bptrace bpstats bplist bpcancel hmackeys bping bpstats2 bpchat imcfw imcadminep bsspcli bsspclo bibeclo bibeadmin bpnmtest ipnd cgrfetch bpversion cpsd
+RUNTIMES = bpadmin bpsecadmin bpsink bpsource bpdriver bpecho bpcounter bpsendfile bprecvfile bpclock bptransit bpclm ipnadmin ipnfw ipnadminep dtn2admin dtn2fw dtn2adminep tcpcli tcpclo stcpcli stcpclo brsscla brsccla udpcli udpclo dgrcli dgrclo ltpcli ltpclo lgsend lgagent bptrace bpstats bplist bpcancel hmackeys bping bpstats2 bpchat imcfw imcadminep bsspcli bsspclo bibeclo bibeadmin bpnmtest ipnd cgrfetch bpversion cpsd irradmin irrd 
 # dccpcli dccpclo
 
 ALL = check $(BPLIBS) libcgr.so libipnfw.so libimcfw.so libdtn2fw.so libstcpcla.so libudpcla.so $(RUNTIMES)
@@ -98,6 +100,10 @@ bpclm:		bpclm.o $(BPLIBS)
 cpsd:		cpsd.o $(BPLIBS)
 		$(CC) -o cpsd cpsd.o -L./lib -L$(ROOT)/lib $(LBP) -lici -lpthread -lm
 		cp cpsd ./bin
+
+irrd:		irrd.o $(BPLIBS)
+		$(CC) -o irrd irrd.o -L./lib -L$(ROOT)/lib $(LBP) -lici -lpthread -lm
+		cp irrd ./bin
 
 #	-	-	Utility executables	-	-	-	-
 
@@ -168,6 +174,10 @@ cgrfetch:	cgrfetch.o $(BPLIBS)
 bpversion:	bpversion.o
 		$(CC) -o bpversion bpversion.o -L./lib -L$(ROOT)/lib $(LBP) -lici -lpthread -lm
 		cp bpversion ./bin
+
+irradmin:	irradmin.o $(BPLIBS)
+		$(CC) -o irradmin irradmin.o -L./lib -L$(ROOT)/lib $(LBP) -lici -lpthread -lm
+		cp irradmin ./bin
 
 #	-	-	IPN executables	-	-	-	-	-
 
@@ -327,8 +337,8 @@ bpnmtest:	bpnmtest.o libbp.so $(BPLIBS)
 
 #	-	-	Libraries	-	-	-	-	-
 
-libbp.so:	libbp.o $(BPPOBJS) libbpnm.o
-		$(LD) -o libbp.so libbp.o $(BPPOBJS) libbpnm.o
+libbp.so:	libbp.o $(BPOBJS) libbpnm.o
+		$(LD) -o libbp.so libbp.o $(BPOBJS) libbpnm.o
 		cp libbp.so ./lib
 
 libcgr.so:	$(CGROBJS)
@@ -339,8 +349,8 @@ libipnfw.so:	libipnfw.o
 		$(LD) -o libipnfw.so libipnfw.o
 		cp libipnfw.so ./lib
 
-libimcfw.so:	libimcfw.o
-		$(LD) -o libimcfw.so libimcfw.o
+libimcfw.so:	libimcfw.o libimcfwP.o $(CGROBJS)
+		$(LD) -o libimcfw.so libimcfw.o libimcfwP.o $(CGROBJS)
 		cp libimcfw.so ./lib
 
 libdtn2fw.so:	libdtn2fw.o
@@ -440,6 +450,12 @@ ifdef UNIBO_CGR
 		$(CC) -c $<
 endif
 
+%.o:		$(IRR)/%.c
+		$(CC) -c $<
+
+%.o:		$(DNAC)/%.c
+		$(CC) -c $<
+
 %.o:		$(IPN)/%.c
 		$(CC) -c $<
 
@@ -480,6 +496,9 @@ endif
 		$(CC) -c $<
 
 %.o:		$(API)/ext/imc/%.c
+		$(CC) -c $<
+
+%.o:		$(API)/ext/ipt/%.c
 		$(CC) -c $<
 
 %.o:		$(IPND)/%.c

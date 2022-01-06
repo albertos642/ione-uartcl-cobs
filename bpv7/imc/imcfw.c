@@ -10,7 +10,7 @@
 									*/
 #include "ipnfw.h"
 #include "bei.h"
-#include "imcfw.h"
+#include "imcfwP.h"
 
 typedef struct
 {
@@ -151,495 +151,15 @@ static void	*imcClock(void *parm)
 
 /*	*	imcfw main thread functions	*	*	*	*/
 
-static int	loadDestination(Bundle *bundle, uvast newNodeNbr)
-{
-	Sdr	sdr = getIonsdr();
-	Object	elt;
-	uvast	nodeNbr;
-
-	/*	Ensure no duplication in destinations list.		*/
-
-	for (elt = sdr_list_first(sdr, bundle->destinations); elt;
-			elt = sdr_list_next(sdr, elt))
-	{
-		nodeNbr = sdr_list_data(sdr, elt);
-		if (nodeNbr < newNodeNbr)
-		{
-			continue;
-		}
-
-		if (nodeNbr == newNodeNbr)	/*	Duplicate.	*/
-		{
-			return 0;
-		}
-
-		break;
-	}
-
-	if (elt)
-	{
-		if (sdr_list_insert_before(sdr, elt, newNodeNbr) == 0)
-		{
-			putErrmsg("Can't add node to destinations.", NULL);
-			return -1;
-		}
-	}
-	else
-	{
-		if (sdr_list_insert_last(sdr, bundle->destinations, newNodeNbr)
-				== 0)
-		{
-			putErrmsg("Can't add node to destinations.", NULL);
-			return -1;
-		}
-	}
-
-	return 0;
-}
-
-static void	deleteObject(LystElt elt, void *userData)
-{
-	void	*object = lyst_data(elt);
-
-	if (object)
-	{
-		MRELEASE(object);
-	}
-}
-
-static uvast 	getBestEntryNode(Bundle *bundle, IonNode *terminusNode,
-			time_t atTime)
-{
-	IonVdb		*ionvdb = getIonVdb();
-	CgrVdb		*cgrvdb = cgr_get_vdb();
-	int		ionMemIdx;
-	Lyst		bestRoutes;
-	Lyst		excludedNodes;
-	LystElt		elt;
-	CgrRoute	*route;
-#if CGR_DEBUG == 1
-	CgrTrace	*trace = &(CgrTrace) { .fn = printCgrTraceLine };
-#else
-	CgrTrace	*trace = NULL;
-#endif
-
-	/*	Determine whether or not the contact graph for the
-	 *	terminus node identifies one or more routes over
-	 *	which the bundle may be sent in order to get it
-	 *	delivered to the terminus node.  If so, return the
-	 *	number of the entry node of the best route.		*/
-
-	if (ionvdb->lastEditTime.tv_sec > cgrvdb->lastLoadTime.tv_sec
-	|| (ionvdb->lastEditTime.tv_sec == cgrvdb->lastLoadTime.tv_sec
-	    && ionvdb->lastEditTime.tv_usec > cgrvdb->lastLoadTime.tv_usec)) 
-	{
-		/*	Contact plan has been modified, so must discard
-		 *	all route lists and reconstruct them as needed.	*/
-
-		cgr_clear_vdb(cgrvdb);
-		getCurrentTime(&(cgrvdb->lastLoadTime));
-	}
-
-	ionMemIdx = getIonMemoryMgr();
-	bestRoutes = lyst_create_using(ionMemIdx);
-	if (bestRoutes == NULL)
-	{
-		putErrmsg("Can't create list for route computation.", NULL);
-		return 0;
-	}
-
-	lyst_delete_set(bestRoutes, deleteObject, NULL);
-	excludedNodes = lyst_create_using(ionMemIdx);
-	if (excludedNodes == NULL)
-	{
-		lyst_destroy(bestRoutes);
-		putErrmsg("Can't create lists for route computation.", NULL);
-		return 0;
-	}
-
-	/*	Must exclude sender of bundle from consideration as
-	 *	a station on the route, to minimize routing loops.  	*/
-
-	if (bundle->clDossier.senderNodeNbr != 0
-	&& bundle->clDossier.senderNodeNbr != getOwnNodeNbr())
-	{
-		if (lyst_insert_last(excludedNodes, (void *)
-			((uaddr) bundle->clDossier.senderNodeNbr)) == NULL)
-		{
-			putErrmsg("Can't exclude sender from routes.", NULL);
-			lyst_destroy(excludedNodes);
-			lyst_destroy(bestRoutes);
-			return 0;
-		}
-	}
-
-	/*	Consult the contact graph to identify the neighboring
-	 *	node(s) to forward the bundle to.			*/
-
-	if (terminusNode->routingObject == 0)
-	{
-		if (cgr_create_routing_object(terminusNode) < 0)
-		{
-			putErrmsg("Can't initialize routing object.", NULL);
-			lyst_destroy(excludedNodes);
-			lyst_destroy(bestRoutes);
-			return 0;
-		}
-	}
-
-	if (cgr_identify_best_routes(terminusNode, bundle, excludedNodes,
-			atTime, NULL, trace, bestRoutes) < 0)
-	{
-		putErrmsg("Can't identify best route(s) for bundle.", NULL);
-		lyst_destroy(excludedNodes);
-		lyst_destroy(bestRoutes);
-		return 0;
-	}
-
-	lyst_destroy(excludedNodes);
-	elt = lyst_first(bestRoutes);
-	if (elt)
-	{
-		route = (CgrRoute *) lyst_data_set(elt, NULL);
-		lyst_destroy(bestRoutes);
-#if IMCDEBUG
-printf("Computed best route to " UVAST_FIELDSPEC " begins with transmission to " UVAST_FIELDSPEC ".\n", terminusNode->nodeNbr, route->toNodeNbr);
-#endif
-		return route->toNodeNbr;
-	}
-
-	lyst_destroy(bestRoutes);
-	return 0;
-}
-
-static uvast	getViaNode(Bundle *bundle, uvast destinationNodeNbr)
-{
-	Sdr		sdr = getIonsdr();
-	IonVdb		*ionvdb = getIonVdb();
-	IonNode		*node;
-	PsmAddress	nextNode;
-	uvast		viaNodeNbr;
-	char		eid[MAX_EID_LEN + 1];
-	VPlan		*vplan;
-	PsmAddress	vplanElt;
-	BpPlan		plan;
-
-	node = findNode(ionvdb, destinationNodeNbr, &nextNode);
-	if (node == NULL)
-	{
-		node = addNode(ionvdb, destinationNodeNbr);
-		if (node == NULL)
-		{
-			putErrmsg("Can't add node.", NULL);
-			return -1;
-		}
-	}
-
-	viaNodeNbr = getBestEntryNode(bundle, node, getCtime());
-	if (viaNodeNbr)
-	{
-		return viaNodeNbr;
-	}
-
-	/*	No luck using the contact graph to compute a route
-	 *	to the destination node, so see if destination node
-	 *	is a neighbor (not identified in the contact plan);
-	 *	if so, direct transmission works.			*/
-
-	isprintf(eid, sizeof eid, "ipn:" UVAST_FIELDSPEC ".0",
-			destinationNodeNbr);
-	findPlan(eid, &vplan, &vplanElt);
-	if (vplanElt == 0)
-	{
-		return 0;
-	}
-
-	sdr_read(sdr, (char *) &plan, sdr_list_data(sdr, vplan->planElt),
-			sizeof(BpPlan));
-	if (plan.blocked)
-	{
-		return 0;
-	}
-
-	return destinationNodeNbr;
-}
-
-static void	deleteGang(LystElt elt, void *userData)
-{
-	ImcGang	*gang = (ImcGang *) lyst_data(elt);
-
-	lyst_destroy(gang->members);
-	MRELEASE(gang);
-}
-
-static int	addNodeToGang(Lyst gangs, uvast viaNode, uvast nodeNbr)
-{
-	LystElt	elt;
-	ImcGang	*gang;
-
-	for (elt = lyst_first(gangs); elt; elt = lyst_next(elt))
-	{
-		gang = (ImcGang *) lyst_data(elt);
-		if (gang->entryNode < viaNode)
-		{
-			continue;
-		}
-
-		if (gang->entryNode == viaNode)
-		{
-			/*	Join this gang.				*/
-
-			if (lyst_insert_last(gang->members,
-					(void *) ((uaddr) nodeNbr)) == NULL)
-			{
-				return -1;
-			}
-
-			return 0;
-		}
-
-		/*	Requisite gang not found.			*/
-
-		break;
-	}
-
-	/*	Must create new gang.					*/
-
-	gang = MTAKE(sizeof(ImcGang));
-	if (gang == NULL)
-	{
-		return -1;
-	}
-
-	gang->entryNode = viaNode;
-	gang->members = lyst_create_using(getIonMemoryMgr());
-	if (gang->members == NULL)
-	{
-		return -1;
-	}
-
-	if (elt)
-	{
-		if (lyst_insert_before(elt, gang) == NULL)
-		{
-			return -1;
-		}
-	}
-	else
-	{
-		if (lyst_insert_last(gangs, gang) == NULL)
-		{
-			return -1;
-		}
-	}
-
-	/*	Now have got gang that this node can join.		*/
-
-	if (lyst_insert_last(gang->members, (void *) ((uaddr) nodeNbr)) == NULL)
-	{
-		return -1;
-	}
-
-	return 0;
-}
-
-static int	enqueueToNeighbor(Bundle *bundle, Object bundleObj,
-			uvast nodeNbr)
-{
-	char		eid[MAX_EID_LEN + 1];
-	VPlan		*vplan;
-	PsmAddress	vplanElt;
-
-	isprintf(eid, sizeof eid, "ipn:" UVAST_FIELDSPEC ".0", nodeNbr);
-#if IMCDEBUG
-printf("Preparing to send to neighbor '%s'.\n", eid);
-#endif
-	findPlan(eid, &vplan, &vplanElt);
-	if (vplanElt == 0)
-	{
-		return 0;
-	}
-
-#if IMCDEBUG
-puts("Sending to neighbor.");
-#endif
-	if (bpEnqueue(vplan, bundle, bundleObj) < 0)
-	{
-		putErrmsg("Can't enqueue bundle.", NULL);
-		return -1;
-	}
-
-	return 0;
-}
-
-static int	enqueueBundle(Bundle *bundle, Object bundleObj, uvast nodeNbr)
-{
-	/*	Entry node for Gang must be a neighbor.			*/
-
-	if (enqueueToNeighbor(bundle, bundleObj, nodeNbr) < 0)
-	{
-		putErrmsg("Can't send bundle to neighbor.", NULL);
-		return -1;
-	}
-
-	if (bundle->planXmitElt)
-	{
-		/*	Enqueued.					*/
-
-		return bpAccept(bundleObj, bundle);
-	}
-
-	/*	No plan for conveying bundle to this neighbor, so
-	 *	must give up on forwarding it.				*/
-
-#if IMCDEBUG
-printf("enqueueBundle to node" UVAST_FIELDSPEC ".\n", nodeNbr);
-#endif
-	return bpAbandon(bundleObj, bundle, BP_REASON_NO_ROUTE);
-}
-
-static int	forwardImcBundle(Bundle *bundle, Object bundleAddr)
-{
-	Sdr		sdr = getIonsdr();
-	unsigned int	memmgr = getIonMemoryMgr();
-	uvast		ownNodeNbr = getOwnNodeNbr();
-	Lyst		gangs;
-	Object		elt;
-	uvast		nodeNbr;
-	int		regionIdx;
-	uint32_t	regionNbr;
-	uvast		viaNode = 0;
-	LystElt		elt2;
-	ImcGang		*gang;
-	Bundle		newBundle;
-	Object		newBundleObj;
-	LystElt		elt3;
-
-	gangs = lyst_create_using(memmgr);
-	if (gangs == NULL)
-	{
-		putErrmsg("Can't create list of Gangs for CGR multicast.",
-				NULL);
-		return -1;
-	}
-
-	lyst_delete_set(gangs, deleteGang, NULL);
-
-	/*	First, divide all of the bundle's destinations into
-	 *	gangs.  Each gang is characterized by the entry node
-	 *	number that is common to the best routes for
-	 *	forwarding the bundle to all members of the gang.	*/
-
-	for (elt = sdr_list_first(sdr, bundle->destinations); elt;
-			elt = sdr_list_next(sdr, elt))
-	{
-		nodeNbr = sdr_list_data(sdr, elt);
-#if IMCDEBUG
-printf("Outbound destination is " UVAST_FIELDSPEC ".\n", nodeNbr);
-#endif
-		regionIdx = ionRegionOf(nodeNbr, ownNodeNbr, &regionNbr);
-		if (regionIdx < 0)
-		{
-			/*	Some other node will be forwarding
-			 *	the bundle to this destination node,
-			 *	or else it's impossble to forward
-			 *	the bundle to this destination node.	*/
-#if IMCDEBUG
-puts("No common region.");
-#endif
-			continue;
-		}
-
-		viaNode = getViaNode(bundle, nodeNbr);
-		if (viaNode == 0)
-		{
-			/*	No way to get the bundle to this
-			 *	destination.				*/
-#if IMCDEBUG
-puts("No via node.");
-#endif
-			continue;
-		}
-
-		/*	Add this node to the gang headed by this
-		 *	viaNode.					*/
-
-		if (addNodeToGang(gangs, viaNode, nodeNbr) < 0)
-		{
-			putErrmsg("Can't add node to gang.", NULL);
-			lyst_destroy(gangs);
-			return -1;
-		}
-	}
-
-	/*	Then, for each gang, clone the bundle and set the
-	 *	destinations list of the clone to all and only the
-	 *	members of the gang, then enqueue the clone for
-	 *	transmission to the gang's common entry node.		*/
-
-	for (elt2 = lyst_first(gangs); elt2; elt2 = lyst_next(elt2))
-	{
-		gang = (ImcGang *) lyst_data(elt2);
-		if (bpClone(bundle, &newBundle, &newBundleObj, 0, 0) < 0)
-		{
-			putErrmsg("Failed on clone.", NULL);
-			lyst_destroy(gangs);
-			return -1;
-		}
-
-		/*	Erase clone's original destinations list.	*/
-
-		while ((elt = sdr_list_first(sdr, newBundle.destinations)))
-		{
-			sdr_list_delete(sdr, elt, NULL, NULL);
-		}
-
-		/*	Insert all new destinations.			*/
-
-		for (elt3 = lyst_first(gang->members); elt3;
-				elt3 = lyst_next(elt3))
-		{
-			nodeNbr = (uaddr) lyst_data(elt3);
-#if IMCDEBUG
-printf("Loading destination " UVAST_FIELDSPEC ".\n", nodeNbr);
-#endif
-			if (loadDestination(&newBundle, nodeNbr) < 0)
-			{
-				putErrmsg("Failed loading destination.", NULL);
-				lyst_destroy(gangs);
-				return -1;
-			}
-		}
-
-		/*	Finally, enqueue the new bundle for xmit.	*/
-#if IMCDEBUG
-printf("Gang bundle sent to " UVAST_FIELDSPEC " has %lu members.\n", gang->entryNode, lyst_length(gang->members));
-#endif
-		if (enqueueBundle(&newBundle, newBundleObj, gang->entryNode)
-				< 0)
-		{
-			putErrmsg("Failed on enqueue.", NULL);
-			lyst_destroy(gangs);
-			return -1;
-		}
-	}
-
-	/*	Destroy gangs list and originally received multicast
-	 *	bundle.							*/
-
-	lyst_destroy(gangs);
-	return bpDestroyBundle(bundleAddr, 2);
-}
-
 static int	relayImcBundle(Bundle *bundle, Object bundleAddr,
 			ExtensionBlock *imcblock, Object imcblkAddr)
 {
-	Sdr		sdr = getIonsdr();
-	uvast		ownNodeNbr = getOwnNodeNbr();
-	int		destinationsCount;
-	char		*nodeNbrsArray;
-	int		i;
-	uvast		*nodeNbrPtr;
+	Sdr	sdr = getIonsdr();
+	uvast	ownNodeNbr = getOwnNodeNbr();
+	int	destinationsCount;
+	char	*nodeNbrsArray;
+	int	i;
+	uvast	*nodeNbrPtr;
 
 	/*	Load the bundle's list of destinations from the
 	 *	array of gang members in the bundle's IMC extension
@@ -650,7 +170,7 @@ static int	relayImcBundle(Bundle *bundle, Object bundleAddr,
 	{
 		writeMemo("[?] IMC block has no destinations.");
 #if IMCDEBUG
-puts("no destinations");
+writeMemo("no destinations");
 #endif
 		oK(bpAbandon(bundleAddr, bundle, BP_REASON_NO_ROUTE));
 		return 0;
@@ -666,8 +186,14 @@ puts("no destinations");
 
 	sdr_read(sdr, nodeNbrsArray, imcblock->object, imcblock->size);
 	nodeNbrPtr = (uvast *) nodeNbrsArray;
+#if IMCDEBUG
+writeMemo("Preparing to relay IMC bundle.");
+#endif
 	for (i = 0; i < destinationsCount; i++, nodeNbrPtr++)
 	{
+#if IMCDEBUG
+writeMemoNote("Checking IMC block destination", itoa(*nodeNbrPtr));
+#endif
 		if (*nodeNbrPtr == ownNodeNbr)
 		{
 			/*	Omit self from destinations list.	*/
@@ -677,7 +203,7 @@ puts("no destinations");
 
 		/*	Load this destination into the bundle.		*/
 
-		if (loadDestination(bundle, *nodeNbrPtr) < 0)
+		if (imcLoadDestination(bundle, *nodeNbrPtr) < 0)
 		{
 			MRELEASE(nodeNbrsArray);
 			putErrmsg("Can't load from IMC extension block.", NULL);
@@ -711,7 +237,7 @@ puts("no destinations");
 
 	/*	Forward the bundle.					*/
 
-	return forwardImcBundle(bundle, bundleAddr);
+	return imcForwardBundle(bundle, bundleAddr);
 }
 
 static int	loadRegionMembers(Bundle *bundle, uint32_t regionNbr, IonDB *db)
@@ -721,16 +247,22 @@ static int	loadRegionMembers(Bundle *bundle, uint32_t regionNbr, IonDB *db)
 	Object		memberAddr;
 	RegionMember	member;
 
+#if IMCDEBUG
+writeMemo("In loadRegionMembers...");
+#endif
 	for (elt = sdr_list_first(sdr, db->rolodex); elt;
 			elt = sdr_list_next(sdr, elt))
 	{
 		memberAddr = sdr_list_data(sdr, elt);
 		sdr_read(sdr, (char *) &member, memberAddr,
 				sizeof(RegionMember));
+#if IMCDEBUG
+writeMemoNote("Checking rolodex member", itoa(member.nodeNbr));
+#endif
 		if (member.homeRegionNbr == regionNbr
 		|| member.outerRegionNbr == regionNbr)
 		{
-			if (loadDestination(bundle, member.nodeNbr) < 0)
+			if (imcLoadDestination(bundle, member.nodeNbr) < 0)
 			{
 				putErrmsg("Can't add region member.", NULL);
 				return -1;
@@ -741,9 +273,36 @@ static int	loadRegionMembers(Bundle *bundle, uint32_t regionNbr, IonDB *db)
 	return 0;
 }
 
+static int	loadRolodexMembers(Bundle *bundle, IonDB *db)
+{
+	Sdr		sdr = getIonsdr();
+	Object		elt;
+	Object		memberAddr;
+	RegionMember	member;
+
+#if IMCDEBUG
+writeMemo("In loadRolodexMembers...");
+#endif
+	for (elt = sdr_list_first(sdr, db->rolodex); elt;
+			elt = sdr_list_next(sdr, elt))
+	{
+		memberAddr = sdr_list_data(sdr, elt);
+		sdr_read(sdr, (char *) &member, memberAddr,
+				sizeof(RegionMember));
+		if (imcLoadDestination(bundle, member.nodeNbr) < 0)
+		{
+			putErrmsg("Can't add region member.", NULL);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
 static int	originateImcBundle(Bundle *bundle, Object bundleAddr)
 {
 	Sdr		sdr = getIonsdr();
+	uvast		ownNodeNbr = getOwnNodeNbr();
 	Object		iondbObj;
 	IonDB		iondb;
 	uint32_t	regionNbr;
@@ -758,71 +317,110 @@ static int	originateImcBundle(Bundle *bundle, Object bundleAddr)
 	groupNbr = bundle->destination.ssp.imc.groupNbr;
 
 	/*	Load the bundle's list of destinations, either from
-	 *	region membership (for a petition) or from group
+	 *	region membership (for a dispatch) or from group
 	 *	membership (for an application multicast message).	*/
 
-	if (groupNbr == 0)	/*	Broadcast to region members.	*/
+	if (groupNbr == 0)
 	{
-
+		/*	Broadcast to region members.			*/
+#if IMCDEBUG
+writeMemo("Multicasting to region members.");
+#endif
 		regionNbr = bundle->ancillaryData.imcRegionNbr;
 		iondbObj = getIonDbObject();
 		sdr_read(sdr, (char *) &iondb, iondbObj, sizeof(IonDB));
 		if (regionNbr == 0)	/*	Fwd in both regions.	*/
 		{
+#if IMCDEBUG
+writeMemo("Sending to all members of both regions.");
+#endif
 			/*	Send to all members of both home
 			 *	region and (if any) outer region.	*/
 
-			if (loadRegionMembers(bundle,
-					iondb.regions[0].regionNbr, &iondb) < 0
-			|| loadRegionMembers(bundle,
-					iondb.regions[1].regionNbr, &iondb) < 0)
+			if (loadRolodexMembers(bundle, &iondb) < 0)
 			{
-				putErrmsg("Can't add IMC region member.", NULL);
+				putErrmsg("IMC can't add members.", NULL);
 				return -1;
 			}
 		}
 		else			/*	Fwd within this region.	*/
 		{
+#if IMCDEBUG
+writeMemoNote("Sending to all members of region", itoa(regionNbr));
+#endif
 			/*	Send only to all members of the
 			 *	specified region.			*/
 
 			regionIdx = ionPickRegion(regionNbr);
+#if IMCDEBUG
+writeMemoNote("regionIdx is", itoa(regionIdx));
+#endif
 			if (regionIdx < 0)
 			{
-				putErrmsg("IMC system error.", NULL);
-				return -1;
+				putErrmsg("Not a member of region.",
+						itoa(regionNbr));
+				return 0;
 			}
 
+#if IMCDEBUG
+writeMemoNote("regions[regionIdx].regionNbr is", itoa(iondb.regions[regionIdx].regionNbr));
+#endif
 			if (loadRegionMembers(bundle, 
 				iondb.regions[regionIdx].regionNbr, &iondb) < 0)
 			{
-				putErrmsg("Can't add IMC region member.", NULL);
+				putErrmsg("IMC can't add region members.",
+						NULL);
 				return -1;
 			}
 		}
+#if IMCDEBUG
+writeMemoNote("Multicasting message to members",
+itoa(sdr_list_length(sdr, bundle->destinations)));
+writeMemoNote("...of region", itoa(regionNbr));
+#endif
 	}
 	else			/*	Multicast to group members.	*/
 	{
+#if IMCDEBUG
+writeMemoNote("Multicasting to members of group", itoa(groupNbr));
+#endif
 		imcFindGroup(groupNbr, &groupAddr, &groupElt);
 		if (groupElt == 0)
 		{
 			/*	Nobody subscribes to bundles destined
 			 *	for this group.				*/
 #if IMCDEBUG
-puts("no such group");
+writeMemo("no such group");
 #endif
 			oK(bpAbandon(bundleAddr, bundle, BP_REASON_NO_ROUTE));
 			return 0;
 		}
 
-		/*	Multicast bundle to all members of this group.	*/
-
 		sdr_read(sdr, (char *) &group, groupAddr, sizeof(ImcGroup));
+#if IMCDEBUG
+writeMemoNote("Number of members in group",
+itoa(sdr_list_length(sdr, group.members)));
+#endif
 		for (elt = sdr_list_first(sdr, group.members); elt;
 				elt = sdr_list_next(sdr, elt))
 		{
 			nodeNbr = sdr_list_data(sdr, elt);
-			if (loadDestination(bundle, nodeNbr) < 0)
+			if (nodeNbr == ownNodeNbr)
+			{
+				if (group.isMember == 0)
+				{
+					/*	Only an "ex officio"
+					 *	(passageway) member of
+					 *	this multicast group.
+					 *	Omit from destinations.	*/
+	
+					continue;
+				}
+			}
+#if IMCDEBUG
+writeMemoNote("Loading group member", itoa(nodeNbr));
+#endif
+			if (imcLoadDestination(bundle, nodeNbr) < 0)
 			{
 				putErrmsg("Can't add IMC group member.", NULL);
 				return -1;
@@ -832,7 +430,7 @@ puts("no such group");
 
 	/*	Forward the bundle.					*/
 
-	return forwardImcBundle(bundle, bundleAddr);
+	return imcForwardBundle(bundle, bundleAddr);
 }
 
 #if defined (ION_LWT)
@@ -856,6 +454,8 @@ int	main(int argc, char *argv[])
 	Object		imcblkElt;
 	Object		imcblkAddr;
 	ExtensionBlock	imcblock;
+	Object		iondbObj;
+	IonDB		iondb;
 
 	if (bpAttach() < 0)
 	{
@@ -952,9 +552,6 @@ int	main(int argc, char *argv[])
 		if (imcblkElt == 0)
 		{
 			writeMemo("[?] IMC extension block is missing.");
-#if IMCDEBUG
-puts("IMC extension block missing");
-#endif
 			oK(bpAbandon(bundleAddr, &bundle, BP_REASON_NO_ROUTE));
 			continue;
 		}
@@ -973,6 +570,47 @@ puts("IMC extension block missing");
 				running = 0;
 				continue;
 			}
+
+			/*	If this multicast is unregistration of
+			 *	the local node, that unregistration can
+			 *	now proceed: the information rquired
+			 *	in order to announce the unregistration
+			 *	has been used and is no longer needed.	*/
+
+			if (bundle.destination.ssp.imc.groupNbr == 0
+			&& bundle.destination.ssp.imc.serviceNbr == 1)
+			{
+				iondbObj = getIonDbObject();
+				if (iondbObj == 0)
+				{
+					putErrmsg("Can't load ION database.",
+							NULL);
+					sdr_cancel_xn(sdr);
+					running = 0;
+					continue;
+				}
+
+				sdr_stage(sdr, (char *) &iondb, iondbObj,
+						sizeof(IonDB));
+				if (iondb.regions[0].locked)
+				{
+#if IMCDEBUG
+writeMemoNote("imcfw unlocking region", itoa(iondb.regions[0].regionNbr));
+#endif
+					iondb.regions[0].locked = 0;
+					sdr_write(sdr, iondbObj,
+						(char *) &iondb, sizeof(IonDB));
+				}
+				else if (iondb.regions[1].locked)
+				{
+#if IMCDEBUG
+writeMemoNote("imcfw unlocking region", itoa(iondb.regions[1].regionNbr));
+#endif
+					iondb.regions[1].locked = 0;
+					sdr_write(sdr, iondbObj,
+						(char *) &iondb, sizeof(IonDB));
+				}
+			}
 		}
 		else	/*	Received from some node, possibly self.	*/
 		{
@@ -984,7 +622,7 @@ puts("IMC extension block missing");
 					 *	node, can't safely
 					 *	relay the bundle.	*/
 #if IMCDEBUG
-puts("received from unknown node");
+writeMemo("imcfw received bundle from unknown node");
 #endif
 					oK(bpAbandon(bundleAddr, &bundle,
 						BP_REASON_NO_ROUTE));

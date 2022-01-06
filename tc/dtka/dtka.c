@@ -1,19 +1,6 @@
 /*
-	dtka.c:	public/private key pair generator for ION
-			nodes.
-
-		NOTE: this program utilizes functions provided by
-		cryptography software that is not distributed with
-		ION.  To indicate that this supporting software
-		has been installed, set the compiler flag
-			
-			-DCRYPTO_SOFTWARE_INSTALLED
-				
-		when compiling this program.  Absent that flag
-		setting at compile time, dtka's generateKeyPair()
-		function simply uses the rand() function to generate
-		pseudo keys for test purposes only.
-
+	dtka.c:	public/private key pair generator for delay-tolerant
+		key administration.
 
 	Author: Scott Burleigh, JPL
 
@@ -29,20 +16,6 @@
 #ifndef _CRT_SECURE_NO_DEPRECATE
 #define _CRT_SECURE_NO_DEPRECATE 1
 #endif
-
-#ifdef CRYPTO_SOFTWARE_INSTALLED
-#include "polarssl/config.h"
-#include "polarssl/entropy.h"
-#include "polarssl/ctr_drbg.h"
-#include "polarssl/bignum.h"
-#include "polarssl/rsa.h"
-#include "polarssl/x509.h"
-#include "polarssl/base64.h"
-#include "polarssl/x509write.h"
-#endif
-
-#define KEY_SIZE 1024
-#define EXPONENT 65537
 
 static saddr	_running(saddr *newValue)
 {
@@ -118,20 +91,11 @@ static int	writeAddPubKeyCmd(time_t effectiveTime,
 	return 0;
 }
 
-static int	generateKeyPair(BpSAP sap, DtkaDB *db)
+static int	generateKeyPair(BpSAP sap, DtkaDB *db, char *passwdPathName)
 {
 	time_t			currentTime = getCtime();
 	Sdr			sdr = getIonsdr();
 	time_t			effectiveTime;
-#ifdef CRYPTO_SOFTWARE_INSTALLED
-	entropy_context		entropy;
-	ctr_drbg_context	ctr_drbg;
-	const char		*pers = "rsa_genkey";
-	rsa_context		rsa;
-	int			result;
-#else		/*	For regression testing only.			*/
-	int			key;
-#endif
 	unsigned char		pubKeyBuf[16000];
 	unsigned short		publicKeyLen;
 	unsigned char		*publicKey;
@@ -145,84 +109,31 @@ static int	generateKeyPair(BpSAP sap, DtkaDB *db)
 	char			destEid[32];
 	Object			newBundle;
 
+	CHKERR(sdr_begin_xn(sdr));
 	effectiveTime = currentTime + db->effectiveLeadTime;
-#ifdef CRYPTO_SOFTWARE_INSTALLED
-	entropy_init(&entropy);
-	if (ctr_drbg_init(&ctr_drbg, entropy_func, &entropy,
-			(const unsigned char *) pers, strlen(pers)))
+	if (sec_generate_key_pair(pubKeyBuf, sizeof pubKeyBuf, &publicKey,
+			&publicKeyLen, privKeyBuf, sizeof privKeyBuf,
+			&privateKey, &privateKeyLen) < 0)
 	{
-		putErrmsg("ctr_drbg_init failed.", NULL);
+		sdr_cancel_xn(sdr);
+		putErrmsg("Key pair generation failed.", NULL);
 		return -1;
 	}
 
-	rsa_init(&rsa, RSA_PKCS_V15, 0);
-	if (rsa_gen_key(&rsa, ctr_drbg_random, &ctr_drbg, KEY_SIZE, EXPONENT))
-	{
-		putErrmsg("rsa_gen_key failed.", NULL);
-		return -1;
-	}
-
-	result = rsa_check_privkey(&rsa);
-	if (result != 0)
-	{
-		putErrmsg("Bad private key.", itoa(result));
-		return -1;
-	}
-
-	result = rsa_check_pubkey(&rsa);
-	if (result != 0)
-	{
-		putErrmsg("Bad public key.", itoa(result));
-		return -1;
-	}
-
-	/*	Extract public key from context.			*/
-
-	result = x509_write_pubkey_der(pubKeyBuf, sizeof pubKeyBuf, &rsa);
-	if (result < 0)
-	{
-		putErrmsg("Can't extract public key.", NULL);
-		return -1;
-	}
-
-	publicKeyLen = result;
-	publicKey = (pubKeyBuf + (sizeof pubKeyBuf - 1)) - publicKeyLen;
-
-	/*	Extract private key from context.			*/
-
-	result = x509_write_key_der(privKeyBuf, sizeof privKeyBuf, &rsa);
-	if (result < 0)
-	{
-		putErrmsg("Can't extract private key.", NULL);
-		return -1;
-	}
-
-	privateKeyLen = result;
-	privateKey = (privKeyBuf + (sizeof privKeyBuf - 1)) - privateKeyLen;
-	rsa_free(&rsa);
-#else		/*	For regression testing only.			*/
-	srand((unsigned int) currentTime / getOwnNodeNbr());
-	key = rand();
-	memcpy(pubKeyBuf, (char *) &key, sizeof key);
-	publicKey = pubKeyBuf;
-	publicKeyLen = sizeof key;
-	srand((unsigned int) key);
-	key = rand();
-	memcpy(privKeyBuf, (char *) &key, sizeof key);
-	privateKey = privKeyBuf;
-	privateKeyLen = sizeof key;
-#endif
 	/*	Store public and private keys locally.			*/
 
 	if (sec_addOwnPublicKey(effectiveTime, publicKeyLen, publicKey) < 0)
 	{
+		sdr_cancel_xn(sdr);
 		putErrmsg("Can't add own public key.", NULL);
 		return -1;
 	}
 
-	if (sec_addPrivateKey(effectiveTime, privateKeyLen, privateKey) < 0)
+	if (sec_addPrivateKey(effectiveTime, privateKeyLen, privateKey,
+			passwdPathName) < 0)
 	{
-		putErrmsg("Can't add own public key.", NULL);
+		sdr_cancel_xn(sdr);
+		putErrmsg("Can't add own private key.", NULL);
 		return -1;
 	}
 
@@ -230,6 +141,7 @@ static int	generateKeyPair(BpSAP sap, DtkaDB *db)
 
 	if (writeAddPubKeyCmd(effectiveTime, publicKeyLen, publicKey) < 0)
 	{
+		sdr_cancel_xn(sdr);
 		putErrmsg("Can't write command to add node public key.", NULL);
 		return -1;
 	}
@@ -239,7 +151,9 @@ static int	generateKeyPair(BpSAP sap, DtkaDB *db)
 #if TC_DEBUG
 writeMemo("dtka: recorded initial keys.");
 #endif
-		return 0;	/*	No publication of this key.	*/
+		/*	No publication of this key.			*/
+
+		return sdr_end_xn(sdr);
 	}
 
 	/*	Publish new public key declaration record.		*/
@@ -249,11 +163,11 @@ writeMemo("dtka: recorded initial keys.");
 			publicKeyLen, publicKey);
 	if (recordLen < 0)
 	{
+		sdr_cancel_xn(sdr);
 		putErrmsg("Can't serialize key declaration record.", NULL);
 		return -1;
 	}
 
-	CHKERR(sdr_begin_xn(sdr));
 	extent = sdr_malloc(sdr, recordLen);
 	if (extent)
 	{
@@ -262,7 +176,7 @@ writeMemo("dtka: recorded initial keys.");
 
 	if (sdr_end_xn(sdr) < 0)
 	{
-		putErrmsg("Can't create ZCO extent.", NULL);
+		putErrmsg("Can't generate key pair.", NULL);
 		return -1;
 	}
 
@@ -290,6 +204,7 @@ writeMemo("dtka: published key declaration bundle.");
 
 static void	*generateKeys(void *parm)
 {
+	char		*passwdPathName = (char *) parm;
 	char		*procName = "dtka";
 	Sdr		sdr;
 	Object		dbobj;
@@ -311,14 +226,7 @@ static void	*generateKeys(void *parm)
 		return NULL;
 	}
 
-	/*	Generate initial keys and initial re-keying interval.	*/
-
-	if (generateKeyPair(NULL, &db) < 0)
-	{
-		putErrmsg("dtka initial key pair generation failed.", NULL);
-		ionKillMainThread(procName);
-		return NULL;
-	}
+	/*	Initialize key generation as necessary.			*/
 
 	currentTime = getCtime();
 	if (sdr_begin_xn(sdr) < 0)
@@ -329,13 +237,33 @@ static void	*generateKeys(void *parm)
 	}
 
 	sdr_stage(sdr, (char *) &db, dbobj, sizeof(DtkaDB));
-	db.nextKeyGenTime = currentTime + db.keyGenInterval;
-	sdr_write(sdr, dbobj, (char *) &db, sizeof(DtkaDB));
-	if (sdr_end_xn(sdr) < 0)
+	if (db.nextKeyGenTime == 0)	/*	Not pre-initialized.	*/
 	{
-		putErrmsg("Can't set initial DTKA next key gen time.", NULL);
-		ionKillMainThread(procName);
-		return NULL;
+		/*	Set initialre-keying time.			*/
+
+		db.nextKeyGenTime = currentTime + db.keyGenInterval;
+		sdr_write(sdr, dbobj, (char *) &db, sizeof(DtkaDB));
+		if (sdr_end_xn(sdr) < 0)
+		{
+			putErrmsg("Can't set initial DTKA next key gen time.",
+					NULL);
+			ionKillMainThread(procName);
+			return NULL;
+		}
+
+		/*	Generate initial keys.				*/
+
+		if (generateKeyPair(NULL, &db, passwdPathName) < 0)
+		{
+			putErrmsg("dtka initial key pair generation failed.",
+					NULL);
+			ionKillMainThread(procName);
+			return NULL;
+		}
+	}
+	else	/*	Already initialized by DNAC.			*/
+	{
+		sdr_exit_xn(sdr);
 	}
 
 	/*	Now prepare for re-keying cycle.			*/
@@ -389,7 +317,7 @@ writeMemo("dtka: Re-keying.");
 			continue;
 		}
 
-		if (generateKeyPair(sap, &db) < 0)
+		if (generateKeyPair(sap, &db, passwdPathName) < 0)
 		{
 			putErrmsg("dtka key pair generation failed.", NULL);
 			state = 0;
@@ -510,9 +438,11 @@ static int	handleBulletin(char *buffer, int bufSize)
 int	dtka(int a1, int a2, int a3, int a4, int a5,
 		int a6, int a7, int a8, int a9, int a10)
 {
+	char	*passwdPathName = (char *) a1;
 #else
 int	main(int argc, char *argv[])
 {
+	char	*passwdPathName = (argc > 1 ? argv[1] : NULL);
 #endif
 	saddr		state = 1;
 	pthread_t	clockThread;
@@ -529,7 +459,7 @@ int	main(int argc, char *argv[])
 
 	isignal(SIGTERM, shutDown);
 	writeMemo("[i] dtka is running.");
-	if (pthread_begin(&clockThread, NULL, generateKeys, NULL))
+	if (pthread_begin(&clockThread, NULL, generateKeys, passwdPathName))
 	{
 		putSysErrmsg("dtka can't start clock thread", NULL);
 		return -1;

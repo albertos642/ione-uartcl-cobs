@@ -380,6 +380,8 @@ static int	publishConsensusBulletin(Sdr sdr, TcaDB *db, BpSAP sap)
 	Object		nextElt;
 	Object		obj;
 			OBJ_POINTER(TcaRecord, rec);
+	Object		elt3;
+	Object		nextRecordElt;
 	int		recCount = 0;
 	int		recLen;
 	int		bulletinLen = 0;
@@ -515,11 +517,28 @@ writeMemo("tcapublish: No records to publish.");
 
 		if (elt2)	/*	No consensus.			*/
 		{
-			/*	TODO: insert this record into the
+			/*	Insert this record into the
 			 *	db->currentRecords list for research
 			 *	and future consideration.		*/
 
-			sdr_free(sdr, obj);
+			if (tcaFetchRecord(db->currentRecords, rec->nodeNbr,
+					rec->effectiveTime, &elt3,
+					&nextRecordElt) == 0)
+			{
+				if (nextRecordElt)
+				{
+					oK(sdr_list_insert_before(sdr,
+						nextRecordElt, obj));
+				}
+				else
+				{
+					oK(sdr_list_insert_last(sdr,
+						db->currentRecords, obj));
+				}
+			}
+
+			/*	Remove from list of pending records.	*/
+
 			sdr_list_delete(sdr, elt, NULL, NULL);
 			continue;	/*	Omit from bulletin.	*/
 		}
@@ -556,9 +575,10 @@ writeMemo(msgbuf);
 		bytesRemaining -= recLen;
 		bulletinLen += recLen;
 
-		/*	Remove from list of pending records.		*/
+		/*	Archive this record and remove it from the
+		 *	list of pending records.			*/
 
-		sdr_free(sdr, obj);
+		oK(sdr_list_insert_last(sdr, db->archive, obj));
 		sdr_list_delete(sdr, elt, NULL, NULL);
 	}
 

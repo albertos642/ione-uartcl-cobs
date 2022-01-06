@@ -12,6 +12,10 @@
 #ifndef _BIBE_H_
 #define _BIBE_H_
 
+/*	Administrative record types	*/
+#define	BP_BIBE_PDU	(7)
+#define	BP_BIBE_SIGNAL	(8)	     /*      Aggregate.			*/
+
 #ifdef __cplusplus
 extern "C" {
 #endif

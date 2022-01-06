@@ -1776,7 +1776,11 @@ int	sdr_begin_xn(Sdr sdrv)
 		return 0;	/*	Failed to begin transaction.	*/
 	}
 
-	sdrv->modified = 0;
+	if (sdrv->sdr->xnDepth == 1)	/*	Not a nested xn.	*/
+	{
+		sdrv->modified = 0;	/*	Start tracking changes.	*/
+	} 
+
 	return 1;		/*	Began transaction.		*/
 }
 
