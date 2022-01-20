@@ -305,6 +305,7 @@ typedef struct
 
 	/*	ION innovations for IRF.			*/
 #define BDL_IS_NODE_LOCATOR	(8)	/* 0000 00000000 00001000	*/
+#define BDL_IRF_TRACE_RPT_REQ	(16)	/* 0000 00000000 00010000	*/
 	/*	End of ION innovations for IRF.			*/
 
 #define BDL_APP_ACK_REQUEST	(32)	/* 0000 00000000 00100000	*/

@@ -230,8 +230,9 @@ static int 	tryIRF(Bundle *bundle, Object bundleObj, IonNode *terminusNode)
 	{
 		/*	Absence of IRF extension block makes
 		 *	Inter-regional routing infeasible.		*/
-
+#if RFXDEBUG
 		writeMemo("[?] IRF extension block is missing.");
+#endif
 		return 0;
 	}
 
@@ -1296,7 +1297,7 @@ static int	enqueueBundle(Bundle *bundle, Object bundleObj, CgrSAP sap)
 
 	if (ionRegionOf(nodeNbr, 0, &regionNbr) < 0)
 	{
-		/*	Destination node is not in any region that
+		/*	Terminus node is not in any region that
 		 *	the local node is in.  Try to forward
 		 *	through other regions via passageway(s).	*/
 
@@ -1319,7 +1320,7 @@ static int	enqueueBundle(Bundle *bundle, Object bundleObj, CgrSAP sap)
 			return 0;
 		}
 	}
-	else
+	else	/*	Terminus node is in one of this node's regions.	*/
 	{
 		if (tryCGR(bundle, bundleObj, node, getCtime(), trace, 0))
 		{

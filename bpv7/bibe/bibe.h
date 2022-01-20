@@ -12,6 +12,8 @@
 #ifndef _BIBE_H_
 #define _BIBE_H_
 
+#include "bpP.h"
+
 /*	Administrative record types	*/
 #define	BP_BIBE_PDU	(7)
 #define	BP_BIBE_SIGNAL	(8)	     /*      Aggregate.			*/
@@ -19,8 +21,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "bpP.h"
 
 /*		Functions for bundle-in-bundle encapsulation.		*/
 

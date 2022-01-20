@@ -1206,6 +1206,16 @@ writeMemoNote("Node B is", itoa(nodeNbrB));
 writeMemoNote("Local node home region", itoa(localHomeRegion));
 writeMemoNote("Local node outer region", itoa(localOuterRegion));
 #endif
+	if (sdr_list_length(sdr, iondb.rolodex) < 2)
+	{
+		/*	No IRF enabled, rolodex contains at
+		 *	most only the local node.  Assume the
+		 *	local home region.				*/
+
+		*regionNbr = localHomeRegion;
+		return 0;
+	}
+
 	for (elt = sdr_list_first(sdr, iondb.rolodex); elt;
 		       elt = sdr_list_next(sdr, elt))
 	{

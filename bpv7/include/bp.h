@@ -154,6 +154,12 @@ typedef struct
 	 *	be useful for network performance analysis purposes.	*/
 
 	unsigned char	doNotFragment;
+
+	/*	A user-asserted switch for requesting that a report
+	 *	of the inter-regional path taken by this bundle
+	 *	be sent to the Report-to endpoint.			*/
+
+	unsigned char	irfTraceRptRequested;
 } BpAncillaryData;
 
 /*	Quality-of-service flags.					*/
@@ -261,8 +267,7 @@ extern int		bp_open_source(	char *eid,
 			 *	Returns 0 on success, -1 on any error.	*/
 
 #define BP_PARSE_QUALITY_OF_SERVICE_USAGE				\
-	"<custody-requested>.<priority>[.<ordinal>" 			\
-	"[.<unreliable>.<critical>[.<data-label>]]]"
+"<custody-requested>[.<priority>[.<ordinal>[.<unreliable>[.<critical>[.<data-label>[.<ipt-report-requested>]]]]]]"
 
 extern int		bp_parse_quality_of_service(const char *token,
 					BpAncillaryData *ancillaryData,

@@ -6298,6 +6298,11 @@ when asking for status reports.");
 		{
 			bundleProcFlags |= BDL_DOES_NOT_FRAGMENT;
 		}
+
+		if (ancillaryData->irfTraceRptRequested)
+		{
+			bundleProcFlags |= BDL_IRF_TRACE_RPT_REQ;
+		}
 	}
 
 	if (ackRequested)
@@ -6981,13 +6986,22 @@ static int	dispatchUnicast(Bundle *bundle, Object bundleObj,
 	 *	the sequence of passageway nodes that succeeded in
 	 *	getting the bundle to its destination.			*/
 
-	if (bundle->bundleProcFlags & BDL_IS_NODE_LOCATOR)
+	if (sdr_list_length(sdr, bundle->passageways) > 0)
 	{
-		if (sdr_list_length(sdr, bundle->passageways) > 0)
+		if (bundle->bundleProcFlags & BDL_IS_NODE_LOCATOR)
 		{
 			if (irf_source_msg(bundle, 1) < 0)
 			{
 				putErrmsg("Failed sending IRF message.", NULL);
+				return -1;
+			}
+		}
+
+		if (bundle->bundleProcFlags & BDL_IRF_TRACE_RPT_REQ)
+		{
+			if (irf_issue_ipt_rpt(bundle) < 0)
+			{
+				putErrmsg("Failed sending IPT report.", NULL);
 				return -1;
 			}
 		}
@@ -12351,6 +12365,16 @@ int	_handleAdminBundles(char *adminEid, StatusRptCB handleStatusRpt)
 			if (bibeHandleSignal(&dlv, cursor, unparsedBytes) < 0)
 			{
 				putErrmsg("BIBE custody signal handler failed.",
+						NULL);
+				running = 0;
+			}
+
+			break;
+
+		case BP_IPT_REPORT:
+			if (irf_print_ipt_rpt(&dlv, cursor, unparsedBytes) < 0)
+			{
+				putErrmsg("IRF path trace rpt print failed.",
 						NULL);
 				running = 0;
 			}
