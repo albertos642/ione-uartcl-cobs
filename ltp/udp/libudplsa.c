@@ -31,6 +31,7 @@ void	*udplsa_handle_datagrams(void *parm)
 
 	/*	Initialize recvmmsg buffers.				*/
 
+writeMemo("udplsa_handle_datagrams is UDP_MULTISEND.");
 	buffers = MTAKE((UDPLSA_BUFSZ + 1)* MULTIRECV_BUFFER_COUNT);
 	if (buffers == NULL)
 	{
@@ -146,6 +147,7 @@ void	*udplsa_handle_datagrams(void *parm)
 		switch (segmentLength)
 		{
 		case 0:	/*	Interrupted system call.		*/
+writeMemo("libudplsa irecvfrom is interrupted");
 			continue;
 
 		case -1:
@@ -155,6 +157,7 @@ void	*udplsa_handle_datagrams(void *parm)
 			/*	Intentional fall-through to next case.	*/
 
 		case 1:				/*	Normal stop.	*/
+writeMemo("libudplsa irecvfrom() receives STOP byte");
 			rtp->running = 0;
 			continue;
 		}
