@@ -95,8 +95,10 @@ See man(5) for ltprc.");
 	PUTS("\t   m maxbacklog <max block delivery backlog; default is 10>");
 	PUTS("\ts\tStart");
 	PUTS("\t   s ['<LSI command>']");
+	PUTS("\t   s span <engine ID#>");
 	PUTS("\tx\tStop");
 	PUTS("\t   x");
+	PUTS("\t   x span <engine ID#>");
 	PUTS("\tw\tWatch LTP activity");
 	PUTS("\t   w { 0 | 1 | <activity spec> }");
 	PUTS("\t\tActivity spec is a string of all requested activity \
@@ -952,6 +954,7 @@ static int	processLine(char *line, int lineLength, int *checkNeeded,
 	char		*cursor;
 	int		i;
 	char		*tokens[12];
+	uvast		engineId;
 	char		lsiCmd[256];
 	char		buffer[80];
 	struct timeval	done_time;
@@ -1025,6 +1028,20 @@ static int	processLine(char *line, int lineLength, int *checkNeeded,
 			{
 				if (tokenCount > 1)
 				{
+					if (strcmp(tokens[1], "span") == 0)
+					{
+						if (tokenCount != 3)
+						{
+							SYNTAX_ERROR;
+							return 0;
+						}
+
+						engineId = strtoul(tokens[2],
+								NULL, 0);
+						oK(ltpStartSpan(engineId));
+						return 0;
+					}
+
 					patchLsiCmd(tokenCount, tokens, lsiCmd);
 					oK(addSeat(lsiCmd));
 				}
@@ -1059,6 +1076,26 @@ up, abandoned.");
 		case 'x':
 			if (attachToLtp() == 0)
 			{
+				if (tokenCount > 1)
+				{
+					if (strcmp(tokens[1], "span") == 0)
+					{
+						if (tokenCount != 3)
+						{
+							SYNTAX_ERROR;
+							return 0;
+						}
+
+						engineId = strtoul(tokens[2],
+								NULL, 0);
+						ltpStopSpan(engineId);
+						return 0;
+					}
+
+					SYNTAX_ERROR;
+					return 0;
+				}
+
 				ltpStop();
 			}
 

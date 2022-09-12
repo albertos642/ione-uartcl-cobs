@@ -1701,15 +1701,13 @@ static int	processLine(char *line, int lineLength, int *rc)
 				if (tokenCount > 1)
 				{
 					executeStart(tokenCount, tokens);
+					return 0;
 				}
-				else
+
+				if (bpStart() < 0)
 				{
-					if (bpStart() < 0)
-					{
-						putErrmsg("Can't start BP.",
-								NULL);
-						return 0;
-					}
+					putErrmsg("Can't start BP.", NULL);
+					return 0;
 				}
 
 				/* Wait for bp to start up. */
