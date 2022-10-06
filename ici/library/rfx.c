@@ -135,18 +135,6 @@ int	rfx_order_contacts(PsmPartition partition, PsmAddress nodeData,
 
 	contact = (IonCXref *) psp(partition, nodeData);
 	argContact = (IonCXref *) dataBuffer;
-	if (contact->regionNbr < argContact->regionNbr)
-	{
-		return -1;
-	}
-
-	if (contact->regionNbr > argContact->regionNbr)
-	{
-		return 1;
-	}
-
-	/*	Matching region.					*/
-
 	if (contact->fromNode < argContact->fromNode)
 	{
 		return -1;
@@ -556,10 +544,10 @@ static void	postCpsNotice(uint32_t regionNbr, time_t fromTime,
 	 *
 	 * 	*** For a contact notice:
 	 *
-	 *	If fromTime is -1 (a registration contact)
+	 *	If fromTime is MAX_POSIX_TIME (a registration contact)
 	 *		If toTime is 0
 	 *			Unregister fromNode in region (regionNbr)
-	 *		Else (toTime is -1)
+	 *		Else (toTime is MAX_POSIX_TIME)
 	 *			Register fromNode in region (regionNbr)
 	 *	Else (scheduled contact)
 	 *		If toTime is 0
@@ -613,7 +601,6 @@ static PsmAddress	insertCXref(IonCXref *cxref)
 	/*	If the CXref already exists, just return its address.	*/
 
 	memset((char *) &arg, 0, sizeof(IonCXref));
-	arg.regionNbr = cxref->regionNbr;
 	arg.fromNode = cxref->fromNode;
 	arg.toNode = cxref->toNode;
 	arg.fromTime = cxref->fromTime;
@@ -831,6 +818,7 @@ static void	insertContact(int regionIdx, IonDB *iondb, Object iondbObj,
 	contact.xmitRate = xmitRate;
 	contact.confidence = confidence;
 	contact.type = contactType;
+	contact.regions[0] = regionNbr;
 	volume = xmitRate * (toTime - fromTime);
 	contact.mtv[0] = volume;		/*	Bulk.		*/
 	contact.mtv[1] = volume;		/*	Standard.	*/
@@ -842,15 +830,13 @@ static void	insertContact(int regionIdx, IonDB *iondb, Object iondbObj,
 	}
 
 	sdr_write(sdr, obj, (char *) &contact, sizeof(IonContact));
-	elt = sdr_list_insert_last(sdr,
-			iondb->regions[regionIdx].contacts, obj);
+	elt = sdr_list_insert_last(sdr, iondb->contacts, obj);
 	if (elt == 0)
 	{
 		return;
 	}
 
 	memset((char *) &newCx, 0, sizeof(IonCXref));
-	newCx.regionNbr = regionNbr;
 	newCx.fromTime = fromTime;
 	newCx.toTime = toTime;
 	newCx.fromNode = fromNode;
@@ -1015,278 +1001,265 @@ static void	deleteContact(PsmAddress cxaddr)
 			rfx_erase_data, NULL);
 }
 
-static void	vacateRegion(IonDB *iondb, Object iondbObj, int regionIdx,
-			int announce)
+static void	postPwcNotice(uvast nodeNbr, PwState state)
 {
 	Sdr		sdr = getIonsdr();
-	PsmPartition	ionwm = getIonwm();
-	IonVdb		*vdb = getIonVdb();
-	uint32_t	regionNbr = iondb->regions[regionIdx].regionNbr;
-	Object		elt;
-	Object		nextElt;
-	Object		obj;
-	IonContact	contact;
-	IonCXref	arg;
-	PsmAddress	cxelt;
-	PsmAddress	cxaddr;
-	RegionMember	member;
+	Object		iondbObj;
+	IonDB		iondb;
+	PwcNotice	notice;
+	Object		noticeObj;
 
-	iondb->regions[regionIdx].regionNbr = 0;
-
-	/*	Forget contact plan for this region.			*/
-
-	for (elt = sdr_list_first(sdr, iondb->regions[regionIdx].contacts);
-			elt; elt = nextElt)
+	iondbObj = getIonDbObject();
+	CHKVOID(iondbObj);
+	sdr_read(getIonsdr(), (char *) &iondb, iondbObj, sizeof(IonDB));
+	notice.nodeNbr = nodeNbr;
+	notice.state = state;
+	noticeObj = sdr_malloc(sdr, sizeof(PwcNotice));
+	if (noticeObj)
 	{
-		nextElt = sdr_list_next(sdr, elt);
-		obj = sdr_list_data(sdr, elt);
-		sdr_read(sdr, (char *) &contact, obj, sizeof(IonContact));
-		memset((char *) &arg, 0, sizeof(IonCXref));
-		arg.regionNbr = regionNbr;
-		arg.fromNode = contact.fromNode;
-		arg.toNode = contact.toNode;
-		arg.fromTime = contact.fromTime;
-		oK(sm_rbt_search(ionwm, vdb->contactIndex, rfx_order_contacts,
-				&arg, &cxelt));
-		if (cxelt)
-		{
-			cxaddr = sm_rbt_data(ionwm, cxelt);
-			deleteContact(cxaddr);
-		}
-	}
-
-	sdr_list_destroy(sdr, iondb->regions[regionIdx].contacts, NULL, NULL);
-	iondb->regions[regionIdx].contacts = 0;
-
-	/*	Forget membership of this region.			*/
-
-	if (regionIdx == 1)	/*	Vacating outer region.		*/
-	{
-		/*	At this point, the local node's outer region
-		 *	number has been set to zero.			*/
-
-		for (elt = sdr_list_first(sdr, iondb->rolodex); elt;
-				elt = nextElt)
-		{
-			nextElt = sdr_list_next(sdr, elt);
-			obj = sdr_list_data(sdr, elt);
-			sdr_read(sdr, (char *) &member, obj,
-					sizeof(RegionMember));
-			if (member.outerRegionNbr == regionNbr)
-			{
-				/*	Member's outer region is the
-				 *	same as the local node's
-				 *	previous outer region, so
-				 *	the member must be in the
-				 *	local node's home region;
-				 *	retain this member as a
-				 *	passageway up to that outer
-				 *	region.				*/
-
-				continue;
-			}
-
-			if (member.homeRegionNbr == regionNbr)
-			{
-				/*	Member is a passageway up to
-				 *	the super-region of the local
-				 *	node's previous outer region.
-				 *	That passageway will no longer
-				 *	be usable, so discard member.	*/
-
-				sdr_free(sdr, obj);
-				sdr_list_delete(sdr, elt, NULL, NULL);
-			}
-		}
-	}
-	else			/*	Vacating home region.		*/
-	{
-		/*	The local node's outer region (if any) is
-		 *	about to become the local node's new home
-		 *	region.  The local node's home region number
-		 *	has been set to zero.				*/
-
-		for (elt = sdr_list_first(sdr, iondb->rolodex); elt;
-				elt = nextElt)
-		{
-			nextElt = sdr_list_next(sdr, elt);
-			obj = sdr_list_data(sdr, elt);
-			sdr_read(sdr, (char *) &member, obj,
-					sizeof(RegionMember));
-			if (member.outerRegionNbr == regionNbr)
-			{
-				/*	Member is a passageway down
-				 *	to a sub-region of the local
-				 *	node's previous home region.
-				 *	That passageway will no longer
-				 *	be usable, so discard member.	*/
-
-				sdr_free(sdr, obj);
-				sdr_list_delete(sdr, elt, NULL, NULL);
-				continue;
-			}
-
-			if (member.homeRegionNbr == regionNbr)
-			{
-				if (member.outerRegionNbr
-						== iondb->regions[1].regionNbr)
-				{
-					/*	Member will still be
-					 *	in the same region as
-					 *	the local node (the
-					 *	local node's current
-					 *	outer region, which
-					 *	will soon become its
-					 *	home region).  So
-					 *	retain this member as
-					 *	a passageway down to
-					 *	the local node's
-					 *	previous home region.	*/
-
-					continue;
-				}
-
-				/*	Since the local node's home
-				 *	region can only be a sub-region
-				 *	of one other region, and this
-				 *	member's outer region is not
-				 *	that region, the member can't
-				 *	be a passageway.  It must be
-				 *	a terminal node residing in
-				 *	the local node's current home
-				 *	region, soon to be unreachable
-				 *	by CGR.  So discard it.		*/
-
-				sdr_free(sdr, obj);
-				sdr_list_delete(sdr, elt, NULL, NULL);
-			}
-		}
-	}
-
-	/*	Post node unregistration notice if necessary.		*/
-
-	if (announce)
-	{
-		postCpsNotice(regionNbr, MAX_POSIX_TIME, 0, contact.fromNode,
-				0, 0, 0.0);
+		sdr_write(sdr, noticeObj, (char *) &notice, sizeof(PwcNotice));
+		oK(sdr_list_insert_last(sdr, iondb.pwcNotices, noticeObj));
 	}
 }
 
-static void	purgePassageways(uint32_t regionNbr, IonDB *iondb,
-			Object iondbObj, int announce)
+Object	findLocalNode(uvast nodeNbr, RegionMember *member, Object *memberElt)
+{
+	Sdr	sdr = getIonsdr();
+	Object	iondbObj = getIonDbObject();
+	IonDB	iondb;
+	Object	elt;
+	Object	memberObj = 0;
+
+	CHKZERO(nodeNbr > 0);
+	CHKZERO(member);
+	CHKZERO(memberElt);
+	*memberElt = 0;
+	CHKZERO(iondbObj);
+	CHKZERO(sdr_begin_xn(sdr));	/*	Just to lock database.	*/
+	sdr_read(sdr, (char *) &iondb, iondbObj, sizeof(IonDB));
+	for (elt = sdr_list_first(sdr, iondb.rolodex); elt;
+			elt = sdr_list_next(sdr, elt))
+	{
+		memberObj = sdr_list_data(sdr, elt);
+		sdr_read(sdr, (char *) member, memberObj, sizeof(RegionMember));
+		if (member->nodeNbr < nodeNbr)
+		{
+			continue;
+		}
+
+		if (member->nodeNbr > nodeNbr)
+		{
+			/*	Node is not in the membership list.	*/
+
+			memberObj = 0;
+		}
+
+		break;
+	}
+
+	sdr_exit_xn(sdr);		/*	Unlock database.	*/
+	if (elt == 0)
+	{
+		memberObj = 0;
+	}
+
+	*memberElt = elt;
+	return memberObj;
+}
+
+static int	outerRegionDeclared(uint32_t regionNbr, IonDB *iondb)
 {
 	Sdr		sdr = getIonsdr();
-	uint32_t	homeRegionNbr;
+	int		result = 0;
 	Object		elt;
 	Object		memberObj;
 	RegionMember	member;
 
-	homeRegionNbr = iondb->regions[0].regionNbr;
+	CHKERR(sdr_begin_xn(sdr));	/*	Just to lock database.	*/
 	for (elt = sdr_list_first(sdr, iondb->rolodex); elt;
 			elt = sdr_list_next(sdr, elt))
 	{
 		memberObj = sdr_list_data(sdr, elt);
-		sdr_stage(sdr, (char *) &member, memberObj,
-				sizeof(RegionMember));
-		if (member.homeRegionNbr != homeRegionNbr
+		sdr_read(sdr, (char *) &member, memberObj, sizeof member);
+		if (member.homeRegionNbr != iondb->regions[0].regionNbr
 		|| member.outerRegionNbr == 0
 		|| member.outerRegionNbr == regionNbr)
 		{
 			continue;
 		}
 
-		/*	This node is a passageway to the region which
-		 *	was formerly - but is no longer - the local
-		 *	node's outer region.  Must note that it is no
-		 *	longer registered in that former outer region.	*/
+		/*	Outer region for local node's home region
+		 *	has already been declared by some node.		*/
 
-		if (member.nodeNbr == getOwnNodeNbr())
-		{
-			vacateRegion(iondb, iondbObj, 1, announce);
-		}
-
-		member.outerRegionNbr = 0;
-		sdr_write(sdr, memberObj, (char *) &member,
-				sizeof(RegionMember));
+		result = 1;
+		break;
 	}
+
+	sdr_exit_xn(sdr);		/*	Unlock database.	*/
+	return result;
 }
 
-static void	registerInRegion(uint32_t regionNbr, uvast nodeNbr,
-			IonDB *iondb, Object iondbObj, int announce)
+static int	nodeIsInRegion(uvast nodeNbr, uint32_t regionNbr)
 {
+	RegionMember	member;
+	Object		memberElt;
+
+	if (findLocalNode(nodeNbr, &member, &memberElt) == 0)
+	{
+		return 0;
+	}
+
+	if (member.homeRegionNbr == regionNbr
+	|| member.outerRegionNbr == regionNbr)
+	{
+		return 1;
+	}
+
+	return 0;
+}
+
+static int	occupyRegion(uint32_t regionNbr, IonDB *iondb, Object iondbObj)
+{
+	char		buffer[256];
 	Sdr		sdr = getIonsdr();
 	Object		elt;
-	Object		memberObj;
-	RegionMember	member;
+	Object		obj;
+	IonContact	contact;
 
-	for (elt = sdr_list_first(sdr, iondb->rolodex); elt;
+	/*	Compute registration mode.  The region number of a
+	 *	sub-region is always greater than the region number
+	 *	of its super-region.					*/
+
+	if (regionNbr > iondb->regions[0].regionNbr)
+	{
+		/*	Node is migrating to a (possibly new) sub-
+		 *	region.  Node's current home region becomes
+		 *	its outer region...				*/
+
+		iondb->regions[1].regionNbr = iondb->regions[0].regionNbr;
+
+		/*	...and the cited region becomes the node's
+		 *	new home region.				*/
+
+		iondb->regions[0].regionNbr = regionNbr;
+	}
+	else
+	{
+		/*	Node is being recruited as passageway into a
+	 	*	super-region.  The cited region is to become
+	 	*	this node's outer region.			*/
+
+		if (outerRegionDeclared(regionNbr, iondb))
+		{
+			isprintf(buffer, sizeof buffer, "[?] Node "
+UVAST_FIELDSPEC " can't register in outer region %u because other node(s) \
+claim different outer region(s) for home region %u.", getOwnNodeNbr(),
+				regionNbr, iondb->regions[0].regionNbr);
+			writeMemo(buffer);
+			return -1;
+		}
+
+		iondb->regions[1].regionNbr = regionNbr;
+	}
+
+	/*	Add region notes to known contacts as needed.		*/
+
+	for (elt = sdr_list_first(sdr, iondb->contacts); elt;
 			elt = sdr_list_next(sdr, elt))
 	{
-		memberObj = sdr_list_data(sdr, elt);
-		sdr_stage(sdr, (char *) &member, memberObj,
-				sizeof(RegionMember));
-		if (member.nodeNbr < nodeNbr)
+		obj = sdr_list_data(sdr, elt);
+		sdr_stage(sdr, (char *) &contact, obj, sizeof(IonContact));
+		if (contact.regions[0] == regionNbr
+		|| contact.regions[1] == regionNbr)
 		{
+			/*	Contact is already in this region's
+			 *	contact plan.				*/
+
 			continue;
 		}
 
-		if (member.nodeNbr > nodeNbr)
+		if (nodeIsInRegion(contact.fromNode, regionNbr)
+		&& nodeIsInRegion(contact.toNode, regionNbr))
 		{
-			/*	Node is not in the membership list.	*/
-
-			break;
-		}
-
-		/*	Node is a known member of at least one of
-		 *	the local node's (up to 2) regions.  Adjust
-		 *	membership if necessary.			*/
-
-		if (regionNbr < member.homeRegionNbr)
-		{
-			/*	Registering in new outer region.	*/
-
-			if (regionNbr == member.outerRegionNbr)
+			if (contact.regions[1] == 0)
 			{
-				/*	Redundant registration; ignore.	*/
-
-				return;
+				contact.regions[1] = regionNbr;
+			}
+			else if (contact.regions[0] == 0)
+			{
+				contact.regions[0] = regionNbr;
+			}
+			else
+			{
+				putErrmsg("Contact region clash!",
+						itoa(regionNbr));
+				return -1;
 			}
 
-			/*	Node is now a passageway to this region.*/
-
-			member.outerRegionNbr = regionNbr;
-			sdr_write(sdr, memberObj, (char *) &member,
-					sizeof(RegionMember));
-
-			/*	Any existing passageways to the former
-			 *	outer region must now be erased.	*/
-
-			purgePassageways(regionNbr, iondb, iondbObj, announce);
-			return;
+			sdr_write(sdr, obj, (char *) &contact,
+					sizeof(IonContact));
 		}
+	}
 
-		if (regionNbr == member.homeRegionNbr)
-		{
-			/*	Redundant registration; ignore.		*/
+	return 0;
+}
 
-			return;
-		}
+static void	preRegister(uint32_t regionNbr, IonDB *iondb, Object iondbObj)
+{
+	Sdr	sdr = getIonsdr();
 
-		/*	Registering in new home region.  Current
-		 *	home region becomes new outer region.		*/
+	/*	Network management is "vesting" the local node in a
+	 *	pending membership in the region identified by
+	 *	regionNbr, so simulate registration in this region
+	 *	prior to reception of the actual registration contact.	*/
 
-		member.outerRegionNbr = member.homeRegionNbr;
-		member.homeRegionNbr = regionNbr;
-		sdr_write(sdr, memberObj, (char *) &member,
-				sizeof(RegionMember));
+#if RFXDEBUG
+writeMemoNote("Pre-registering self in an additional region", itoa(regionNbr));
+#endif
+	if (iondb->regions[0].regionNbr == regionNbr
+	|| iondb->regions[1].regionNbr == regionNbr)
+	{
+		writeMemoNote("[?] No need to preRegister in new region, as \
+node is already registered in this region", itoa(regionNbr));
 		return;
 	}
 
-	/*	Not in membership list.	 Assume regionNbr identifies
-	 *	the node's home region; if it's not, a supplementary
-	 *	registration in another region will force the
-	 *	adjustment.						*/
+	if (iondb->regions[1].regionNbr != 0)
+	{
+		writeMemoNote("[?] Can't preRegister in another region, as \
+node is already a passageway", itoa(regionNbr));
+		return;
+	}
 
+	if (occupyRegion(regionNbr, iondb, iondbObj) == 0)
+	{
+		sdr_write(sdr, iondbObj, (char *) iondb, sizeof(IonDB));
+	}
+}
+
+static void	announceRegistration(uint32_t regionNbr, uvast nodeNbr)
+{
+	/*	Post node registration announcement.			*/
+
+	postCpsNotice(regionNbr, MAX_POSIX_TIME, MAX_POSIX_TIME, nodeNbr,
+			nodeNbr, 0, 1.0);
+}
+
+static int	addRolodexEntry(uvast nodeNbr, uint32_t regionNbr, IonDB *iondb,
+			Object iondbObj, Object elt, int announce)
+{
+	Sdr		sdr = getIonsdr();
+	RegionMember	member;
+	Object		memberObj;
+
+	/*	Assume regionNbr identifies the node's home region;
+	 *	if it's not, a supplementary registration in another
+	 *	region will force the adjustment.			*/
+
+#if RFXDEBUG
+writeMemoNote("Registering in region", itoa(regionNbr));
+writeMemoNote("...is node", itoa(nodeNbr));
+#endif
 	member.nodeNbr = nodeNbr;
 	member.homeRegionNbr = regionNbr;
 	member.outerRegionNbr = 0;
@@ -1304,108 +1277,416 @@ static void	registerInRegion(uint32_t regionNbr, uvast nodeNbr,
 			sdr_list_insert_last(sdr, iondb->rolodex, memberObj);
 		}
 	}
+
+	if (announce > 0)
+	{
+		announceRegistration(regionNbr, nodeNbr);
+	}
+
+	return 0;
 }
 
-static void	registerSelf(uint32_t regionNbr, IonDB *iondb, Object iondbObj,
-			int announce)
+static int	augmentRolodexEntry(uvast nodeNbr, uint32_t regionNbr,
+			IonDB *iondb, Object iondbObj, RegionMember *member,
+			Object memberObj, Object elt, int announce)
 {
 	Sdr	sdr = getIonsdr();
+	char	buffer[256];
 
-	/*	Must unregister from current outer region, if any.	*/
-
-	if (iondb->regions[1].regionNbr != 0)
+	if (regionNbr == member->homeRegionNbr
+	|| regionNbr == member->outerRegionNbr)
 	{
-		vacateRegion(iondb, iondbObj, 1, announce);
+		return -1;	/*	No new information.		*/
 	}
 
-	/*	Select registration mode.  The region number of a
-	 *	sub-region is always greater than the region number
-	 *	of its super-region.					*/
-
-	if (regionNbr > iondb->regions[0].regionNbr)
+	if (member->outerRegionNbr != 0)
 	{
-		/*	Node is migrating to a (possibly new) sub-
-		 *	region.  Node's current home region becomes
-		 *	its outer region...				*/
+		/*	Peer is already registered in home and outer
+		 *	regions.  Must unregister in one or the other
+		 *	before registering in a new region.		*/ 
 
-		iondb->regions[1].regionNbr = iondb->regions[0].regionNbr;
-		iondb->regions[1].contacts = iondb->regions[0].contacts;
-
-		/*	...and the cited region becomes the node's
-		 *	new home region.				*/
-
-		iondb->regions[0].regionNbr = regionNbr;
-		iondb->regions[0].contacts = sdr_list_create(sdr);
-		CHKVOID(iondb->regions[0].contacts);
-		sdr_list_user_data_set(sdr, iondb->regions[0].contacts,
-				(Address) regionNbr);
+		isprintf(buffer, sizeof buffer, "[?] Node " UVAST_FIELDSPEC
+" must unregister in either region %u or region %u before registering in \
+region %u.", nodeNbr, member->homeRegionNbr, member->outerRegionNbr, regionNbr);
+		writeMemo(buffer);
+		return -1;
 	}
-	else
+
+	if (member->homeRegionNbr == iondb->regions[0].regionNbr)
 	{
-		/*	Node is being recruited as passageway into a
-		 *	super-region.  The cited region becomes the
+		/*	Registering node's home region is the local
+		 *	node's home region.				*/
+
+		if (regionNbr > member->homeRegionNbr)
+		{
+			/*	Node is registering as a new
+			 *	passageway to the indicated
+			 *	sub-region.				*/
+
+			member->outerRegionNbr = member->homeRegionNbr;
+			member->homeRegionNbr = regionNbr;
+			sdr_write(sdr, memberObj, (char *) member,
+					sizeof(RegionMember));
+			if (announce > 0)
+			{
+				announceRegistration(regionNbr, nodeNbr);
+			}
+
+			postPwcNotice(nodeNbr, Passageway);
+			return 0;
+		}
+
+		/*	Node is registering in outer region.		*/
+
+		if (regionNbr == iondb->regions[1].regionNbr
+		|| iondb->regions[1].regionNbr == 0)
+		{
+			/*	Node is registering as an additional
+			 *	passageway to the outer region.		*/
+
+			member->outerRegionNbr = regionNbr;
+			sdr_write(sdr, memberObj, (char *) member,
+					sizeof(RegionMember));
+			if (announce > 0)
+			{
+				announceRegistration(regionNbr, nodeNbr);
+			}
+
+			postPwcNotice(nodeNbr, Passageway);
+			return 0;
+		}
+
+		/*	Node is trying to register as a passageway
+		 *	to a super-region that is not the outer
+		 *	region of the local node's home region.
+		 *	Invalid; the home region must first be
+		 *	detached from its outer region.			*/
+
+		isprintf(buffer, sizeof buffer, "[?] Node " UVAST_FIELDSPEC
+" cannot register in outer region %u until region %u is no longer the outer \
+region for region %u.", nodeNbr, regionNbr, iondb->regions[1].regionNbr,
+iondb->regions[0].regionNbr);
+		writeMemo(buffer);
+		return -1;
+	}
+
+	if (member->homeRegionNbr == iondb->regions[1].regionNbr)
+	{
+		/*	Registering node's home region is the local
 		 *	node's outer region.				*/
 
-		iondb->regions[1].regionNbr = regionNbr;
-		iondb->regions[1].contacts = sdr_list_create(sdr);
-		CHKVOID(iondb->regions[1].contacts);
-		sdr_list_user_data_set(sdr, iondb->regions[1].contacts,
-				(Address) regionNbr);
+		if (regionNbr > member->homeRegionNbr)
+		{
+			/*	Node is registering as a new
+			 *	passageway to the indicated sub-
+			 *	region of the local node's outer
+			 *	region).				*/
+
+			member->outerRegionNbr = member->homeRegionNbr;
+			member->homeRegionNbr = regionNbr;
+			sdr_write(sdr, memberObj, (char *) member,
+					sizeof(RegionMember));
+			if (announce > 0)
+			{
+				announceRegistration(regionNbr, nodeNbr);
+			}
+
+			postPwcNotice(nodeNbr, Passageway);
+			return 0;
+		}
+
+		/*	Node is registering in the super-region of
+		 *	the local node's outer region.  Don't care.	*/
+
+		member->outerRegionNbr = regionNbr;
+		sdr_write(sdr, memberObj, (char *) member,
+				sizeof(RegionMember));
+		return -1;
 	}
 
-	registerInRegion(regionNbr, getOwnNodeNbr(), iondb, iondbObj, announce);
+	/*	System error: rolodex member isn't in either region.	*/
+
+	putErrmsg("RFX error: rolodex member isn't in any local region.",
+			itoa(member->nodeNbr));
+	return -1;
 }
 
-static void	handleRegistrationContact(uint32_t regionNbr, uvast nodeNbr,
+static void	postRegistration(uint32_t regionNbr, uvast nodeNbr,
 			IonDB *iondb, Object iondbObj, PsmAddress *cxaddr,
 			int announce)
 {
-	Sdr		sdr = getIonsdr();
-	PsmPartition	ionwm = getIonwm();
-	IonVdb		*vdb = getIonVdb();
-	IonCXref	arg;
-	PsmAddress	cxelt;
-	PsmAddress	nextElt;
-	int		regionIdx;
+	Sdr	sdr = getIonsdr();
+	int	regionIdx;
 
-	arg.regionNbr = regionNbr;
-	arg.fromNode = nodeNbr;
-	arg.toNode = nodeNbr;
-	arg.fromTime = MAX_POSIX_TIME;
-	cxelt = sm_rbt_search(ionwm, vdb->contactIndex, rfx_order_contacts,
-			&arg, &nextElt);
-	if (cxelt)	/*	Node already registered in region.	*/
+	/*	Post node registration announcement.			*/
+
+	sdr_write(sdr, iondbObj, (char *) iondb, sizeof(IonDB));
+	if (*cxaddr != 0)	/*	Contact already in database.	*/
 	{
 		return;
 	}
 
-       	if (nodeNbr == getOwnNodeNbr())
-	{
-		/*	Registering self in a region.			*/
-
-		registerSelf(regionNbr, iondb, iondbObj, announce);
-	}
-	else	/*	Registering some other node.			*/
-	{
-		registerInRegion(regionNbr, nodeNbr, iondb, iondbObj, announce);
-	}
-
-	/*	Post node registration announcement.			*/
-
-	if (announce)
-	{
-		postCpsNotice(regionNbr, MAX_POSIX_TIME, MAX_POSIX_TIME,
-				nodeNbr, nodeNbr, 0, 1.0);
-	}
-
 	/*	Add the registration contact.				*/
 
-	sdr_write(sdr, iondbObj, (char *) iondb, sizeof(IonDB));
 	regionIdx = ionPickRegion(regionNbr);
 	CHKVOID(regionIdx == 0 || regionIdx == 1);
 	insertContact(regionIdx, iondb, iondbObj, MAX_POSIX_TIME,
 			MAX_POSIX_TIME, nodeNbr, nodeNbr, 0, 1.0,
 			CtRegistration, cxaddr);
+}
+
+static void	registerSelf(uint32_t regionNbr, IonDB *iondb, Object iondbObj,
+			PsmAddress *cxaddr, int announce)
+{
+	Sdr		sdr = getIonsdr();
+	uvast		nodeNbr = getOwnNodeNbr();
+	char		buffer[256];
+	Object		memberObj;
+	RegionMember	member;
+	Object		elt;
+
+#if RFXDEBUG
+writeMemoNote("In registerSelf for", itoa(nodeNbr));
+#endif
+	if (regionNbr != iondb->regions[0].regionNbr
+	&& regionNbr != iondb->regions[1].regionNbr)
+	{
+		/*	Registering in a region for which no
+		 *	contacts have been pre-loaded.			*/
+
+		if (iondb->regions[1].regionNbr != 0)
+		{
+			/*	Already registered in home and outer
+			 *	regions.  Must unregister in one or
+			 *	the other before registering in a new
+			 *	region.					*/
+
+			isprintf(buffer, sizeof buffer, "[?] Node "
+UVAST_FIELDSPEC " must unregister in either region %u or region %u before \
+registering in region %u.", nodeNbr, iondb->regions[0].regionNbr,
+iondb->regions[1].regionNbr, regionNbr);
+			writeMemo(buffer);
+			return;
+		}
+
+		if (occupyRegion(regionNbr, iondb, iondbObj) < 0)
+		{
+			return;
+		}
+
+		sdr_write(sdr, iondbObj, (char *) iondb, sizeof(IonDB));
+	}
+
+	/*	Update rolodex and post registration contact.		*/
+
+	memberObj = findLocalNode(nodeNbr, &member, &elt);
+	if (memberObj == 0)	/*	Local node is brand-new.	*/
+	{
+		if (addRolodexEntry(nodeNbr, regionNbr, iondb, iondbObj, elt,
+				announce) == 0)
+		{
+			postRegistration(regionNbr, nodeNbr, iondb, iondbObj,
+					cxaddr, announce);
+		}
+
+		return;
+	}
+
+	/*	This is a supplementary registration for the local
+	 *	node.							*/
+
+	if (augmentRolodexEntry(nodeNbr, regionNbr, iondb, iondbObj, &member,
+			memberObj, elt, announce) == 0)
+	{
+		postRegistration(regionNbr, nodeNbr, iondb, iondbObj,
+				cxaddr, announce);
+	}
+}
+
+static void	registerPeer(uvast nodeNbr, uint32_t regionNbr, IonDB *iondb,
+			Object iondbObj, PsmAddress *cxaddr, int announce)
+{
+	Object		memberObj;
+	RegionMember	member;
+	Object		elt;
+
+#if RFXDEBUG
+writeMemoNote("In registerPeer for", itoa(nodeNbr));
+#endif
+	/*	Note that removing the local node from all regions
+	 *	(leaving both region numbers set to 0) has the effect
+	 *	of removing all rolodex entries that were registered
+	 *	in those regions, i.e., all rolodex entries.  So in
+	 *	this event any newly registering peer is an undeclared
+	 *	peer.							*/
+
+	memberObj = findLocalNode(nodeNbr, &member, &elt);
+	if (memberObj == 0)	/*	This is an undeclared peer.	*/
+	{
+		if (regionNbr != iondb->regions[0].regionNbr
+		&& regionNbr != iondb->regions[1].regionNbr)
+		{
+#if RFXDEBUG
+writeMemo("Registration is not relevant to the local node.");
+#endif
+			return;
+		}
+
+		if (addRolodexEntry(nodeNbr, regionNbr, iondb, iondbObj, elt,
+				announce) == 0)
+		{
+			postRegistration(regionNbr, nodeNbr, iondb, iondbObj,
+					cxaddr, announce);
+		}
+
+		return;
+	}
+
+	/*	Supplementary registration for a declared peer.		*/
+
+	if (augmentRolodexEntry(nodeNbr, regionNbr, iondb, iondbObj, &member,
+			memberObj, elt, announce) == 0)
+	{
+		postRegistration(regionNbr, nodeNbr, iondb, iondbObj,
+				cxaddr, announce);
+	}
+}
+
+static int	addRegionToContact(PsmAddress cxelt, uint32_t regionNbr,
+			time_t toTime, size_t xmitRate, float confidence,
+			PsmAddress *cxaddr, int announce)
+{
+	Sdr		sdr = getIonsdr();
+	PsmPartition	ionwm = getIonwm();
+	IonCXref	*cxref;
+	Object		obj;
+	IonContact	contact;
+	Object		iondbObj;
+	IonDB		iondb;
+	int		regionIdx;
+
+	*cxaddr = sm_rbt_data(ionwm, cxelt);
+	cxref = (IonCXref *) psp(ionwm, *cxaddr);
+	CHKERR(sdr_begin_xn(sdr));
+	obj = sdr_list_data(sdr, cxref->contactElt);
+	sdr_stage(sdr, (char *) &contact, obj, sizeof(IonContact));
+#if RFXDEBUG
+writeMemo("In addRegionToContact...");
+writeMemoNote("...contact.regions[0]", itoa(contact.regions[0]));
+writeMemoNote("...contact.regions[1]", itoa(contact.regions[1]));
+#endif
+	if (contact.regions[0] == regionNbr
+	|| contact.regions[1] == regionNbr)
+	{
+#if RFXDEBUG
+writeMemo("Duplicate contact ignored");
+#endif
+		sdr_exit_xn(sdr);
+		return 11;
+	}
+
+	if (contact.regions[0] != 0
+	&& contact.regions[1] != 0)
+	{
+		writeMemoNote("[?] Contact is already included in two contact \
+plans", itoa(regionNbr));
+		sdr_exit_xn(sdr);
+		return 13;
+	}
+
+	/*	Incorporating existing contact into a new contact
+	 *	plan, e.g., registering in a second region.		*/
+
+	if (contact.toTime != toTime
+	|| contact.xmitRate != xmitRate
+	|| contact.confidence != confidence)
+	{
+		writeMemoNote("[?] Conflicting contact parameters",
+				itoa(regionNbr));
+		sdr_exit_xn(sdr);
+		return 13;
+	}
+
+	iondbObj = getIonDbObject();
+	CHKERR(iondbObj);
+	sdr_stage(sdr, (char *) &iondb, iondbObj, sizeof(IonDB));
+
+	/*	Update registration contact, if applicable.		*/
+
+	if (contact.type == CtRegistration)
+	{
+		if (contact.fromNode == getOwnNodeNbr())
+		{
+			/*	Registering self in a region.		*/
+
+			registerSelf(regionNbr, &iondb, iondbObj,
+					cxaddr, announce);
+		}
+		else	/*	Registering some other node.		*/
+		{
+			registerPeer(contact.fromNode, regionNbr,
+					&iondb, iondbObj, cxaddr, announce);
+		}
+
+		if (contact.regions[0] == 0)
+		{
+			contact.regions[0] = regionNbr;
+		}
+		else 
+		{
+			contact.regions[1] = regionNbr;
+		}
+
+		sdr_write(sdr, obj, (char *) &contact, sizeof(IonContact));
+		return sdr_end_xn(sdr);
+	}
+
+	/*	Contact is either Hypothetical or Scheduled or
+	 *	Predicted.  Must occur within one of this node's
+	 *	regions in order to be utilized.			*/
+
+	if (contact.type != CtScheduled)
+	{
+		/*	Effects of adding Hypothetical and Predicted
+		 *	contacts are private, not to be synchronized
+		 *	with the rest of the region.			*/
+
+		announce = 0;
+	}
+
+	regionIdx = ionPickRegion(regionNbr);
+	if (regionIdx < 0 || regionIdx > 1)
+	{
+		/*	Region number of contact identifies a region
+		 *	of which the local node is not a member.
+		 *	This is valid only for a registration contact
+		 *	that causes pre-registration in the new
+		 *	region.						*/
+
+		writeMemoNote("[?] Contact is for a foreign region",
+				itoa(regionNbr));
+		sdr_exit_xn(sdr);
+		return 7;	/*	Must ignore.			*/
+	}
+
+	if (announce > 0)
+	{
+		postCpsNotice(regionNbr, contact.fromTime, contact.toTime,
+				contact.fromNode, contact.toNode,
+				contact.xmitRate, contact.confidence);
+	}
+
+	if (contact.regions[0] == 0)
+	{
+		contact.regions[0] = regionNbr;
+	}
+	else 
+	{
+		contact.regions[1] = regionNbr;
+	}
+
+	sdr_write(sdr, obj, (char *) &contact, sizeof(IonContact));
+	return sdr_end_xn(sdr);
 }
 
 int	rfx_insert_contact(uint32_t regionNbr, time_t fromTime, time_t toTime,
@@ -1417,16 +1698,22 @@ int	rfx_insert_contact(uint32_t regionNbr, time_t fromTime, time_t toTime,
 	IonVdb 		*vdb = getIonVdb();
 	uvast		ownNodeNbr = getOwnNodeNbr();
 	ContactType	contactType;
-	Object		iondbObj;
-	IonDB		iondb;
-	int		regionIdx;
 	IonCXref	arg;
 	PsmAddress	cxelt;
 	PsmAddress	nextElt;
+	Object		iondbObj;
+	IonDB		iondb;
+	int		regionIdx;
 	IonCXref	*cxref;
+	Object		obj;
+	IonContact	contact;
+	int		result;
 	char		buf1[TIMESTAMPBUFSZ];
 	char		buf2[TIMESTAMPBUFSZ];
 	char		contactIdString[128];
+#if RFXDEBUG
+char	msgbuf[256];
+#endif
 
 	CHKERR(cxaddr);
 	*cxaddr = 0;			/*	Default.		*/
@@ -1470,6 +1757,9 @@ between 0.0 and 1.0.");
 		xmitRate = 0;
 		confidence = 1.0;
 		contactType = CtRegistration;
+#if RFXDEBUG
+writeMemo("It's a registration contact.");
+#endif
 	}
 	else if (fromTime == 0)		/*	Hypothetical.		*/
 	{
@@ -1510,17 +1800,59 @@ must be later than From time.");
 		}
 	}
 
+#if RFXDEBUG
+isprintf(msgbuf, sizeof msgbuf, "At node " UVAST_FIELDSPEC " rfx_insert_\
+contact for region %u from %lu to %lu from node " UVAST_FIELDSPEC " to node "
+UVAST_FIELDSPEC ".", ownNodeNbr, regionNbr, fromTime, toTime, fromNode, toNode);
+writeMemo(msgbuf);
+#endif
+
 	iondbObj = getIonDbObject();
 	CHKERR(iondbObj);
 	CHKERR(sdr_begin_xn(sdr));
 	sdr_stage(sdr, (char *) &iondb, iondbObj, sizeof(IonDB));
+	if (announce < 0)	/*	Pre-registering in new region.	*/
+	{
+		/*	Only the registration contact for a peer node
+		 *	that resides in the new region can initiate
+		 *	pre-registration.				*/
 
-	/*	Insert registration contact, if applicable.		*/
+		if (contactType == CtRegistration
+		&& fromNode != getOwnNodeNbr())
+		{
+			preRegister(regionNbr, &iondb, iondbObj);
+		}
+	}
+
+	arg.fromNode = fromNode;
+	arg.toNode = toNode;
+	arg.fromTime = fromTime;
+	cxelt = sm_rbt_search(ionwm, vdb->contactIndex, rfx_order_contacts,
+			&arg, &nextElt);
+	if (cxelt)	/*	Contact was previously inserted.	*/
+	{
+		CHKERR(sdr_end_xn(sdr) == 0);
+		return addRegionToContact(cxelt, regionNbr, toTime, xmitRate,
+				confidence, cxaddr, announce);
+	}
+
+	/*	Inserting a new contact.				*/
 
 	if (contactType == CtRegistration)
 	{
-		handleRegistrationContact(regionNbr, fromNode, &iondb, iondbObj,
-				cxaddr, announce);
+       		if (fromNode == getOwnNodeNbr())
+		{
+			/*	Registering self in a region.		*/
+
+			registerSelf(regionNbr, &iondb, iondbObj,
+					cxaddr, announce);
+		}
+		else	/*	Registering some other node.		*/
+		{
+			registerPeer(fromNode, regionNbr, &iondb, iondbObj,
+					cxaddr, announce);
+		}
+
 		return sdr_end_xn(sdr);
 	}
 
@@ -1537,26 +1869,30 @@ must be later than From time.");
 		announce = 0;
 	}
 
-	if (regionNbr != iondb.regions[0].regionNbr
-	&& regionNbr != iondb.regions[1].regionNbr)
+	regionIdx = ionPickRegion(regionNbr);
+	if (regionIdx < 0 || regionIdx > 1)
 	{
+		/*	Region number of contact identifies a region
+		 *	of which the local node is not a member.
+		 *	This is valid only for a registration contact
+		 *	that causes pre-registration in the new
+		 *	region.						*/
+
 		writeMemoNote("[?] Contact is for a foreign region",
 				itoa(regionNbr));
 		sdr_exit_xn(sdr);
-		return 7;	/*	Do not insert.		*/
+		return 7;	/*	Must ignore.			*/
 	}
-
-	*cxaddr = 0;	/*	Default.				*/
-	memset((char *) &arg, 0, sizeof(IonCXref));
-	arg.regionNbr = regionNbr;
-	arg.fromNode = fromNode;
-	arg.toNode = toNode;
-	cxelt = sm_rbt_search(ionwm, vdb->contactIndex, rfx_order_contacts,
-			&arg, &nextElt);
 
 	/*	Set cxelt to point to first contact for this node pair,
 	 *	if any.							*/
 
+	*cxaddr = 0;	/*	Default.				*/
+	memset((char *) &arg, 0, sizeof(IonCXref));
+	arg.fromNode = fromNode;
+	arg.toNode = toNode;
+	cxelt = sm_rbt_search(ionwm, vdb->contactIndex, rfx_order_contacts,
+			&arg, &nextElt);
 	if (cxelt == 0)
 	{
 		cxelt = nextElt;
@@ -1616,7 +1952,7 @@ hypothetical contact, as that contact is now discovered.");
 				case CtHypothetical:
 					/*	Replace this one.	*/
 
-					if (rfx_remove_contact(cxref->regionNbr,
+					if (rfx_remove_contact(regionNbr,
 							&cxref->fromTime,
 							cxref->fromNode,
 							cxref->toNode, 0) < 0)
@@ -1672,9 +2008,8 @@ hypothetical contact, as that contact is now discovered.");
 			 *	predicted contact.  The predicted
 			 *	contact is overridden.			*/
 
-			if (rfx_remove_contact(cxref->regionNbr,
-					&cxref->fromTime, cxref->fromNode,
-					cxref->toNode, 0) < 0)
+			if (rfx_remove_contact(regionNbr, &cxref->fromTime,
+					cxref->fromNode, cxref->toNode, 0) < 0)
 			{
 				sdr_cancel_xn(sdr);
 				return -1;
@@ -1698,6 +2033,33 @@ hypothetical contact, as that contact is now discovered.");
 		/*	New contact overlaps with a non-predicted
 		 *	contact.					*/
 
+/*	EXPERIMENTAL!							*/
+		obj = sdr_list_data(sdr, cxref->contactElt);
+		sdr_read(sdr, (char *) &contact, obj, sizeof(IonContact));
+		if (contact.regions[0] != 0 || contact.regions[1] != 0)
+		{
+			/*	Contact is available for attachment
+			 *	to another contact plan.		*/
+
+			if (regionNbr != contact.regions[0]
+			&& regionNbr != contact.regions[1])
+			{
+				/*	Only trying to attach contact
+				 *	to another contact plan.	*/
+
+				result = addRegionToContact(cxelt, regionNbr,
+					contact.toTime, contact.xmitRate,
+					contact.confidence, cxaddr, announce);
+				if (sdr_end_xn(sdr) < 0)
+				{
+					return -1;
+				}
+
+				return result;
+			}
+		}
+/*	End of EXPERIMENTAL!						*/
+
 		writeTimestampUTC(fromTime, buf1);
 		writeTimestampUTC(toTime, buf2);
 		isprintf(contactIdString, sizeof contactIdString,
@@ -1714,21 +2076,15 @@ hypothetical contact, as that contact is now discovered.");
 	}
 
 	/*	Contact doesn't conflict with any other contact in
-	 *	the database; okay to add.
-	 *
-	 *	By virtue of this contact, the nodes involved are
-	 *	automatically members of the indicated region even
-	 *	if no registration contacts were previously posted.	*/
+	 *	the database; okay to add.				*/
 
-	registerInRegion(regionNbr, fromNode, &iondb, iondbObj, announce);
-	registerInRegion(regionNbr, toNode, &iondb, iondbObj, announce);
 	regionIdx = ionPickRegion(regionNbr);
 	insertContact(regionIdx, &iondb, iondbObj, fromTime, toTime, fromNode,
 			toNode, xmitRate, confidence, contactType, cxaddr);
 
 	/*	Notify other nodes in the region if necessary.		*/
 
-	if (announce)
+	if (announce > 0)
 	{
 		postCpsNotice(regionNbr, fromTime, toTime, fromNode, toNode,
 				xmitRate, confidence);
@@ -1739,19 +2095,25 @@ hypothetical contact, as that contact is now discovered.");
 
 char	*rfx_print_contact(PsmAddress cxaddr, char *buffer)
 {
-	IonCXref	*contact;
+	Sdr		sdr = getIonsdr();
+	IonCXref	*cxref;
+	Object		obj;
+	IonContact	contact;
 	char		fromTimeBuffer[TIMESTAMPBUFSZ];
 	char		toTimeBuffer[TIMESTAMPBUFSZ];
 
 	CHKNULL(cxaddr);
 	CHKNULL(buffer);
-	contact = (IonCXref *) psp(getIonwm(), cxaddr);
-	writeTimestampUTC(contact->fromTime, fromTimeBuffer);
-	writeTimestampUTC(contact->toTime, toTimeBuffer);
+	cxref = (IonCXref *) psp(getIonwm(), cxaddr);
+	obj = sdr_list_data(sdr, cxref->contactElt);
+	sdr_read(sdr, (char *) &contact, obj, sizeof(IonContact));
+	writeTimestampUTC(contact.fromTime, fromTimeBuffer);
+	writeTimestampUTC(contact.toTime, toTimeBuffer);
 	isprintf(buffer, RFX_NOTE_LEN, "From %20s to %20s the xmit rate from \
 node " UVAST_FIELDSPEC " to node " UVAST_FIELDSPEC " is %10lu bytes/sec, \
-confidence %f.", fromTimeBuffer, toTimeBuffer, contact->fromNode,
-		contact->toNode, contact->xmitRate, contact->confidence);
+confidence %f, regions %lu and %lu.", fromTimeBuffer, toTimeBuffer,
+		contact.fromNode, contact.toNode, contact.xmitRate,
+		contact.confidence, contact.regions[0], contact.regions[1]);
 	return buffer;
 }
 
@@ -1765,15 +2127,14 @@ int	rfx_revise_contact(uint32_t regionNbr, time_t fromTime, uvast fromNode,
 	IonCXref	arg;
 	PsmAddress	cxelt;
 	PsmAddress	nextElt;
-	PsmAddress	cxaddr;
-	IonCXref	*cxref;
 	Object		obj;
 	IonContact	contact;
+	PsmAddress	cxaddr;
+	IonCXref	*cxref;
 	IonNeighbor	*neighbor;
 
 	CHKERR(confidence <= 1.0);
 	memset((char *) &arg, 0, sizeof(IonCXref));
-	arg.regionNbr = regionNbr;
 	arg.fromNode = fromNode;
 	arg.toNode = toNode;
 	arg.fromTime = fromTime;
@@ -1786,8 +2147,6 @@ int	rfx_revise_contact(uint32_t regionNbr, time_t fromTime, uvast fromNode,
 		sdr_exit_xn(sdr);
 		return 1;
 	}
-
-	/*	Update the contact and its xref.			*/
 
 	cxaddr = sm_rbt_data(ionwm, cxelt);
 	cxref = (IonCXref *) psp(ionwm, cxaddr);
@@ -1802,6 +2161,18 @@ int	rfx_revise_contact(uint32_t regionNbr, time_t fromTime, uvast fromNode,
 
 	obj = sdr_list_data(sdr, cxref->contactElt);
 	sdr_stage(sdr, (char *) &contact, obj, sizeof(IonContact));
+	if (contact.regions[0] != regionNbr
+	&& contact.regions[1] != regionNbr)
+	{
+		/*	Contact is not part of the contact plan for
+		 *	the indicated region.				*/
+
+		sdr_exit_xn(sdr);
+		return 1;
+	}
+
+	/*	Update the contact and its xref.			*/
+
 	contact.xmitRate = xmitRate;
 	cxref->xmitRate = xmitRate;
 	if (confidence >= 0.0)
@@ -1844,7 +2215,7 @@ int	rfx_revise_contact(uint32_t regionNbr, time_t fromTime, uvast fromNode,
 	/*	Contact has been updated.  No change to contact graph,
 	 *	no need to recompute routes.  Announce if necessary.	*/
 
-	if (announce)
+	if (announce > 0)
 	{
 		if (confidence < 0.0)	/*	No change.		*/
 		{
@@ -1872,16 +2243,17 @@ int	rfx_revise_contact(uint32_t regionNbr, time_t fromTime, uvast fromNode,
 static void	removeAllContacts(uint32_t regionNbr, uvast fromNode,
 			uvast toNode, int announce)
 {
+	Sdr		sdr = getIonsdr();
 	PsmPartition	ionwm = getIonwm();
 	IonVdb 		*vdb = getIonVdb();
 	IonCXref	arg;
 	PsmAddress	cxelt;
-	PsmAddress	nextElt;
 	PsmAddress	cxaddr;
 	IonCXref	*cxref;
+	Object		addr;
+	IonContact	contact;
 
 	memset((char *) &arg, 0, sizeof(IonCXref));
-	arg.regionNbr = regionNbr;
 	arg.fromNode = fromNode;
 	arg.toNode = toNode;
 
@@ -1899,38 +2271,154 @@ static void	removeAllContacts(uint32_t regionNbr, uvast fromNode,
 		if (cxref->fromNode > fromNode
 		|| cxref->toNode > toNode)
 		{
-			break;	/*	No more matches.		*/
+			return;	/*	No more matches.		*/
 		}
 
-		nextElt = sm_rbt_next(ionwm, cxelt); 
-		if (announce)
+		if (announce > 0)
 		{
 			postCpsNotice(regionNbr, cxref->fromTime, 0,
 				cxref->fromNode, cxref->toNode, 0, 0.0);
 		}
 
-		deleteContact(cxaddr);
-
-		/*	Now reposition at the next contact.		*/
-
-		if (nextElt == 0)
+		addr = sdr_list_data(sdr, cxref->contactElt);
+		sdr_stage(sdr, (char *) &contact, addr, sizeof(IonContact));
+		if (contact.regions[0] == regionNbr)
 		{
-			break;	/*	No more contacts.		*/
+			contact.regions[0] = 0;
+		}
+		else if (contact.regions[1] == regionNbr)
+		{
+			contact.regions[1] = 0;
+		}
+		else	/*	Skip this one.				*/
+		{
+			cxelt = sm_rbt_next(ionwm, cxelt);
+			continue;
 		}
 
-		cxaddr = sm_rbt_data(ionwm, nextElt);
-		cxref = (IonCXref *) psp(ionwm, cxaddr);
-		arg.regionNbr = regionNbr;
-		arg.fromNode = cxref->fromNode;
-		arg.toNode = cxref->toNode;
-		arg.fromTime = cxref->fromTime;
-		cxelt = sm_rbt_search(ionwm, vdb->contactIndex,
-				rfx_order_contacts, &arg, &nextElt);
+		if (contact.regions[0] != 0 || contact.regions[1] != 0)
+		{
+			sdr_write(sdr, addr, (char *) &contact,
+					sizeof(IonContact));
+		}
+		else
+		{
+			/*	Contact is no longer relevant.		*/
+
+			deleteContact(cxaddr);
+		}
+
+		/*	Now reposition at next relevant contact.	*/
+
+		oK(sm_rbt_search(ionwm, vdb->contactIndex,
+				rfx_order_contacts, &arg, &cxelt));
+	}
+}
+
+static void	vacateRegion(IonDB *iondb, Object iondbObj, int regionIdx)
+{
+	Sdr		sdr = getIonsdr();
+	uint32_t	regionNbr;
+	uint32_t	remainingRegionNbr;
+	Object		elt;
+	Object		obj;
+	IonContact	contact;
+#if RFXDEBUG
+char	buffer[256];
+#endif
+
+	regionNbr = iondb->regions[regionIdx].regionNbr;
+	remainingRegionNbr = iondb->regions[1 - regionIdx].regionNbr;
+#if RFXDEBUG
+sprintf(buffer, "Node " UVAST_FIELDSPEC " is vacating region %u.",
+getOwnNodeNbr(), regionNbr); writeMemo(buffer);
+#endif
+
+	iondb->regions[regionIdx].regionNbr = 0;
+
+	/*	Forget contact plan for this region.			*/
+
+	for (elt = sdr_list_first(sdr, iondb->contacts); elt;
+			elt = sdr_list_next(sdr, elt))
+	{
+		obj = sdr_list_data(sdr, elt);
+		sdr_stage(sdr, (char *) &contact, obj, sizeof(IonContact));
+		if (contact.regions[0] == regionNbr)
+		{
+			contact.regions[0] = 0;
+			if (contact.regions[1] != remainingRegionNbr)
+			{
+				contact.regions[1] = 0;
+			}
+		}
+		else if (contact.regions[1] == regionNbr)
+		{
+			contact.regions[1] = 0;
+			if (contact.regions[0] != remainingRegionNbr)
+			{
+				contact.regions[0] = 0;
+			}
+		}
+		else	/*	Clean up.				*/
+		{
+			if (contact.regions[0] != remainingRegionNbr)
+			{
+				contact.regions[0] = 0;
+			}
+
+			if (contact.regions[1] != remainingRegionNbr)
+			{
+				contact.regions[1] = 0;
+			}
+		}
+
+		sdr_write(sdr, obj, (char *) &contact, sizeof(IonContact));
+	}
+}
+
+static void	forgetRegionMembers(IonDB *iondb)
+{
+	Sdr		sdr = getIonsdr();
+	uint32_t	homeRegionNbr;
+	Object		elt;
+	Object		nextElt;
+	Object		obj;
+	RegionMember	member;
+
+	/*	Forget nodes that are not registered in the region
+	 *	that is now the local node's home region.		*/
+
+	homeRegionNbr = iondb->regions[0].regionNbr;
+	for (elt = sdr_list_first(sdr, iondb->rolodex); elt; elt = nextElt)
+	{
+		nextElt = sdr_list_next(sdr, elt);
+		obj = sdr_list_data(sdr, elt);
+		sdr_read(sdr, (char *) &member, obj, sizeof(RegionMember));
+#if RFXDEBUG
+writeMemoNote("Considering member", itoa(member.nodeNbr));
+#endif
+		if (homeRegionNbr != 0)
+		{
+			if (member.outerRegionNbr == homeRegionNbr
+			|| member.homeRegionNbr == homeRegionNbr)
+			{
+				continue;
+			}
+		}
+
+		/*	Node is no longer relevant.			*/
+
+#if RFXDEBUG
+writeMemoNote("Discarding rolodex member", itoa(member.nodeNbr));
+#endif
+		sdr_free(sdr, obj);
+		sdr_list_delete(sdr, elt, NULL, NULL);
+		postPwcNotice(member.nodeNbr, NotPassageway);
 	}
 }
 
 static void	unregisterFromRegion(uvast fromNode, IonCXref *cxref,
-			uint32_t regionNbr, int announce)
+			uint32_t regionNbr)
 {
 	Sdr		sdr = getIonsdr();
 	PsmPartition	ionwm = getIonwm();
@@ -1939,14 +2427,20 @@ static void	unregisterFromRegion(uvast fromNode, IonCXref *cxref,
 	Object		iondbObj;
 	IonDB		iondb;
 	Object		elt;
-	Object		nextElt;
+	RegionMember	member;
+	uint32_t	homeRegionNbr;
 	Object		obj;
+	Object		nextElt;
 	IonContact	contact;
 	IonCXref	arg;
 	PsmAddress	cxelt;
+	PsmAddress	nextCxelt;
 	PsmAddress	cxaddr;
-	RegionMember	member;
 
+#if RFXDEBUG
+writeMemoNote("In region", itoa(regionNbr));
+writeMemoNote("...unregistering node", itoa(fromNode));
+#endif
 	iondbObj = getIonDbObject();
 	CHKVOID(iondbObj);
 	sdr_stage(sdr, (char *) &iondb, iondbObj, sizeof(IonDB));
@@ -1954,126 +2448,208 @@ static void	unregisterFromRegion(uvast fromNode, IonCXref *cxref,
 	{
 		/*	Local node is being removed from region.	*/
 
+		regionIdx = ionPickRegion(regionNbr);
+		if (iondb.regions[regionIdx].locked)
+		{
+			/*	Previous invocation of rfx_remove_contact
+			 *	just announced the unregistration and
+			 *	locked the region to enable multicast
+			 *	to work.  We are now receiving that
+			 *	announcement and unlocking the region.
+			 *	A subsequent rfx_remove_contact with
+			 *	"announce" set to zero will then be
+			 *	able to effect the removal of the
+			 *	registration contact.			*/
+#if RFXDEBUG
+writeMemo("Just unlocking the region.");
+#endif
+			iondb.regions[regionIdx].locked = 0;
+			sdr_write(sdr, iondbObj, (char *) &iondb,
+					sizeof(IonDB));
+			return;
+		}
+
 		if (regionNbr == iondb.regions[0].regionNbr)
 		{
+#if RFXDEBUG
+writeMemoNote("Removing self from home region", itoa(regionNbr));
+#endif
 			/*	Node is leaving its home region.
 			 *	Its outer region, if any, becomes
 			 *	its new home region.			*/
 
-			vacateRegion(&iondb, iondbObj, 0, announce);
+			vacateRegion(&iondb, iondbObj, 0);
 			iondb.regions[0].regionNbr = iondb.regions[1].regionNbr;
-			iondb.regions[0].contacts = iondb.regions[1].contacts;
 			iondb.regions[1].regionNbr = 0;
-			iondb.regions[1].contacts = 0;
 		}
-		else
+		else if (regionNbr == iondb.regions[1].regionNbr)
 		{
+#if RFXDEBUG
+writeMemoNote("Removing self from outer region", itoa(regionNbr));
+#endif
 			/*	Node is leaving its outer region.	*/
 
-			vacateRegion(&iondb, iondbObj, 1, announce);
+			vacateRegion(&iondb, iondbObj, 1);
+		}
+		else	/*	Node is already unregistered.		*/
+		{
+#if RFXDEBUG
+writeMemo("Node is already unregistered from this region.");
+#endif
+			return;
 		}
 
 		sdr_write(sdr, iondbObj, (char *) &iondb, sizeof(IonDB));
-		return;
-	}
 
-	/*	The unregistering node is not the local node.  Just
-	 *	delete all other contacts for this region that are
-	 *	From or To this node and update the rolodex entry
-	 *	for this node.						*/
+		/*	Update own rolodex entry.			*/
 
-	regionIdx = ionPickRegion(regionNbr);
-	if (regionIdx < 0 || regionIdx > 1)
-	{
-		return;
-	}
-
-	for (elt = sdr_list_first(sdr, iondb.regions[regionIdx].contacts);
-			elt; elt = nextElt)
-	{
-		nextElt = sdr_list_next(sdr, elt);
-		obj = sdr_list_data(sdr, elt);
-		sdr_read(sdr, (char *) &contact, obj, sizeof(IonContact));
-		if (contact.fromNode == fromNode
-		|| contact.toNode == fromNode)
+		homeRegionNbr = iondb.regions[0].regionNbr;
+		obj = findLocalNode(fromNode, &member, &elt);
+		if (obj)
 		{
-			memset((char *) &arg, 0, sizeof(IonCXref));
-			arg.regionNbr = regionNbr;
-			arg.fromNode = contact.fromNode;
-			arg.toNode = contact.toNode;
-			arg.fromTime = contact.fromTime;
-			oK(sm_rbt_search(ionwm, vdb->contactIndex,
-					rfx_order_contacts, &arg, &cxelt));
-			if (cxelt)
+			if (homeRegionNbr == 0)
 			{
-				cxaddr = sm_rbt_data(ionwm, cxelt);
-				deleteContact(cxaddr);
-			}
-		}
-	}
-
-	for (elt = sdr_list_first(sdr, iondb.rolodex); elt; elt = nextElt)
-	{
-		nextElt = sdr_list_next(sdr, elt);
-		obj = sdr_list_data(sdr, elt);
-		sdr_stage(sdr, (char *) &member, obj, sizeof(RegionMember));
-		if (member.nodeNbr < fromNode)
-		{
-			continue;
-		}
-
-		if (member.nodeNbr > fromNode)
-		{
-			break;		/*	Node not found.		*/
-		}
-
-		/*	This is the unregistering node.			*/
-
-		if (member.outerRegionNbr == regionNbr)
-		{
-			/*	Node is being unregistered from its
-			 *	outer region.				*/
-
-			member.outerRegionNbr = 0;
-			sdr_write(sdr, obj, (char *) &member,
-					sizeof(RegionMember));
-			break;
-		}
-
-		if (member.homeRegionNbr == regionNbr)
-		{
-			/*	Node is being unregistered from its
-			 *	home region; its outer region, if
-			 *	any, becomes its home region.		*/
-
-			if (member.outerRegionNbr == 0)
-			{
-				/*	Complete removal of node.	*/
-
 				sdr_free(sdr, obj);
 				sdr_list_delete(sdr, elt, NULL, NULL);
 			}
 			else
 			{
-				member.homeRegionNbr = member.outerRegionNbr;
+				member.homeRegionNbr = homeRegionNbr;
 				member.outerRegionNbr = 0;
 				sdr_write(sdr, obj, (char *) &member,
 						sizeof(RegionMember));
 			}
 
-			break;
+			postPwcNotice(member.nodeNbr, NotPassageway);
 		}
 
-		/*	A glitch: the node is not registered in this
-		 *	region.  Nothing to do.				*/
+		/*	Review other rolodex entries.			*/
 
-		break;
+		forgetRegionMembers(&iondb);
+		return;
+	}
+
+#if RFXDEBUG
+writeMemoNote("Removing from region", itoa(regionNbr));
+writeMemoNote("...node", itoa(fromNode));
+#endif
+	/*	The unregistering node is not the local node.
+	 *
+	 *	Delete all other contacts for this region that are
+	 *	From or To the unregistering node.			*/
+
+	for (elt = sdr_list_first(sdr, iondb.contacts); elt; elt = nextElt)
+	{
+		nextElt = sdr_list_next(sdr, elt);
+		obj = sdr_list_data(sdr, elt);
+		sdr_stage(sdr, (char *) &contact, obj, sizeof(IonContact));
+		if (contact.fromNode != fromNode
+		&& contact.toNode != fromNode)
+		{
+			continue;
+		}
+
+		if (contact.regions[0] == regionNbr)
+		{
+			contact.regions[0] = 0;
+		}
+		else if (contact.regions[1] == regionNbr)
+		{
+			contact.regions[1] = 0;
+		}
+		else
+		{
+			continue;
+		}
+
+		if (contact.regions[0] != 0
+		|| contact.regions[1] != 0)
+		{
+			sdr_write(sdr, obj, (char *) &contact,
+					sizeof(IonContact));
+			continue;
+		}
+
+		/*	Contact is no longer relevant.	*/
+
+		memset((char *) &arg, 0, sizeof(IonCXref));
+		arg.fromNode = contact.fromNode;
+		arg.toNode = contact.toNode;
+		arg.fromTime = contact.fromTime;
+		cxelt = sm_rbt_search(ionwm, vdb->contactIndex,
+			rfx_order_contacts, &arg, &nextCxelt);
+		if (cxelt)
+		{
+			cxaddr = sm_rbt_data(ionwm, cxelt);
+			deleteContact(cxaddr);
+		}
+	}
+
+	/*	Adjust rolodex entry of the unregistering node.		*/
+
+	obj = findLocalNode(fromNode, &member, &elt);
+	if (obj)
+	{
+		if (member.homeRegionNbr == regionNbr)
+		{
+			/*	Node is being unregistered from its
+			 *	home region; its outer region, if
+			 *	it is the local node's home or outer
+			 *	region, becomes its home region.	*/
+	
+			member.homeRegionNbr = member.outerRegionNbr;
+		}
+
+		member.outerRegionNbr = 0;
+		if (member.homeRegionNbr > 0
+		&& (member.homeRegionNbr == iondb.regions[0].regionNbr
+		|| member.homeRegionNbr == iondb.regions[1].regionNbr))
+		{
+			sdr_write(sdr, obj, (char *) &member,
+					sizeof(RegionMember));
+		}
+		else
+		{
+			/*	Rolodex member is now irrelevant.	*/
+
+			sdr_free(sdr, obj);
+			sdr_list_delete(sdr, elt, NULL, NULL);
+		}
+
+		postPwcNotice(member.nodeNbr, NotPassageway);
+	}
+}
+
+static void	announceUnregistration(uint32_t regionNbr, uvast nodeNbr)
+{
+	Sdr	sdr = getIonsdr();
+	int	regionIdx;
+	Object	iondbObj;
+	IonDB	iondb;
+
+	/*	Informing entire rolodex of the Unregistration.		*/
+
+	regionIdx = ionPickRegion(regionNbr);
+	if (regionIdx == 0 || regionIdx == 1)
+	{
+		iondbObj = getIonDbObject();
+		CHKVOID(iondbObj);
+		sdr_stage(sdr, (char *) &iondb, iondbObj, sizeof(IonDB));
+		iondb.regions[regionIdx].locked = 1;
+		sdr_write(sdr, iondbObj, (char *) &iondb, sizeof(IonDB));
+#if RFXDEBUG
+writeMemoNote("Announcing unregistration of node", itoa(nodeNbr));
+writeMemoNote("...from region", itoa(regionNbr));
+#endif
+		postCpsNotice(regionNbr, MAX_POSIX_TIME, 0, nodeNbr, nodeNbr,
+				0, 0.0);
 	}
 }
 
 static void	removeOneContact(uint32_t regionNbr, time_t fromTime,
 			uvast fromNode, uvast toNode, int announce)
 {
+	Sdr		sdr = getIonsdr();
 	PsmPartition	ionwm = getIonwm();
 	IonVdb 		*vdb = getIonVdb();
 	IonCXref	arg;
@@ -2081,9 +2657,13 @@ static void	removeOneContact(uint32_t regionNbr, time_t fromTime,
 	PsmAddress	nextElt;
 	PsmAddress	cxaddr;
 	IonCXref	*cxref;
+	Object		obj;
+	IonContact	contact;
 
+#if RFXDEBUG
+writeMemo("In removeOneContact...");
+#endif
 	memset((char *) &arg, 0, sizeof(IonCXref));
-	arg.regionNbr = regionNbr;
 	arg.fromNode = fromNode;
 	arg.toNode = toNode;
 	arg.fromTime = fromTime;
@@ -2094,6 +2674,13 @@ static void	removeOneContact(uint32_t regionNbr, time_t fromTime,
 			&arg, &nextElt);
 	if (cxelt == 0)		/*	No such contact.		*/
 	{
+#if RFXDEBUG
+writeMemo("Contact to be removed is not found.");
+writeMemoNote("Region", itoa(regionNbr));
+writeMemoNote("From", itoa(fromNode));
+writeMemoNote("To", itoa(toNode));
+writeMemoNote("At", itoa(fromTime));
+#endif
 		return;
 	}
 
@@ -2101,20 +2688,61 @@ static void	removeOneContact(uint32_t regionNbr, time_t fromTime,
 	cxref = (IonCXref *) psp(ionwm, cxaddr);
 	if (cxref->type == CtRegistration)
 	{
+#if RFXDEBUG
+writeMemoNote("Removing a registration contact", itoa(announce));
+#endif
 		/*	Deleting a registration contact removes
 		 *	the node from the region.  The registration
 		 *	contact itself is deleted in the process.	*/
 
-		unregisterFromRegion(fromNode, cxref, regionNbr, announce);
-	}
-	else	/*	Ordinary contact removal.			*/
-	{
-		if (announce)
+		if (announce > 0)
 		{
-			postCpsNotice(regionNbr, cxref->fromTime, 0,
-				cxref->fromNode, cxref->toNode, 0, 0.0);
+			/*	Unregistration will ONLY be announced
+			 *	(to all members of the rolodex).
+			 *	Removal of the registration contact
+			 *	requires a second invocation of
+			 *	rfx_remove_contact with announce set
+			 *	to 0.					*/
+
+			announceUnregistration(regionNbr, fromNode);
+		}
+		else
+		{
+			unregisterFromRegion(fromNode, cxref, regionNbr);
 		}
 
+		return;
+	}
+
+	/*	Ordinary contact removal.				*/
+
+#if RFXDEBUG
+writeMemo("Removing a scheduled contact.");
+#endif
+	if (announce > 0)
+	{
+		postCpsNotice(regionNbr, cxref->fromTime, 0, cxref->fromNode,
+				cxref->toNode, 0, 0.0);
+	}
+
+	obj = sdr_list_data(sdr, cxref->contactElt);
+	sdr_stage(sdr, (char *) &contact, obj, sizeof(IonContact));
+	if (contact.regions[0] == regionNbr)
+	{
+		contact.regions[0] = 0;
+	}
+	else if (contact.regions[0] == regionNbr)
+	{
+		contact.regions[0] = 0;
+	}
+
+	if (contact.regions[0] != 0
+	|| contact.regions[1] != 0)
+	{
+		sdr_write(sdr, obj, (char *) &contact, sizeof(IonContact));
+	}
+	else	/*	Contact is no longer relevant.		*/
+	{
 		deleteContact(cxaddr);
 	}
 }
@@ -2127,11 +2755,16 @@ int	rfx_remove_contact(uint32_t regionNbr, time_t *fromTime, uvast fromNode,
 	/*	Note: when the fromTime passed to ionadmin is '*'
 	 *	a NULL fromTime is passed to rfx_remove_contact,
 	 *	where it is interpreted as "all contacts between
-	 *	these two nodes".					*/
+	 *	these two nodes".  Note that registration contacts
+	 *	are NOT contacts between different nodes and
+	 *	therefore are NOT removed by a wild-card deletion.	*/
 
+#if RFXDEBUG
+writeMemoNote("In rfx_remove_contact...", itoa(announce));
+#endif
 	CHKERR(regionNbr > 0);
 	CHKERR(sdr_begin_xn(sdr));
-	if (fromTime)		/*	Not a wild-card deletion.	*/
+	if (fromTime)	/*	Not a wild-card deletion.		*/
 	{
 		removeOneContact(regionNbr, *fromTime, fromNode, toNode,
 				announce);
@@ -2159,27 +2792,22 @@ void	rfx_brief_contacts(uint32_t regionNbr)
 	int		briefingFile;
 	PsmAddress	elt;
 	PsmAddress	addr;
-	IonCXref	*contact;
+	IonCXref	*cxref;
+	Object		obj;
+	IonContact	contact;
 	char		fromTimeBuffer[TIMESTAMPBUFSZ];
 	char		toTimeBuffer[TIMESTAMPBUFSZ];
-	char		buffer[256];
-	int		textLen;
+	char		regionText[32];
+	int		regionTextLen;
+	char		contactText[256];
+	int		contactTextLen;
+	int		i;
 
 	isprintf(fileName, sizeof fileName, "contacts.%lu.ionrc", regionNbr);
 	briefingFile = iopen(fileName, O_WRONLY | O_CREAT, 0666);
 	if (briefingFile == -1)
 	{
 		putSysErrmsg("Can't create briefing file", fileName);
-		return;
-	}
-
-	isprintf(buffer, sizeof buffer, "^ %lu\n", regionNbr);
-       	textLen = strlen(buffer);
-	if (write(briefingFile, buffer, textLen) < 0)
-	{
-		close(briefingFile);
-		putSysErrmsg("Can't write '^' command to briefing file",
-				fileName);
 		return;
 	}
 
@@ -2196,33 +2824,60 @@ void	rfx_brief_contacts(uint32_t regionNbr)
 			elt = sm_rbt_next(ionwm, elt))
 	{
 		addr = sm_rbt_data(ionwm, elt);
-		contact = (IonCXref *) psp(ionwm, addr);
-		if (contact->type != CtRegistration)
+		cxref = (IonCXref *) psp(ionwm, addr);
+		if (cxref->type != CtRegistration)
 		{
+#if RFXDEBUG
+writeMemo("Briefing: Contact not a registration.");
+#endif
 			continue;
 		}
 
-		if (contact->regionNbr < regionNbr)
+		obj = sdr_list_data(sdr, cxref->contactElt);
+		sdr_read(sdr, (char *) &contact, obj, sizeof(IonContact));
+		if (contact.regions[0] != regionNbr
+		&& contact.regions[1] != regionNbr)
 		{
+#if RFXDEBUG
+writeMemoNote("Briefing: Contact not for region", itoa(regionNbr));
+#endif
 			continue;
 		}
 
-		if (contact->regionNbr > regionNbr)
-		{
-			break;
-		}
-
-		writeTimestampUTC(contact->fromTime, fromTimeBuffer);
-		writeTimestampUTC(contact->toTime, toTimeBuffer);
-		isprintf(buffer, sizeof buffer, "a contact %20s %20s "
+		writeTimestampUTC(contact.fromTime, fromTimeBuffer);
+		writeTimestampUTC(contact.toTime, toTimeBuffer);
+		isprintf(contactText, sizeof contactText, "a contact %20s %20s "
 UVAST_FIELDSPEC " " UVAST_FIELDSPEC " %lu %f\n", fromTimeBuffer, toTimeBuffer,
-				contact->fromNode, contact->toNode,
-				contact->xmitRate, contact->confidence);
-       		textLen = strlen(buffer);
-		if (write(briefingFile, buffer, textLen) < 0)
+				contact.fromNode, contact.toNode,
+				contact.xmitRate, contact.confidence);
+       		contactTextLen = strlen(contactText);
+		for (i = 0; i < 2; i++)
 		{
-			putSysErrmsg("Can't write briefing command", fileName);
-			break;
+			if (contact.regions[i] != 0)
+			{
+				isprintf(regionText, sizeof regionText,
+						"^ %lu\n", contact.regions[i]);
+       				regionTextLen = strlen(regionText);
+				if (write(briefingFile, regionText,
+						regionTextLen) < 0)
+				{
+					sdr_exit_xn(sdr);
+					close(briefingFile);
+					putSysErrmsg("Can't write '^' command \
+to briefing file", fileName);
+					return;
+				}
+
+				if (write(briefingFile, contactText,
+						contactTextLen) < 0)
+				{
+					sdr_exit_xn(sdr);
+					close(briefingFile);
+					putSysErrmsg("Can't write registration \
+briefing command to briefing file", fileName);
+					return;
+				}
+			}
 		}
 	}
 
@@ -2232,28 +2887,142 @@ UVAST_FIELDSPEC " " UVAST_FIELDSPEC " %lu %f\n", fromTimeBuffer, toTimeBuffer,
 			elt = sm_rbt_next(ionwm, elt))
 	{
 		addr = sm_rbt_data(ionwm, elt);
-		contact = (IonCXref *) psp(ionwm, addr);
-		if (contact->type == CtRegistration)
+		cxref = (IonCXref *) psp(ionwm, addr);
+		if (cxref->type == CtRegistration)
 		{
+#if RFXDEBUG
+writeMemo("Briefing: Contact is a registration.");
+#endif
 			continue;
 		}
 
-		if (contact->regionNbr < regionNbr)
+		obj = sdr_list_data(sdr, cxref->contactElt);
+		sdr_read(sdr, (char *) &contact, obj, sizeof(IonContact));
+		if (contact.regions[0] != regionNbr
+		&& contact.regions[1] != regionNbr)
 		{
+#if RFXDEBUG
+writeMemoNote("Briefing: Contact not for region", itoa(regionNbr));
+#endif
 			continue;
 		}
 
-		if (contact->regionNbr > regionNbr)
-		{
-			break;
-		}
-
-		writeTimestampUTC(contact->fromTime, fromTimeBuffer);
-		writeTimestampUTC(contact->toTime, toTimeBuffer);
-		isprintf(buffer, sizeof buffer, "a contact %20s %20s "
+#if RFXDEBUG
+writeMemoNote("Briefing: Writing contact to ionrc file", itoa(regionNbr));
+#endif
+		writeTimestampUTC(contact.fromTime, fromTimeBuffer);
+		writeTimestampUTC(contact.toTime, toTimeBuffer);
+		isprintf(contactText, sizeof contactText, "a contact %20s %20s "
 UVAST_FIELDSPEC " " UVAST_FIELDSPEC " %lu %f\n", fromTimeBuffer, toTimeBuffer,
-				contact->fromNode, contact->toNode,
-				contact->xmitRate, contact->confidence);
+				contact.fromNode, contact.toNode,
+				contact.xmitRate, contact.confidence);
+       		contactTextLen = strlen(contactText);
+		for (i = 0; i < 2; i++)
+		{
+			if (contact.regions[i] != 0)
+			{
+				isprintf(regionText, sizeof regionText,
+						"^ %lu\n", contact.regions[i]);
+       				regionTextLen = strlen(regionText);
+				if (write(briefingFile, regionText,
+						regionTextLen) < 0)
+				{
+					sdr_exit_xn(sdr);
+					close(briefingFile);
+					putSysErrmsg("Can't write '^' command \
+to briefing file", fileName);
+					return;
+				}
+
+				if (write(briefingFile, contactText,
+						contactTextLen) < 0)
+				{
+					sdr_exit_xn(sdr);
+					close(briefingFile);
+					putSysErrmsg("Can't write contact \
+briefing command to briefing file", fileName);
+					return;
+				}
+			}
+		}
+	}
+
+	/*	Done.							*/
+
+	sdr_exit_xn(sdr);
+	close(briefingFile);
+	return;
+}
+
+void	rfx_brief_passageways(uint32_t regionNbr)
+{
+	Sdr		sdr = getIonsdr();
+	Object		iondbObj = getIonDbObject();
+	IonDB		iondb;
+	char		fileName[64];
+	int		briefingFile;
+	Object		elt;
+	Object		obj;
+	RegionMember	member;
+	uint32_t	otherRegionNbr;
+	char		buffer[256];
+	int		textLen;
+
+	CHKVOID(iondbObj);
+	sdr_read(sdr, (char *) &iondb, iondbObj, sizeof(IonDB));
+	isprintf(fileName, sizeof fileName, "passageways.%lu.ionrc", regionNbr);
+	briefingFile = iopen(fileName, O_WRONLY | O_CREAT, 0666);
+	if (briefingFile == -1)
+	{
+		putSysErrmsg("Can't create briefing file", fileName);
+		return;
+	}
+
+	if (sdr_begin_xn(sdr) < 0)
+	{
+		close(briefingFile);
+		putErrmsg("Can't start transaction", NULL);
+		return;
+	}
+
+	for (elt = sdr_list_first(sdr, iondb.rolodex); elt;
+			elt = sdr_list_next(sdr, elt))
+	{
+		obj = sdr_list_data(sdr, elt);
+		sdr_read(sdr, (char *) &member, obj, sizeof(RegionMember));
+		if (member.outerRegionNbr == 0)
+		{
+			continue;	/*	Not a passageway.	*/
+		}
+
+		/*	This node is a passageway to some other region.	*/
+
+		if (member.outerRegionNbr == regionNbr)
+		{
+			/*	Passageway to a sub-region.		*/
+
+			otherRegionNbr = member.homeRegionNbr;
+		}
+		else
+		{
+			/*	Passageway to the super-region.		*/
+
+			otherRegionNbr = member.outerRegionNbr;
+		}
+
+		isprintf(buffer, sizeof buffer, "^ %lu\n", otherRegionNbr);
+       		textLen = strlen(buffer);
+		if (write(briefingFile, buffer, textLen) < 0)
+		{
+			close(briefingFile);
+			putSysErrmsg("Can't write '^' command to briefing file",
+					fileName);
+			return;
+		}
+
+		isprintf(buffer, sizeof buffer, "a contact 2038/01/19-03:14:07 \
+2038/01/19-03:14:07 " UVAST_FIELDSPEC " " UVAST_FIELDSPEC " 0 1.0\n",
+				member.nodeNbr, member.nodeNbr);
        		textLen = strlen(buffer);
 		if (write(briefingFile, buffer, textLen) < 0)
 		{
@@ -2277,7 +3046,7 @@ void	rfx_contact_state(uvast nodeNbr, size_t *secRemaining, size_t *xmitRate)
 	IonVdb		*ionvdb = getIonVdb();
 	time_t		currentTime = getCtime();
 	IonCXref	arg;
-	PsmAddress	elt;
+	PsmAddress	cxelt;
 	IonCXref	*contact;
 	int		candidateContacts = 0;
 
@@ -2290,12 +3059,11 @@ void	rfx_contact_state(uvast nodeNbr, size_t *secRemaining, size_t *xmitRate)
 	}
 
 	memset((char *) &arg, 0, sizeof(IonCXref));
-	arg.regionNbr = regionNbr;
 	arg.fromNode = getOwnNodeNbr();
 	for (oK(sm_rbt_search(ionwm, ionvdb->contactIndex, rfx_order_contacts,
-			&arg, &elt)); elt; elt = sm_rbt_next(ionwm, elt))
+		&arg, &cxelt)); cxelt; cxelt = sm_rbt_next(ionwm, cxelt))
 	{
-		contact = (IonCXref *) psp(ionwm, sm_rbt_data(ionwm, elt));
+		contact = (IonCXref *) psp(ionwm, sm_rbt_data(ionwm, cxelt));
 		if (contact->fromNode > arg.fromNode)
 		{
 			/*	No more candidate contacts.		*/
@@ -2627,6 +3395,13 @@ int	rfx_insert_range(time_t fromTime, time_t toTime, uvast fromNode,
 			arg2.type = IonStopImputedRange;
 			sm_rbt_delete(ionwm, vdb->timeline, rfx_order_events,
 					&arg2, rfx_erase_data, NULL);
+
+			/*	Deletion reconfigured red-black tree.
+			 *	Must repeat search in order to get
+			 *	nextElt right.				*/
+
+			rxelt = sm_rbt_search(ionwm, vdb->rangeIndex,
+					rfx_order_ranges, &arg1, &nextElt);
 		}
 		else	/*	Overriding an asserted range.		*/
 		{
@@ -2711,7 +3486,7 @@ asserted", rangeIdString);
 			}
 			else
 			{
-				if (announce)
+				if (announce > 0)
 				{
 					postCpsNotice(0, fromTime, toTime,
 						fromNode, toNode, owlt, 1.0);
@@ -2866,7 +3641,7 @@ static void	removeAllRanges(uvast fromNode, uvast toNode, IonRXref *arg,
 		}
 
 		nextElt = sm_rbt_next(ionwm, rxelt); 
-		if (announce)
+		if (announce > 0)
 		{
 			postCpsNotice(0, rxref->fromTime, 0, fromNode, toNode,
 					0, 0.0);
@@ -2919,7 +3694,7 @@ int	rfx_remove_range(time_t *fromTime, uvast fromNode, uvast toNode,
 		if (rxelt)	/*	Found it.			*/
 		{
 			rxaddr = sm_rbt_data(ionwm, rxelt);
-			if (announce)
+			if (announce > 0)
 			{
 				postCpsNotice(0, *fromTime, 0, fromNode, toNode,
 						0, 0.0);
@@ -2963,7 +3738,7 @@ int	rfx_remove_range(time_t *fromTime, uvast fromNode, uvast toNode,
 		if (rxelt)	/*	Found it.			*/
 		{
 			rxaddr = sm_rbt_data(ionwm, rxelt);
-			if (announce)
+			if (announce > 0)
 			{
 				postCpsNotice(0, *fromTime, 0, fromNode,
 						toNode, 0, 0.0);
@@ -3192,7 +3967,7 @@ static int	loadRange(Object elt)
 	return 0;
 }
 
-static int	loadContact(Object elt, uint32_t regionNbr)
+static int	loadContact(Object elt)
 {
 	Sdr		sdr = getIonsdr();
 	Object		obj;
@@ -3205,7 +3980,6 @@ static int	loadContact(Object elt, uint32_t regionNbr)
 	/*	Load contact index entry.				*/
 
 	memset((char *) &cxref, 0, sizeof(IonCXref));
-	cxref.regionNbr = regionNbr;
 	cxref.fromNode = contact.fromNode;
 	cxref.toNode = contact.toNode;
 	cxref.fromTime = contact.fromTime;
@@ -3229,8 +4003,6 @@ int	rfx_start()
 	IonVdb		*vdb = getIonVdb();
 	Object		iondbObj;
 	IonDB		iondb;
-	int		i;
-	uint32_t	regionNbr;
 	Object		elt;
 
 	iondbObj = getIonDbObject();
@@ -3257,25 +4029,14 @@ int	rfx_start()
 	 *	necessary) and load events for all planned changes
 	 *	in data rate affecting the local node.			*/
 
-	iondbObj = getIonDbObject();
-	sdr_read(sdr, (char *) &iondb, iondbObj, sizeof(IonDB));
-	for (i = 0; i < 2; i++)
+	for (elt = sdr_list_first(sdr, iondb.contacts); elt;
+			elt = sdr_list_next(sdr, elt))
 	{
-		if (iondb.regions[i].contacts == 0)
+		if (loadContact(elt) < 0)
 		{
-			continue;
-		}
-
-		regionNbr = iondb.regions[i].regionNbr;
-		for (elt = sdr_list_first(sdr, iondb.regions[i].contacts); elt;
-				elt = sdr_list_next(sdr, elt))
-		{
-			if (loadContact(elt, regionNbr) < 0)
-			{
-				putErrmsg("Can't load contact.", NULL);
-				sdr_exit_xn(sdr);
-				return -1;
-			}
+			putErrmsg("Can't load contact.", NULL);
+			sdr_exit_xn(sdr);
+			return -1;
 		}
 	}
 

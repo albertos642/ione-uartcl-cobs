@@ -19,7 +19,11 @@ extern "C" {
 
 #include "ion.h"
 
-#define	RFX_NOTE_LEN	144
+#ifndef	RFX_DEBUG
+#define	RFX_DEBUG	0
+#endif
+
+#define	RFX_NOTE_LEN	256
 
 /*	*	Red-black tree ordering and deletion functions.	*	*/
 
@@ -84,6 +88,15 @@ extern void		rfx_brief_contacts(uint32_t regionNbr);
 			 *	objects in the node's ION database, for
 			 *	the indicated region.  The file's name
 			 *	will be 'contacts.REGIONNBR.ionrc'.	*/
+
+extern void		rfx_brief_passageways(uint32_t regionNbr);
+			/*	Writes a file of commands that will
+			 *	create registration IonContact objects
+			 *	in the node's ION database identifying
+			 *	nodes that are passageways from the
+			 *	indicated region to other regions.
+			 *	The file's name will be
+			 *	'passageways.REGIONNBR.ionrc'.		*/
 
 extern int		rfx_revise_contact(uint32_t regionNbr,
 				time_t fromTime,
@@ -205,6 +218,9 @@ extern IonNode		*findNode(IonVdb *ionvdb, uvast nodeNbr,
 				PsmAddress *nextElt);
 
 extern IonNode		*addNode(IonVdb *ionvdb, uvast nodeNbr);
+
+extern Object		findLocalNode(uvast nodeNbr, RegionMember *member,
+				Object *elt);
 
 extern int		addEmbargo(IonNode *node, uvast neighborNodeNbr);
 

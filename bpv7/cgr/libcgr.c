@@ -181,12 +181,6 @@ static void	detachRoutingObject(PsmPartition ionwm,
 		sm_list_destroy(ionwm, routingObject->proximateNodes, NULL,
 				NULL);
 	}
-
-	if (routingObject->viaPassageways)
-	{
-		sm_list_destroy(ionwm, routingObject->viaPassageways, NULL,
-				NULL);
-	}
 }
 
 void	cgr_clear_vdb(CgrVdb *vdb)
@@ -302,17 +296,22 @@ static int	getApplicableRange(IonCXref *contact, unsigned int *owlt)
 {
 	PsmPartition	ionwm = getIonwm();
 	IonVdb		*ionvdb = getIonVdb();
+	int		trivial = 1;
 	IonRXref	arg;
 	PsmAddress	elt;
 	IonRXref	*range;
 
-	*owlt = 0;		/*	Default.			*/
+	*owlt = 1;		/*	Default.			*/
 	if (contact->type == CtHypothetical || contact->type == CtDiscovered)
 	{
 		return 0;	/*	Physically adjacent nodes.	*/
 	}
 
-	/*	This is a scheduled contact; need to know the OWLT.	*/
+	/*	This is a scheduled contact; need to know the OWLT if
+	 *	non-trivial.  If no OWLT values are forecast for this
+	 *	node pair, assume the nodes are in the same location.
+	 *	In this case we set OWLT to 1 just so that we give
+	 *	preference to paths with fewer hops.			*/
 
 	memset((char *) &arg, 0, sizeof(IonRXref));
 	arg.fromNode = contact->fromNode;
@@ -325,9 +324,13 @@ static int	getApplicableRange(IonCXref *contact, unsigned int *owlt)
 		if (range->fromNode > arg.fromNode
 		|| range->toNode > arg.toNode)
 		{
+			/*	No more forecast ranges for this
+			 *	pair of nodes.				*/
+
 			break;
 		}
 
+		trivial = 0;		/*	Ranges are forecast.	*/
 		if (range->toTime < contact->fromTime)
 		{
 			continue;	/*	Range is in the past.	*/
@@ -337,6 +340,7 @@ static int	getApplicableRange(IonCXref *contact, unsigned int *owlt)
 		{
 			/*	Range unknown at contact start time.	*/
 
+			break;
 		}
 
 		/*	Found applicable range.				*/
@@ -346,6 +350,11 @@ static int	getApplicableRange(IonCXref *contact, unsigned int *owlt)
 	}
 
 	/*	No applicable range.					*/
+
+	if (trivial)
+	{
+		return 0;		/*	Range data not needed.	*/
+	}
 
 	return -1;
 }
@@ -434,7 +443,6 @@ static int	computeDistanceToTerminus(IonCXref *rootContact,
 	IonCXref	*current;
 	CgrContactNote	*currentWork;
 	IonCXref	arg;
-	uint32_t	regionNbr;
 	PsmAddress	elt;
 	PsmAddress	contactAddr;
 	IonCXref	*contact;
@@ -458,7 +466,6 @@ static int	computeDistanceToTerminus(IonCXref *rootContact,
 	TRACE(CgrBeginRoute);
 	current = rootContact;
 	currentWork = rootWork;
-	oK(ionRegionOf(current->toNode, terminusNode->nodeNbr, &regionNbr));
 
 	/*	Perform this outer loop until either the best
 	 *	route to the end vertex has been identified or else
@@ -486,7 +493,6 @@ static int	computeDistanceToTerminus(IonCXref *rootContact,
 
 		TRACE(CgrConsiderRoot, current->fromNode, current->toNode);
 		memset((char *) &arg, 0, sizeof(IonCXref));
-		arg.regionNbr = regionNbr;
 		arg.fromNode = current->toNode;
 		for (oK(sm_rbt_search(ionwm, ionvdb->contactIndex,
 				rfx_order_contacts, &arg, &elt));
@@ -1383,7 +1389,6 @@ static time_t	computePBAT(CgrRoute *route, Bundle *bundle,
 	loadScalar(&allotment, 0);
 	loadScalar(&volume, 0);
 	memset((char *) &arg, 0, sizeof(IonCXref));
-	oK(ionRegionOf(ownNodeNbr, route->toNodeNbr, &arg.regionNbr));
 	arg.fromNode = ownNodeNbr;
 	arg.toNode = route->toNodeNbr;
 	for (oK(sm_rbt_search(ionwm, vdb->contactIndex, rfx_order_contacts,

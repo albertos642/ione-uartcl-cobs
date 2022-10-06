@@ -46,63 +46,6 @@ static void	shutDown()	/*	Commands tcarecv termination.	*/
 	state->running = 0;
 }
 
-static unsigned short	fetchRecord(Object recordsList, uvast nodeNbr,
-				time_t effectiveTime, Object *recordElt,
-				Object *nextRecordElt)
-{
-	Sdr		sdr = getIonsdr();
-	Object		elt;
-	TcaRecord	record;
-
-	CHKERR(recordsList);
-	CHKERR(nodeNbr);
-	CHKERR(effectiveTime);
-	CHKERR(recordElt);
-	*recordElt = 0;			/*	Not found.  (Default)	*/
-	if (nextRecordElt)
-	{
-		*nextRecordElt = 0;	/*	None.  (Default)	*/
-	}
-
-	for (elt = sdr_list_first(sdr, recordsList); elt;
-			elt = sdr_list_next(sdr, elt))
-	{
-		sdr_read(sdr, (char *) &record, sdr_list_data(sdr, elt),
-				TC_HDR_LEN);
-		if (record.nodeNbr < nodeNbr)
-		{
-			continue;
-		}
-		
-		if (record.nodeNbr > nodeNbr)
-		{
-			break;
-		}
-
-		if (record.effectiveTime < effectiveTime)
-		{
-			continue;
-		}
-		
-		if (record.effectiveTime > effectiveTime)
-		{
-			break;
-		}
-
-		/*	Found it.					*/
-
-		*recordElt = elt;
-		return record.datLength;
-	}
-
-	if (nextRecordElt)
-	{
-		*nextRecordElt = elt;
-	}
-
-	return 0;			/*	Not found.		*/
-}
-
 static int	acquireRecord(Sdr sdr, TcaDB *db, char *src, Object adu)
 {
 	int		parsedOkay;
@@ -144,6 +87,7 @@ static int	acquireRecord(Sdr sdr, TcaDB *db, char *src, Object adu)
 writeMemoNote("tcarecv: Got record from", itoa(metaEid.elementNbr));
 #endif
 	memset(&record, 0, sizeof record);
+	record.srcNodeNbr = metaEid.elementNbr;
 	zco_start_receiving(adu, &reader);
 	recordLength = zco_receive_source(sdr, &reader, TC_MAX_REC, buffer);
 	len = recordLength;
@@ -184,21 +128,9 @@ client", src);
 			return 0;
 		}
 	}
-	else
-	{
-		/*	Nodes may only submit records for themselves.	*/
-
-		if (record.nodeNbr != metaEid.elementNbr)
-		{
-			restoreEidString(&metaEid);
-			writeMemoNote("[?] TCA record posted from unauthorized \
-EID", src);
-			return 0;
-		}
-	}
 
 	restoreEidString(&metaEid);
-	if (fetchRecord(db->pendingRecords, record.nodeNbr,
+	if (tcaFetchRecord(db->pendingRecords, record.nodeNbr,
 			record.effectiveTime, &recordElt, &nextRecordElt))
 	{
 #if TC_DEBUG
@@ -210,7 +142,7 @@ writeMemo("tcarecv: Record already pending; ignored.");
 	/*	Record not previously submitted in this cycle.  Was
 	 *	it submitted in an earlier cycle?			*/
 
-	if (fetchRecord(db->currentRecords, record.nodeNbr,
+	if (tcaFetchRecord(db->currentRecords, record.nodeNbr,
 			record.effectiveTime, &recordElt, NULL))
 	{
 #if TC_DEBUG

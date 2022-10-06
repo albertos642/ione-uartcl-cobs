@@ -18,6 +18,7 @@
 #include "hcb.h"
 #include "snw.h"
 #include "imc.h"
+#include "ipt.h"
 #if RGREB
 #include "rgr.h"
 #endif
@@ -193,6 +194,24 @@ static ExtensionDef	extensionDefs[] =
 				imc_record,
 				imc_clear
 		},
+		{ "ipt", IrfPassagewaysBlk,
+				ipt_offer,
+				ipt_serialize,
+				{0,
+				0,
+				0,
+				ipt_processOnDequeue,
+				0},
+				ipt_release,
+				ipt_copy,
+				0,
+				0,
+				0,
+				ipt_parse,
+				ipt_check,
+				ipt_record,
+				ipt_clear
+		},
 #if RGREB
 		{ "rgr", RGRBlk,
 				rgr_offer,
@@ -243,6 +262,7 @@ static ExtensionSpec		extensionSpecs[] =
 					{ BundleAgeBlk, 0, NoCRC },
 					{ SnwPermitsBlk, 0, NoCRC },
 					{ ImcDestinationsBlk, 0, NoCRC },
+					{ IrfPassagewaysBlk, 0, NoCRC },
 #if RGREB
 					{ RGRBlk, 0, NoCRC },
 #endif

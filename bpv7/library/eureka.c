@@ -103,7 +103,6 @@ static void	toggleScheduledContacts(uvast fromNode, uvast toNode,
 	}
 
 	memset((char *) &arg, 0, sizeof(IonCXref));
-	oK(ionRegionOf(fromNode, toNode, &arg.regionNbr));
 	arg.fromNode = fromNode;
 	arg.toNode = toNode;
 	for (oK(sm_rbt_search(ionwm, ionvdb->contactIndex, rfx_order_contacts,
@@ -181,7 +180,6 @@ static int	noteContactAcquired(uvast discoveryNodeNbr,
 
 	cxref = NULL;
 	memset((char *) &arg, 0, sizeof(IonCXref));
-	arg.regionNbr = regionNbr;
 	arg.fromNode = ownNodeNbr;
 	arg.toNode = discoveryNodeNbr;
 	oK(sm_rbt_search(ionwm, ionvdb->contactIndex, rfx_order_contacts,
@@ -234,7 +232,6 @@ static int	noteContactAcquired(uvast discoveryNodeNbr,
 
 	cxref = NULL;
 	memset((char *) &arg, 0, sizeof(IonCXref));
-	arg.regionNbr = regionNbr;
 	arg.fromNode = discoveryNodeNbr;
 	arg.toNode = ownNodeNbr;
 	oK(sm_rbt_search(ionwm, ionvdb->contactIndex, rfx_order_contacts,
@@ -536,7 +533,6 @@ static int	noteContactLost(uvast discoveryNodeNbr, time_t startTime)
 
 	cxref = NULL;
 	memset((char *) &arg, 0, sizeof(IonCXref));
-	arg.regionNbr = regionNbr;
 	arg.fromNode = ownNodeNbr;
 	arg.toNode = discoveryNodeNbr;
 	oK(sm_rbt_search(ionwm, ionvdb->contactIndex, rfx_order_contacts,
@@ -591,7 +587,6 @@ static int	noteContactLost(uvast discoveryNodeNbr, time_t startTime)
 
 	cxref = NULL;
 	memset((char *) &arg, 0, sizeof(IonCXref));
-	arg.regionNbr = regionNbr;
 	arg.fromNode = discoveryNodeNbr;
 	arg.toNode = ownNodeNbr;
 	oK(sm_rbt_search(ionwm, ionvdb->contactIndex, rfx_order_contacts,

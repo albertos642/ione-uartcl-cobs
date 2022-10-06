@@ -20,7 +20,9 @@ START and STOP commands that pertain specifically to the IMC scheme.
 
 B<imcadminep> responds to multicast group "join" and "leave" petitions
 by managing entries in the node's database of multicast groups and
-their members.
+their members.  Such a petition is issued issued whenever a node registers
+(e.g., by means of bpadmin) in a BP endpoint identified by an EID whose
+scheme name is "imc".
 
 =head1 EXIT STATUS
 
@@ -74,4 +76,4 @@ Report bugs to <ion-dtn-support@lists.sourceforge.net>
 
 =head1 SEE ALSO
 
-bpadmin(1), bprc(5)
+bpadmin(1)

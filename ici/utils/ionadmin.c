@@ -218,7 +218,7 @@ static int	initializeNode(int tokenCount, char **tokens)
 			0, 1.0, &xaddr, _announce(NULL));
 }
 
-void	executeAdd(int tokenCount, char **tokens)
+void	executeAdd(int tokenCount, char **tokens, uint32_t vestedRegionNbr)
 {
 	uvast		ownNodeNbr = getOwnNodeNbr();
 	time_t		refTime;
@@ -229,6 +229,7 @@ void	executeAdd(int tokenCount, char **tokens)
 	PsmAddress	xaddr;
 	unsigned int	xmitRate;
 	float		confidence;
+	int		announce;
 	unsigned int	owlt;
 
 	if (tokenCount < 2)
@@ -343,9 +344,28 @@ than start time and earlier than 19 January 2038.");
 			xmitRate = strtol(tokens[6], NULL, 0);
 		}
 
+		if (vestedRegionNbr == _regionNbr(NULL))
+		{
+			/*	ionadmin is being run to pre-populate
+			 *	the contact plan for a region that
+			 *	the node is about to join, so that
+			 *	insertion of the registration contact
+			 *	can be successfully multicast to all
+			 *	members of the region.  So tell the
+			 *	RFX system to accept this contact even
+			 *	though it's for a region of which the
+			 *	local node is not (yet) a member.	*/
+
+			announce = -1;
+		}
+		else
+		{
+			announce = _announce(NULL);
+		}
+
 		if (rfx_insert_contact(_regionNbr(NULL), fromTime, toTime,
 				fromNodeNbr, toNodeNbr, xmitRate, confidence,
-				&xaddr, _announce(NULL)) == 0)
+				&xaddr, announce) == 0)
 		{
 			oK(_forecastNeeded(1));
 		}
@@ -454,7 +474,7 @@ void	executeDelete(int tokenCount, char **tokens)
 	}
 	else if (strcmp(tokens[2], "-1") == 0)	/*	Registration.	*/
 	{
-		fromTime = (time_t) -1;
+		fromTime = MAX_POSIX_TIME;
 	}
 	else				/*	Predicted or Scheduled.	*/
 	{
@@ -534,7 +554,6 @@ static void	executeInfo(int tokenCount, char **tokens)
 	if (strcmp(tokens[1], "contact") == 0)
 	{
 		memset((char *) &arg1, 0, sizeof(IonCXref));
-		oK(ionRegionOf(fromNode, toNode, &arg1.regionNbr));
 		arg1.fromNode = fromNode;
 		arg1.toNode = toNode;
 		arg1.fromTime = fromTime;
@@ -642,6 +661,12 @@ static void	executeBrief(int tokenCount, char **tokens)
 	if (strcmp(tokens[1], "contact") == 0)
 	{
 		rfx_brief_contacts(_regionNbr(NULL));
+		return;
+	}
+
+	if (strcmp(tokens[1], "passageway") == 0)
+	{
+		rfx_brief_passageways(_regionNbr(NULL));
 		return;
 	}
 
@@ -1202,7 +1227,8 @@ static int ion_is_up(int count, int max)
 	return 1;
 }
 
-static int	processLine(char *line, int lineLength, int *rc)
+static int	processLine(char *line, int lineLength, int *rc,
+			uint32_t vestedRegionNbr)
 {
 	int		tokenCount;
 	char		*cursor;
@@ -1384,7 +1410,7 @@ no time.");
 		case 'a':
 			if (ionAttach() == 0)
 			{
-				executeAdd(tokenCount, tokens);
+				executeAdd(tokenCount, tokens, vestedRegionNbr);
 			}
 
 			return 0;
@@ -1491,7 +1517,7 @@ no time.");
 	}
 }
 
-static int	runIonadmin(char *cmdFileName)
+static int	runIonadmin(char *cmdFileName, uint32_t vestedRegionNbr)
 {
 	int	rc = 0;
 	time_t	currentTime;
@@ -1529,7 +1555,7 @@ static int	runIonadmin(char *cmdFileName)
 				continue;
 			}
 
-			if (processLine(line, len, &rc))
+			if (processLine(line, len, &rc, vestedRegionNbr))
 			{
 				break;		/*	Out of loop.	*/
 			}
@@ -1579,7 +1605,8 @@ static int	runIonadmin(char *cmdFileName)
 					continue;
 				}
 
-				if (processLine(line, len, &rc))
+				if (processLine(line, len, &rc,
+						vestedRegionNbr))
 				{
 					break;	/*	Out of loop.	*/
 				}
@@ -1607,15 +1634,18 @@ static int	runIonadmin(char *cmdFileName)
 int	ionadmin(saddr a1, saddr a2, saddr a3, saddr a4, saddr a5,
 		saddr a6, saddr a7, saddr a8, saddr a9, saddr a10)
 {
-	char	*cmdFileName = (char *) a1;
+	char		*cmdFileName = (char *) a1;
+	uint32_t	vestedRegionNbr = strtol(a2, NULL, 10);
 #else
 int	main(int argc, char **argv)
 {
-	char	*cmdFileName = (argc > 1 ? argv[1] : NULL);
+	char		*cmdFileName = (argc > 1 ? argv[1] : NULL);
+	uint32_t	vestedRegionNbr =
+				(argc > 2 ? strtol(argv[2], NULL, 10) : 0);
 #endif
 	int	result;
 
-	result = runIonadmin(cmdFileName);
+	result = runIonadmin(cmdFileName, vestedRegionNbr);
 	if (result < 0)
 	{
 		puts("ionadmin failed.");
@@ -1633,7 +1663,7 @@ int	ionadmin_pseudoshell(char *line)
 
 int	ionadmin_processLine(char *line, int lineLength, int *rc)
 {
-	return processLine(line, lineLength, rc);
+	return processLine(line, lineLength, rc, 0);
 }
 
 void	ionadmin_help(void)

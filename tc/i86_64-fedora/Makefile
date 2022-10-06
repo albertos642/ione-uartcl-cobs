@@ -39,6 +39,8 @@ clean:
 
 install:
 		cp ../include/* $(ROOT)/include
+		cp ../client/*.h $(ROOT)/include
+		cp ../dtka/*.h $(ROOT)/include
 		cp lib/* $(ROOT)/lib
 		cp bin/* $(ROOT)/bin
 
@@ -101,11 +103,11 @@ libzfec.so:	$(ZFEC)/fec.o
 #	-	-	Application -	-	-	-	-	-
 
 dtka:		dtka.o libdtka.so libtcc.so
-		$(CC) -o dtka dtka.o -L./lib -L$(ROOT)/lib -ldtka -ltccP -ltcc -ltc $(LBP) -lici -lpthread -lm
+		$(CC) -o dtka dtka.o -L./lib -L$(ROOT)/lib -ldtka -ltcc -ltccP -ltc $(LBP) -lici -lpthread -lm
 		cp dtka ./bin
 
 dtkaadmin:	dtkaadmin.o libdtka.so
-		$(CC) -o dtkaadmin dtkaadmin.o -L./lib -L$(ROOT)/lib -ldtka -ltccP -ltcc -ltc $(LBP) -lici -lpthread -lm
+		$(CC) -o dtkaadmin dtkaadmin.o -L./lib -L$(ROOT)/lib -ldtka -ltcc -ltccP -ltc $(LBP) -lici -lpthread -lm
 		cp dtkaadmin ./bin
 
 libdtka.so:	libdtka.o

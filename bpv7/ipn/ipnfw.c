@@ -11,6 +11,7 @@
 #include <stdarg.h>
 
 #include "ipnfw.h"
+#include "bei.h"
 
 #ifdef	ION_BANDWIDTH_RESERVED
 #define	MANAGE_OVERBOOKING	0
@@ -192,77 +193,177 @@ static void	bindOverride(Bundle *bundle, Object bundleObj, uvast nodeNbr)
 	}
 }
 
-/*		HIRR invocation functions.				*/
+/*		IRF invocation functions.				*/
 
-static int	initializeHIRR(CgrRtgObject *routingObj)
+static int 	tryIRF(Bundle *bundle, Object bundleObj, IonNode *terminusNode)
 {
 	Sdr		sdr = getIonsdr();
-	PsmPartition	ionwm = getIonwm();
-	IonDB		iondb;
-	Object		elt;
-	Object		addr;
-			OBJ_POINTER(RegionMember, member);
+	Object		iptblkElt;
+	Object		nextPassagewayElt;
+	uvast		nextPassageway;
+	char		eid[32];
+	Lyst		nominees;
+	LystElt		elt;
+	uvast		pwyNodeNbr;
+	Bundle		newBundle;
+	Object		newBundleObj;
 
-	routingObj->viaPassageways = sm_list_create(ionwm);
-	if (routingObj->viaPassageways == 0)
+	/*	Determine whether or not there are one or more
+	 *	passageways to other regions by which the bundle
+	 *	may be sent in order to get it delivered to the
+	 *	terminus node.  If so, enqueue one copy of the
+	 *	bundle for forwarding (via CGR) to each such
+	 *	passageway node.					*/
+
+	CHKERR(bundle && bundleObj && terminusNode);
+	if (bundle->id.source.schemeCodeNbr != ipn)
+        {
+                /*      IRF is all based on node numbers; can't be
+                 *      done if source node's ID is not ipn scheme.     */
+
+                return 0;
+        }
+
+	CHKERR(bundle->passageways);
+	iptblkElt = findExtensionBlock(bundle, IrfPassagewaysBlk, 0);
+	if (iptblkElt == 0)
 	{
-		putErrmsg("Can't initialize HIRR routing.", NULL);
+		/*	Absence of IRF extension block makes
+		 *	Inter-regional routing infeasible.		*/
+#if RFXDEBUG
+		writeMemo("[?] IRF extension block is missing.");
+#endif
+		return 0;
+	}
+
+	/*	Last node in bundle's list of passageways is the
+	 *	node number of the next passageway that is charged
+	 *	with forwarding the bundle toward its destination.
+	 *	If that's not the local node, then we immediately
+	 *	forward to that passageway.				*/
+
+	nextPassagewayElt = sdr_list_last(sdr, bundle->passageways);
+	if (nextPassagewayElt == 0)
+	{
+		/*	Since the bundle has an IRF extension block,
+		 *	all passageways listed in that block have
+		 *	been loaded into the passageways list.  If
+		 *	that list is nonetheless empty, then this
+		 *	must be a newly sourced bundle; the source
+		 *	node is the local node, and there is no
+		 *	nextPassageway node number to constrain
+		 *	forwarding.					*/
+
+		nextPassageway = 0;
+	}
+	else	/*	Source node isn't the local node.		*/
+	{
+		nextPassageway = (uvast) sdr_list_data(sdr, nextPassagewayElt);
+		if (nextPassageway != getOwnNodeNbr())
+		{
+			/*	Must intra-regionally forward to the
+			 *	intended next passageway.		*/
+
+			bpAccept(bundleObj, bundle);
+			isprintf(eid, sizeof eid, "ipn:" UVAST_FIELDSPEC ".0",
+					nextPassageway);
+			if (forwardBundle(bundleObj, bundle, eid) < 0)
+			{
+				putErrmsg("Can't fwd to passageway.", NULL);
+				return -1;
+			}
+
+			return 1;	/*	All done.		*/
+		}
+	}
+
+	/*	Need to identify next passageway(s) to forward to.	*/
+
+	nominees = lyst_create_using(getIonMemoryMgr());
+	if (nominees == NULL)
+	{
+		putErrmsg("Can't create list for IRF nominees.", NULL);
 		return -1;
 	}
 
-	sdr_read(sdr, (char *) &iondb, getIonDbObject(), sizeof(IonDB));
+	/*	Consult region topology to identify the passageway
+	 *	node(s) to forward the bundle to.			*/
 
-	/*	Add to the viaPassageways list for this remote node
-	 *	one entry for every passageway residing in either of
-	 *	the local node's regions.				*/
-
-	for (elt = sdr_list_first(sdr, iondb.rolodex); elt;
-			elt = sdr_list_next(sdr, elt))
+	if (irf_identify_passageways(terminusNode, bundle, nominees) < 0)
 	{
-		addr = sdr_list_data(sdr, elt);
-		GET_OBJ_POINTER(sdr, RegionMember, member, addr);
-		if (member->outerRegionNbr != 0)
-		{
-			/*	Node is a passageway.			*/
+		putErrmsg("Can't identify best passageways for bundle.", NULL);
+		lyst_destroy(nominees);
+		return -1;
+	}
 
-			if (sdr_list_insert_last(sdr,
-					routingObj->viaPassageways,
-					member->nodeNbr) == 0)
+	sdr_write(sdr, bundleObj, (char *) bundle, sizeof(Bundle));
+	if (lyst_length(nominees) == 0)
+	{
+		lyst_destroy(nominees);
+
+		/*	No inter-regional routing is possible.  Must
+		 *	send a blacklist message to all passageways
+		 *	in the path back to the source node including
+		 *	self.						*/
+
+		if (irf_source_msg(bundle, 0) < 0)
+		{
+			putErrmsg("Failed sending IRF message.", NULL);
+			return -1;
+		}
+
+		return 0;
+	}
+
+	/*	Can forward to at least one passageway to some other
+	 *	region.							*/
+
+	oK(bpAccept(bundleObj, bundle));
+	while (lyst_length(nominees) > 0)
+	{
+		elt = lyst_first(nominees);
+		pwyNodeNbr = (uvast) lyst_data(elt);
+		lyst_delete(elt);
+		isprintf(eid, sizeof eid, "ipn:" UVAST_FIELDSPEC ".0",
+				pwyNodeNbr);
+		if (bundle->fwdQueueElt)
+		{
+			/*	This copy of bundle has already
+			 *	been enqueued.				*/
+		      
+			if (bpClone(bundle, &newBundle, &newBundleObj, 0, 0)
+					< 0)
 			{
-				putErrmsg("Can't note passageway.", NULL);
+				putErrmsg("Can't clone bundle.", NULL);
+				lyst_destroy(nominees);
 				return -1;
 			}
+
+			bundle = &newBundle;
+			bundleObj = newBundleObj;
+
+			/*	Must remove the "next passageway node
+			 *	number" that was previously appended
+			 *	to the bundle's list of passageways.	*/
+
+			sdr_list_delete(sdr, sdr_list_last(sdr,
+					bundle->passageways), NULL, NULL);
 		}
-	}
 
-	return 0;
-}
+		/*	Append next passageway node number to the
+		 *	bundle's list of passageways, then forward
+		 *	the bundle.					*/
 
-static int 	tryHIRR(Bundle *bundle, Object bundleObj, IonNode *terminusNode,
-			time_t atTime)
-{
-	PsmPartition	ionwm = getIonwm();
-	CgrRtgObject	*routingObj;
-
-	if (terminusNode->routingObject == 0)
-	{
-		if (cgr_create_routing_object(terminusNode) < 0)
+		sdr_list_insert_last(sdr, bundle->passageways, pwyNodeNbr);
+		if (forwardBundle(bundleObj, bundle, eid) < 0)
 		{
-			putErrmsg("Can't initialize routing object.", NULL);
+			lyst_destroy(nominees);
 			return -1;
 		}
 	}
 
-	routingObj = (CgrRtgObject *) psp(ionwm, terminusNode->routingObject);
-	if (routingObj->viaPassageways == 0)
-	{
-		if (initializeHIRR(routingObj) < 0)
-		{
-			return -1;
-		}
-	}
-
-	return 0;
+	lyst_destroy(nominees);
+	return 1;
 }
 
 /*		CGR invocation functions.				*/
@@ -868,15 +969,15 @@ static int 	tryCGR(Bundle *bundle, Object bundleObj, IonNode *terminusNode,
 	 *
 	 *	Note that CGR can be used to compute a route to an
 	 *	intermediate "station" node selected by another
-	 *	routing mechanism (such as static routing), not
-	 *	only to the bundle's final destination node.  In
-	 *	the simplest case, the bundle's destination is the
-	 *	only "station" selected for the bundle.  To avoid
-	 *	confusion, we here use the term "terminus" to refer
-	 *	to the node to which a route is being computed,
-	 *	regardless of whether that node is the bundle's
-	 *	final destination or an intermediate forwarding
-	 *	station.			 			*/
+	 *	routing mechanism (such as static routing or IRF),
+	 *	not only to the bundle's final destination node.
+	 *	In the simplest case, the bundle's destination is
+	 *	the only "station" selected for the bundle.  To
+	 *	avoid confusion, we here use the term "terminus"
+	 *	to refer to the node to which a route is being
+	 *	computed, regardless of whether that node is the
+	 *	bundle's final destination or an intermediate
+	 *	forwarding station.		 			*/
 
 	CHKERR(bundle && bundleObj && terminusNode);
 	TRACE(CgrBuildRoutes, terminusNode->nodeNbr, bundle->payload.length,
@@ -1027,7 +1128,7 @@ static int 	tryCGR(Bundle *bundle, Object bundleObj, IonNode *terminusNode,
 	return 0;
 }
 
-/*		Contingency functions for when CGR and HIRR don't work.	*/
+/*		Contingency functions for when CGR and IRF don't work.	*/
 
 static int	enqueueToNeighbor(Bundle *bundle, Object bundleObj,
 			uvast nodeNbr)
@@ -1105,12 +1206,12 @@ static int	enqueueBundle(Bundle *bundle, Object bundleObj, CgrSAP sap)
 	Object		elt;
 	char		eid[SDRSTRING_BUFSZ];
 	MetaEid		metaEid;
-	uvast		nodeNbr;
 	VScheme		*vscheme;
 	PsmAddress	vschemeElt;
+	uvast		nodeNbr;
 	IonNode		*node;
-	uint32_t	regionNbr;
 	PsmAddress	nextNode;
+	uint32_t	regionNbr;
 #if CGR_DEBUG == 1
 	CgrTrace	*trace = &(CgrTrace) { .fn = printCgrTraceLine };
 #else
@@ -1172,37 +1273,70 @@ static int	enqueueBundle(Bundle *bundle, Object bundleObj, CgrSAP sap)
 		}
 	}
 
+	/*	Load passageways trace from IRF extension block, if
+	 *	provided.						*/
+
+	CHKERR(bundle->passageways);
+	if (sdr_list_length(sdr, bundle->passageways) == 0)
+	{
+		/*	Either no ipt extension block is attached to
+		 *	the bundle (in which case there can be no
+		 *	inter-regional routing) or the source of the
+		 *	bundle is the local node (in which case the
+		 *	ipt extension block exists [was offered] but
+		 *	has zero-length object) or the ipt extension
+		 *	block's content has not yet been loaded into
+		 *	the passageways list.				*/
+
+	 	if (irf_load_passageways(bundle, bundleObj) < 0)
+		{
+		 	putErrmsg("Can't load IRF passageways.", NULL);
+		 	return -1;
+	 	}
+	}
+
 	if (ionRegionOf(nodeNbr, 0, &regionNbr) < 0)
 	{
-		/*	Destination node is not in any region that
-		 *	the local node is in.  Send via passageway(s).	*/
+		/*	Terminus node is not in any region that
+		 *	the local node is in.  Try to forward
+		 *	through other regions via passageway(s).	*/
 
-		if (tryHIRR(bundle, bundleObj, node, getCtime()))
+		switch (tryIRF(bundle, bundleObj, node))
 		{
-			putErrmsg("HIRR failed.", NULL);
+		case -1:
+			putErrmsg("IRF failed.", NULL);
 			return -1;
+
+		case 0:
+			/*	Maybe node registration is deficient.
+			 *	Try fallback methods.			*/
+
+			break;
+
+		default:
+			/*	Bundle is being forwarded to one or
+			 *	more intermediate passageway nodes.	*/
+
+			return 0;
 		}
 	}
-	else
+	else	/*	Terminus node is in one of this node's regions.	*/
 	{
-		/*	Destination node resides in a region in which
-		 *	the local node resides.  Consult contact plan.	*/
-
 		if (tryCGR(bundle, bundleObj, node, getCtime(), trace, 0))
 		{
 			putErrmsg("CGR failed.", NULL);
 			return -1;
 		}
-	}
 
-	/*	If dynamic routing succeeded in enqueuing the bundle
-	 *	to a neighbor, accept the bundle and return.		*/
+		/*	If CGR succeeded in enqueuing the bundle to
+		 *	a neighbor, accept the bundle and return.	*/
 
-	if (bundle->planXmitElt)
-	{
-		/*	Enqueued.					*/
+		if (bundle->planXmitElt)
+		{
+			/*	Enqueued.				*/
 
-		return bpAccept(bundleObj, bundle);
+			return bpAccept(bundleObj, bundle);
+		}
 	}
 
 	/*	No luck using the contact graph or region tree to

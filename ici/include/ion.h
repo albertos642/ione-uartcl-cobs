@@ -203,6 +203,7 @@ typedef struct
 	size_t		xmitRate;	/*	In bytes per second.	*/
 	float		confidence;	/*	Confidence in contact.	*/
 	ContactType	type;		/*	For disambiguation.	*/
+	uint32_t	regions[2];	/*	Relevant contact plans.	*/
 	double		mtv[3];		/*	Residual xmit volumes.	*/
 } IonContact;
 
@@ -218,7 +219,7 @@ typedef struct
 typedef struct
 {
 	uint32_t	regionNbr;
-	Object		contacts;	/*	SDR list: IonContact	*/
+	int		locked;		/*	Unregistration pending.	*/
 } IonRegion;
 
 typedef struct
@@ -255,6 +256,29 @@ typedef struct
 	float		confidence;	/*	Confidence in contact.	*/
 } CpsNotice;
 
+/*	PwsNotice objects are consumed by irfd, which uses their
+ *	parameters to revise the viaPassageways lists of potential
+ *	bundle destinations.						*/
+
+typedef enum
+{
+	NotPassageway = 0,
+	Passageway,
+	Reset
+} PwState;
+
+typedef struct
+{
+	/*	A PwcNotice (Passageway Change) informs the IRR dameon
+	 *	that the indicated node either (a) was formerly a
+	 *	passageway (hence an IRR candidate) and now is not
+	 *	or (b) was formerly a non-passageway but now is a
+	 *	passageway and potential IRR candidate.		*/
+
+	uvast		nodeNbr;
+	PwState		state;
+} PwcNotice;
+
 /*	The ION database is shared by BP, LTP, and RFX.			*/
 
 typedef struct
@@ -263,7 +287,9 @@ typedef struct
 	IonRegion	regions[2];	/*	Home, outer.		*/
 	Object		rolodex;	/*	SDR list: RegionMember	*/
 	Object		cpsNotices;	/*	SDR list: CpsNotice	*/
+	Object		pwcNotices;	/*	SDR list: PwcNotice	*/
 	Object		ranges;		/*	SDR list: IonRange	*/
+	Object		contacts;	/*	SDR list: IonContact	*/
 	size_t		productionRate;	/*	Bundles sent by apps.	*/
 	size_t		consumptionRate;/*	Bundles rec'd by apps.	*/
 	double		occupancyCeiling;
@@ -322,10 +348,39 @@ typedef struct
 
 typedef struct
 {
+	uvast		nodeNbr;	/*	A current passageway.	*/
+
+	/*	Confirm time is the local time at which it was
+	 *	confirmed that the indicated node is a "usable"
+	 *	passageway, i.e., a passageway through which bundles
+	 *	may be forwarded that are destined for this node.
+	 *
+	 *	A value of 0 indicates that this passageway is
+	 *	potentially usable, not yet confirmed.  A value
+	 *	of MAX_POSIX_TIME indicates that this passageway
+	 *	is *NOT* usable.	  				*/
+
+	time_t		confirmTime;
+} IrfCandidate;
+
+typedef struct
+{
 	uvast		nodeNbr;	/*	As from IonContact.	*/
 	PsmAddress	embargoes;	/*	SM list: Embargo	*/
 	PsmAddress	routingObject;	/*	Routing-dependent.	*/
-} IonNode;		/*	A potential bundle destination node.	*/
+
+	/*	The IonNode object for a given potential destination
+	 *	node also contains a list of all of the passageway
+	 *	nodes through which a bundle destined for this node
+	 *	may be forwarded in the event that the node resides
+	 *	in some foreign region.  A non-zero value of the
+	 *	user data for this list object is used to indicate
+	 *	that the node is judged to be "unreachable", i.e.,
+	 *	all potential candidate passageways have been tested
+	 *	and found unusable.					*/
+
+	PsmAddress	viaPassageways;	/*	SM list: IrfCandidate	*/
+} IonNode;		/*	A potential bundle destination.		*/
 
 typedef struct
 {
@@ -372,7 +427,6 @@ typedef struct
 
 typedef struct
 {
-	uint32_t	regionNbr;	/*	ID of network region	*/
 	uvast		fromNode;	/*	LTP engineID, a.k.a.	*/
 	uvast		toNode;		/*	... BP CBHE nodeNbr.	*/
 	time_t		fromTime;	/*	As from time(2).	*/
@@ -482,9 +536,11 @@ extern void		ionProd(	uvast fromNode,
 					unsigned int owlt);
 extern void		ionTerminate();
 
-extern int		ionPickRegion(uint32_t regionNbr);
-extern int		ionRegionOf(uvast nodeNbrA,
+extern int		ionPickRegion(	uint32_t regionNbr);
+extern int		ionRegionOf(	uvast nodeNbrA,
 					uvast nodeNbrB,
+					uint32_t *regionNbr);
+extern void		ionRemoteRegionOf(uvast nodeNbr,
 					uint32_t *regionNbr);
 
 extern int		ionStartAttendant(ReqAttendant *attendant);

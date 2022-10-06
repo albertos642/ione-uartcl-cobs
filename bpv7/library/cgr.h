@@ -146,7 +146,7 @@ typedef struct
 	} \
 } while (0)
 
-/*		IPN-specific RFX data structures.			*/
+/*		CGR-specific ION data structures.			*/
 
 typedef void		*CgrSAP;
 
@@ -227,19 +227,12 @@ typedef struct
 	 *	The CgrRtgObject also contains a list of the local
 	 *	node's neighbors (proximateNodes) within each
 	 *	region in which the local node resides.  This is
-	 *	for use in forwarding Critical bundles.
-	 *
-	 *	The CgrRtgObject also contains a list of all of the
-	 *	passageway nodes (ultimately just one) through which
-	 *	a bundle destined for this remote node should be
-	 *	forwarded in the event that the node is in some
-	 *	foreign region.						*/
+	 *	for use in forwarding Critical bundles.			*/
 
 	PsmAddress	nodeAddr;	/*	Back-reference.		*/
 	PsmAddress	selectedRoutes;	/*	SmList of CgrRoute.	*/
 	PsmAddress	knownRoutes;	/*	SmList of CgrRoute.	*/
-	PsmAddress	proximateNodes;	/*	SmList of uvast node#s.	*/
-	PsmAddress	viaPassageways;	/*	SmList of uvast node#s.	*/
+	PsmAddress	proximateNodes;	/*	SmList of uvast node#.	*/
 } CgrRtgObject;	/*	IonNode's routingObject is one of these.	*/
 
 /*		Data structure for the CGR volatile database.		*/

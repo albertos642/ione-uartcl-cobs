@@ -6,6 +6,18 @@
 	ALL RIGHTS RESERVED.  U.S. Government Sponsorship
 	acknowledged.
 
+		NOTE: this library utilizes functions provided by
+		cryptography software that is not distributed with
+		ION.  To indicate that this supporting software
+		has been installed, set the compiler flag
+                        
+			-DCRYPTO_SOFTWARE_INSTALLED
+                                
+		when compiling this program.  Absent that flag
+		setting at compile time, the sec_generate_key_pair
+		function simply uses the rand() function to generate
+		pseudo keys for test purposes only.
+
 	Author:		Scott Burleigh, JPL
 	Modifications:	TCSASSEMBLER, TopCoder
 
@@ -18,9 +30,24 @@
 			   Added writeRuleMessage to print rule-related message
 	11-15-13  romanoTC Check for valid ciphersuite values (0,1,255)
 	06-27-19  SB	   Extracted LTP and BP functions.
+	08-13-21  SB       Added public/private key generation.
 
 									*/
 #include "ionsec.h"
+
+#ifdef CRYPTO_SOFTWARE_INSTALLED
+#include "polarssl/config.h"
+#include "polarssl/entropy.h"
+#include "polarssl/ctr_drbg.h"
+#include "polarssl/bignum.h"
+#include "polarssl/rsa.h"
+#include "polarssl/x509.h"
+#include "polarssl/base64.h"
+#include "polarssl/x509write.h"
+#endif
+
+#define KEY_SIZE 1024
+#define EXPONENT 65537
 
 static char	*_secDbName()
 {
@@ -378,6 +405,9 @@ SecVdb	*getSecVdb()
 {
 	return _secvdb(NULL);
 }
+
+
+/*	*	Asymmetric cryptography functions	*	*	*/
 
 static Object	locatePublicKey(uvast nodeNbr, time_t effectiveTime,
 			PubKeyRef *argRef)
@@ -746,20 +776,58 @@ static Object	locatePrivateKey(time_t effectiveTime, Object *nextKey)
 	return 0;
 }
 
+static int	encryptPrivateKey(int keyLen, unsigned char *keyValue,
+			char *passwdPathName, PrivateKey *newPrivateKey)
+{
+	Sdr	sdr = getIonsdr();
+
+	/*	TODO: obtain passphrase from the secured file
+	 *	identified by passwdPathName, use that passphrase
+	 *	to encrypt the key, store the length and text of
+	 *	the encrypted key in privateKey.
+	 *
+	 *	For initial testing purposes we store the plain text
+	 *	of the private key.					*/
+
+	newPrivateKey->length = keyLen;
+	newPrivateKey->value = sdr_malloc(sdr, keyLen);
+	if (newPrivateKey->value == 0)
+	{
+		return -1;
+	}
+
+	sdr_write(sdr, newPrivateKey->value, (char *) keyValue, keyLen);
+	return 0;
+}
+
 int	sec_addPrivateKey(time_t effectiveTime, int keyLen,
-		unsigned char *keyValue)
+		unsigned char *keyValue, char *passwdPathName)
 {
 	Sdr		sdr = getIonsdr();
 	SecDB		*secdb = _secConstants();
 	char		keyId[32];
 	Object		nextKey;
 	Object		keyObj;
-	OwnPublicKey	newPrivateKey;
+	PrivateKey	newPrivateKey;
 
 	CHKERR(secdb);
 	CHKERR(keyLen > 0);
 	CHKERR(keyValue);
 	isprintf(keyId, sizeof keyId, ":%lu", effectiveTime);
+	newPrivateKey.effectiveTime = effectiveTime;
+	if (encryptPrivateKey(keyLen, keyValue, passwdPathName, &newPrivateKey)
+			< 0)
+	{
+		putErrmsg("Can't add private key.", keyId);
+		return -1;
+	}
+
+	if (newPrivateKey.length == 0)
+	{
+		putErrmsg("Can't encrypt private key.", keyId);
+		return -1;
+	}
+
 	CHKERR(sdr_begin_xn(sdr));
 	if (locatePrivateKey(effectiveTime, &nextKey) != 0)
 	{
@@ -770,18 +838,14 @@ int	sec_addPrivateKey(time_t effectiveTime, int keyLen,
 
 	/*	New key may be added.					*/
 
-	newPrivateKey.effectiveTime = effectiveTime;
-	newPrivateKey.length = keyLen;
-	newPrivateKey.value = sdr_malloc(sdr, keyLen);
 	keyObj = sdr_malloc(sdr, sizeof(PrivateKey));
-	if (keyObj == 0 || newPrivateKey.value == 0)
+	if (keyObj == 0)
 	{
 		sdr_cancel_xn(sdr);
 		putErrmsg("Can't add private key.", keyId);
 		return -1;
 	}
 
-	sdr_write(sdr, newPrivateKey.value, (char *) keyValue, keyLen);
 	sdr_write(sdr, keyObj, (char *) &newPrivateKey, sizeof(PrivateKey));
 	if (nextKey)
 	{
@@ -975,8 +1039,40 @@ int	sec_get_own_public_key(time_t effectiveTime, int *keyBufferLen,
 	return ownPublicKey.length;
 }
 
+static int	decryptPrivateKey(PrivateKey *privateKey, int *keyBufferLen,
+			unsigned char *keyValueBuffer, char *passwdPathName)
+{
+	Sdr	sdr = getIonsdr();
+	int	result;
+
+	/*	TODO: obtain passphrase from the secured file
+	 *	identified by passwdPathName, use that passphrase
+	 *	to decrypt the key value in privateKey, store the
+	 *	decrypted key and its length in keyBufferLen and
+	 *	keyValueBuffer.
+	 *
+	 *	For initial testing purposes we return the length
+	 *	and value of the plain text of the private key.		*/
+
+	if (privateKey->length > *keyBufferLen)
+	{
+		/*	Buffer is too small for this key value.		*/
+
+		result = 0;
+	}
+	else
+	{
+		sdr_read(sdr, (char *) keyValueBuffer, privateKey->value,
+				privateKey->length);
+		result = privateKey->length;
+	}
+
+	*keyBufferLen = privateKey->length;
+	return result;
+}
+
 int	sec_get_private_key(time_t effectiveTime, int *keyBufferLen,
-		unsigned char *keyValueBuffer)
+		unsigned char *keyValueBuffer, char *passwdPathName)
 {
 	Sdr		sdr = getIonsdr();
 	SecDB		*secdb = _secConstants();
@@ -1007,31 +1103,111 @@ int	sec_get_private_key(time_t effectiveTime, int *keyBufferLen,
 
 		if (keyElt == 0)
 		{
-			sdr_exit_xn(sdr);
 			return 0;	/*	No such key.		*/
 		}
 	}
 
 	/*	keyElt now points to the last-effective private key
-	 *	for the local node that was in effect at a time at
-	 *	or before the indicated effective time.			*/
+	 *	for the local node that was in effect at or before
+	 *	the indicated effective time.				*/
 
 	keyObj = sdr_list_data(sdr, keyElt);
 	sdr_read(sdr, (char *) &privateKey, keyObj, sizeof(PrivateKey));
-	if (privateKey.length > *keyBufferLen)
+	if (decryptPrivateKey(&privateKey, keyBufferLen, keyValueBuffer,
+				passwdPathName) == 0)
 	{
-		/*	Buffer is too small for this key value.		*/
-
-		sdr_exit_xn(sdr);
-		*keyBufferLen = privateKey.length;
-		return 0;
+		return 0;		/*	Buffer is too small.	*/
 	}
 
-	sdr_read(sdr, (char *) keyValueBuffer, privateKey.value,
-			privateKey.length);
-	sdr_exit_xn(sdr);
-	return privateKey.length;
+	return *keyBufferLen;
 }
+
+int	sec_generate_key_pair(unsigned char *pubKeyBuf,
+		unsigned short pubKeyBufLen, unsigned char **publicKey,
+		unsigned short *publicKeyLen, unsigned char *privKeyBuf,
+		unsigned short privKeyBufLen, unsigned char **privateKey,
+		unsigned short *privateKeyLen)
+{
+#ifdef CRYPTO_SOFTWARE_INSTALLED
+	entropy_context		entropy;
+	ctr_drbg_context	ctr_drbg;
+	const char		*pers = "rsa_genkey";
+	rsa_context		rsa;
+	int			result;
+#else		/*	For regression testing only.			*/
+	int			key;
+#endif
+
+#ifdef CRYPTO_SOFTWARE_INSTALLED
+	entropy_init(&entropy);
+	if (ctr_drbg_init(&ctr_drbg, entropy_func, &entropy,
+			(const unsigned char *) pers, strlen(pers)))
+	{
+		putErrmsg("ctr_drbg_init failed.", NULL);
+		return -1;
+	}
+
+	rsa_init(&rsa, RSA_PKCS_V15, 0);
+	if (rsa_gen_key(&rsa, ctr_drbg_random, &ctr_drbg, KEY_SIZE, EXPONENT))
+	{
+		putErrmsg("rsa_gen_key failed.", NULL);
+		return -1;
+	}
+
+	result = rsa_check_privkey(&rsa);
+	if (result != 0)
+	{
+		putErrmsg("Bad private key.", itoa(result));
+		return -1;
+	}
+
+	result = rsa_check_pubkey(&rsa);
+	if (result != 0)
+	{
+		putErrmsg("Bad public key.", itoa(result));
+		return -1;
+	}
+
+	/*	Extract public key from context.			*/
+
+	result = x509_write_pubkey_der(pubKeyBuf, pubKeyBufLen, &rsa);
+	if (result < 0)
+	{
+		putErrmsg("Can't extract public key.", NULL);
+		return -1;
+	}
+
+	*publicKeyLen = result;
+	*publicKey = (pubKeyBuf + (pubKeyBufLen - 1)) - *publicKeyLen;
+
+	/*	Extract private key from context.			*/
+
+	result = x509_write_key_der(privKeyBuf, privKeyBufLen, &rsa);
+	if (result < 0)
+	{
+		putErrmsg("Can't extract private key.", NULL);
+		return -1;
+	}
+
+	*privateKeyLen = result;
+	*privateKey = (privKeyBuf + (privKeyBufLen - 1)) - *privateKeyLen;
+	rsa_free(&rsa);
+#else		/*	For regression testing only.			*/
+	srand((unsigned int) (getCtime()) / (getOwnNodeNbr()));
+	key = rand();
+	memcpy(pubKeyBuf, (char *) &key, sizeof key);
+	*publicKey = pubKeyBuf;
+	*publicKeyLen = sizeof key;
+	srand((unsigned int) key);
+	key = rand();
+	memcpy(privKeyBuf, (char *) &key, sizeof key);
+	*privateKey = privKeyBuf;
+	*privateKeyLen = sizeof key;
+#endif
+	return 0;
+}
+
+/*	*	Symmetric cryptography functions	*	*	*/
 
 static Object	locateKey(char *keyName, Object *nextKey)
 {

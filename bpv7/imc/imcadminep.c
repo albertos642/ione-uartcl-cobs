@@ -8,7 +8,7 @@
 	ALL RIGHTS RESERVED.  U.S. Government Sponsorship
 	acknowledged.
 									*/
-#include "imcfw.h"
+#include "imcfwP.h"
 
 static int	briefNewNode(uvast nodeNbr)
 {
@@ -127,7 +127,7 @@ static int	briefNewNode(uvast nodeNbr)
 	}
 
 #if IMCDEBUG
-puts("Sending briefing.");
+writeMemo("Sending briefing.");
 #endif
 	/*	Note that ttl must be expressed in milliseconds for
 	 *	BP processing.  The hard-coded TTL here is 1 minute.	*/
@@ -150,6 +150,7 @@ static int	handlePetition(BpDelivery *dlv, unsigned char *cursor,
 	uvast		uvtemp;
 	ImcPetition	petition;
 	MetaEid		metaEid;
+	uvast		petitioner;
 	VScheme		*vscheme;
 	PsmAddress	vschemeElt;
 	Object		groupAddr;
@@ -157,6 +158,9 @@ static int	handlePetition(BpDelivery *dlv, unsigned char *cursor,
 	ImcGroup	group;
 	Object		elt;
 	uvast		nodeNbr;
+	char		destinationEid[32];
+	VEndpoint	*vpoint;
+	PsmAddress	vpointElt;
 	Object		iondbObj;
 	IonDB		iondb;
 	int		sourceRegionIdx;
@@ -194,24 +198,25 @@ static int	handlePetition(BpDelivery *dlv, unsigned char *cursor,
 
 	/*	Now get the multicast group.				*/
 
+	petitioner = metaEid.elementNbr;	/*	A node number.	*/
 #if IMCDEBUG
-printf("Handling type-%d petition from " UVAST_FIELDSPEC " at node "
-UVAST_FIELDSPEC ".\n", petition.isMember, metaEid.elementNbr, ownNodeNbr);
-fflush(stdout);
+writeMemoNote("Handling petition of Boolean value", itoa(petition.isMember));
+writeMemoNote("...from node", itoa(petitioner));
+writeMemoNote("...at node", itoa(ownNodeNbr));
 #endif
 	oK(sdr_begin_xn(sdr));
 	imcFindGroup(petition.groupNbr, &groupAddr, &groupElt);
 #if IMCDEBUG
-printf("Seeking multicast group for group number " UVAST_FIELDSPEC ".\n", petition.groupNbr);
+writeMemoNote("Seeking multicast group for group", itoa(petition.groupNbr));
 #endif
 	if (groupElt == 0)	/*	System failure.			*/
 	{
 #if IMCDEBUG
-puts("Group not found.");
+writeMemo("Group not found.");
 #endif
 		if (petition.isMember)	/*	(Else nothing to do.)	*/
 		{
-			writeMemoNote("Can't handle IMC Join petition",
+			writeMemoNote("[?] Can't handle IMC Join petition",
 					itoa(petition.groupNbr));
 		}
 
@@ -228,26 +233,29 @@ puts("Group not found.");
 
 	/*	The multicast group is known, though possibly empty.	*/
 
-#if IMCDEBUG
-printf("Adding node " UVAST_FIELDSPEC " to this group.\n", metaEid.elementNbr);
-#endif
 	sdr_stage(sdr, (char *) &group, groupAddr, sizeof(ImcGroup));
 	if (petition.isMember)	/*	Source node joining the group.	*/
 	{
+#if IMCDEBUG
+writeMemoNote("Node asking to Join this group", itoa(petitioner));
+#endif
 		for (elt = sdr_list_first(sdr, group.members); elt;
 				elt = sdr_list_next(sdr, elt))
 		{
 			nodeNbr = sdr_list_data(sdr, elt);
-			if (nodeNbr < metaEid.elementNbr)
+#if IMCDEBUG
+writeMemoNote("Existing group member", itoa(nodeNbr));
+writeMemoNote("New group member", itoa(petitioner));
+#endif
+			if (nodeNbr < petitioner)
 			{
 				continue;
 			}
 
-			if (nodeNbr == metaEid.elementNbr)
+			if (nodeNbr == petitioner)
 			{
 #if IMCDEBUG
-puts("Ignoring redundant Join.");
-fflush(stdout);
+writeMemo("Ignoring redundant Join.");
 #endif
 			/*	Again nothing to propagate even if
 			 *	node is a passageway.  Since the
@@ -266,43 +274,63 @@ fflush(stdout);
 
 		/*	Must add new member of group at this point.	*/
 #if IMCDEBUG
-printf("Adding node " UVAST_FIELDSPEC " to group " UVAST_FIELDSPEC ".\n", metaEid.elementNbr, petition.groupNbr);
-fflush(stdout);
+writeMemoNote("Adding node", itoa(petitioner));
+writeMemoNote("...to group", itoa(petition.groupNbr));
 #endif
 		if (elt)
 		{
-			oK(sdr_list_insert_before(sdr, elt,
-					metaEid.elementNbr));
+			oK(sdr_list_insert_before(sdr, elt, petitioner));
 		}
 		else
 		{
 			oK(sdr_list_insert_last(sdr, group.members,
-					metaEid.elementNbr));
+						petitioner));
 		}
 
-		if (metaEid.elementNbr == ownNodeNbr)
+		if (petitioner == ownNodeNbr)
 		{
-			group.isMember = 1;
-		}
+			/*	Set the "isMember" flag only if the
+			 *	node is actually registered in this
+			 *	multicast group.  This will not be
+			 *	the case if node is an IRR passageway
+			 *	that is only joining the multicast
+			 *	group "ex officio".			*/
 
-		if (petition.groupNbr == 0 && metaEid.elementNbr != ownNodeNbr)
-		{
-#if IMCDEBUG
-printf("Should be sending a briefing to node " UVAST_FIELDSPEC ".\n", metaEid.elementNbr);
-#endif
-			/*	This node is subscribing to the IMC
-			 *	petitions group, i.e., it is a node
-			 *	that is newly announcing itself to
-			 *	the multicast community.  So it
-			 *	doesn't know about any other nodes'
-			 *	subscriptions.  So we must send this
-			 *	node a briefing.			*/
-
-			if (briefNewNode(metaEid.elementNbr) < 0)
+			isprintf(destinationEid, sizeof destinationEid,
+					"imc:" UVAST_FIELDSPEC ".0",
+					petition.groupNbr);
+			oK(parseEidString(destinationEid, &metaEid, &vscheme,
+					&vschemeElt));
+			findEndpoint("imc", &metaEid, NULL, &vpoint,
+					&vpointElt);
+			if (vpointElt)
 			{
-				putErrmsg("Failed briefing new node.", NULL);
-				sdr_cancel_xn(sdr);
-				return -1;
+				group.isMember = 1;
+			}
+		}
+		else	/*	Need to send briefing to new member?	*/
+		{
+			if (petition.groupNbr == 0)
+			{
+#if IMCDEBUG
+writeMemoNote("Must send a briefing to node", itoa(petitioner));
+#endif
+				/*	This node is subscribing to
+				 *	the IMC petitions group, i.e.,
+				 *	it is a node that is newly
+				 *	announcing itself to the
+				 *	multicast community.  So it
+			 	*	doesn't know about any other
+				*	nodes' subscriptions.  So we
+				*	must send this node a briefing.	*/
+
+				if (briefNewNode(petitioner) < 0)
+				{
+					putErrmsg("Failed briefing new node.",
+							NULL);
+					sdr_cancel_xn(sdr);
+					return -1;
+				}
 			}
 		}
 
@@ -311,47 +339,34 @@ printf("Should be sending a briefing to node " UVAST_FIELDSPEC ".\n", metaEid.el
 
 		group.secUntilDelete = -1;
 	}
-	else
-	{			/*	Source node leaving the group.	*/
+	else	/*	Source node leaving the group.			*/
+	{
+#if IMCDEBUG
+writeMemoNote("Node asking to Leave this group", itoa(petitioner));
+#endif
 		for (elt = sdr_list_first(sdr, group.members); elt;
 				elt = sdr_list_next(sdr, elt))
 		{
 			nodeNbr = sdr_list_data(sdr, elt);
-			if (nodeNbr < metaEid.elementNbr)
+			if (nodeNbr < petitioner)
 			{
 				continue;
 			}
 
-			if (nodeNbr > metaEid.elementNbr)
-			{
-#if IMCDEBUG
-puts("Ignoring Leave by non-member.");
-fflush(stdout);
-#endif
-			/*	Again nothing to propagate even if
-			 *	node is a passageway.  Since the
-			 *	source node is already missing from
-			 *	the group, the passageway's "ex
-			 *	officio" withdrawal from the group
-			 *	has already been announced in the
-			 *	other region.				*/
-
-				sdr_cancel_xn(sdr);
-				return 0;
-			}
-
-			break;	/*	Source node may be in the list.	*/
+			break;
 		}
 
-		/*	Must delete this member of the group, if found.	*/
-#if IMCDEBUG
-printf("Deleting member " UVAST_FIELDSPEC ".\n", metaEid.elementNbr);
-fflush(stdout);
-#endif
-		if (elt)	/*	Source node is a member.	*/
+		/*	Have either located this group member or
+		 *	reached a point where it is known that the
+		 *	node is not a member of the group.		*/
+
+		if (elt && nodeNbr == petitioner)
 		{
+#if IMCDEBUG
+writeMemoNote("Deleting member", itoa(petitioner));
+#endif
 			sdr_list_delete(sdr, elt, NULL, NULL);
-			if (metaEid.elementNbr == ownNodeNbr)
+			if (petitioner == ownNodeNbr)
 			{
 				group.isMember = 0;
 			}
@@ -364,25 +379,47 @@ fflush(stdout);
 			if (sdr_list_length(sdr, group.members) == 0)
 			{
 #if IMCDEBUG
-puts("Flagging group for deletion.");
-fflush(stdout);
+writeMemo("Flagging group for deletion.");
 #endif
 				group.secUntilDelete = 15;
 			}
 		}
+		else
+		{
+#if IMCDEBUG
+writeMemoNote("Ignoring Leave by non-member", itoa(petitioner));
+#endif
+			/*	Again nothing to propagate even if
+			 *	node is a passageway.  Since the
+			 *	source node is already missing from
+			 *	the group, the passageway's "ex
+			 *	officio" withdrawal from the group
+			 *	has already been announced in the
+			 *	other region.				*/
+
+			sdr_cancel_xn(sdr);
+			return 0;
+		}
 	}
 
-	/*	If node is a passageway, propagate petition as needed.	*/
+	/*	If the local node is a passageway, propagate petition
+	 *	as needed.						*/
 
 	iondbObj = getIonDbObject();
 	sdr_read(sdr, (char *) &iondb, iondbObj, sizeof(IonDB));
 	if (iondb.regions[1].regionNbr != 0)
 	{
+#if IMCDEBUG
+writeMemo("Passageway may need to propagate petition.");
+#endif
 		/*	Node is a passageway between its home region
 		 *	and the immediate encompassing region.		*/
 
-		sourceRegionIdx = ionRegionOf(metaEid.elementNbr, ownNodeNbr,
+		sourceRegionIdx = ionRegionOf(petitioner, ownNodeNbr,
 				&sourceRegionNbr);
+#if IMCDEBUG
+writeMemoNote("Source node nbr", itoa(petitioner));
+#endif
 		if (sourceRegionIdx < 0)
 		{
 			putErrmsg("IMC system error.", NULL);
@@ -390,13 +427,23 @@ fflush(stdout);
 			return -1;
 		}
 
+#if IMCDEBUG
+writeMemoNote("Source node idx", itoa(sourceRegionIdx));
+#endif
 		destinationRegionNbr =
-				iondb.regions[0 - sourceRegionIdx].regionNbr;
+				iondb.regions[1 - sourceRegionIdx].regionNbr;
+#if IMCDEBUG
+writeMemoNote("Potential propagation destination region",
+itoa(destinationRegionNbr));
+#endif
 		if (petition.isMember == 1)		/*	Join	*/
 		{
 			group.count[sourceRegionIdx] += 1;
 			if (group.count[sourceRegionIdx] == 1)
 			{
+#if IMCDEBUG
+writeMemo("Must propagate.");
+#endif
 				if (imcSendPetition(&petition,
 						destinationRegionNbr) < 0)
 				{
@@ -406,6 +453,9 @@ fflush(stdout);
 					return -1;
 				}
 			}
+#if IMCDEBUG
+else writeMemo("No need to propagate.");
+#endif
 		}
 		else					/*	Leave	*/
 		{

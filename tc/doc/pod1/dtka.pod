@@ -4,7 +4,7 @@ dtka - Delay-Tolerant Key Administration (DTKA) daemon
 
 =head1 SYNOPSIS
 
-B<dtka>
+B<dtka> I<password_file_path_name>
 
 B<dtka> is a delay-tolerant public key infrastructure (PKI) system, built
 on the Trusted Collective (TC) application framework.  Each DTKA daemon
@@ -19,6 +19,11 @@ distribution of public keys, enabling ION's BP and LTP implementations
 to utilize asymmetric cryptography to ensure the integrity and/or
 confidentiality of data exchange as necessary.  (Discussion of asymmetric
 cryptography is beyond the scope of this manual page.)
+
+I<password_file_path_name> is expected to be the path name for a secure
+file, accessible only to the owner of the B<dtka> executable, which
+contains the passphrase that dtka can use to store locally -- in encrypted
+representation -- the private keys it generates.
 
 A central principle of DTKA is that keys have B<effective times> which
 condition their applicability.  For example, the public key that must

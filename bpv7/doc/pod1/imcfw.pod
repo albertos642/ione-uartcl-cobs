@@ -9,15 +9,15 @@ B<imcfw>
 =head1 DESCRIPTION
 
 B<imcfw> is a background "daemon" task that pops bundles from the queue of
-bundle destined for IMC-scheme (Interplanetary Multicast) endpoints, determines
-which "relatives" on the IMC multicast tree to forward the bundles to,
-and appends those bundles to the appropriate queues of bundles pending
-transmission to those proximate destinations.
-
-For each possible proximate destination (that is, neighboring node) there is
-a separate queue for each possible level of bundle priority: 0, 1, 2.  Each
-outbound bundle is appended to the queue matching the bundle's designated
-priority.
+bundles destined for IMC-scheme (Interplanetary Multicast) endpoints and
+determines which neighboring nodes those bundles should be sent to in order
+to be forwarded to all members of the multicast groups identified by
+those endpoints.  To do so, it reviews the preferred routes (computed
+by Contact Graph Routing) to all group members, "gangs" the members by
+route entry node (the initial node on each route), and forwards the
+bundle once for each gang; each forwarded copy of the bundle is sent
+to the entry node for the gang with an attached extension block listing
+all gang members.
 
 Proximate destination computation is determined by multicast group membership
 as resulting from nodes' registration in multicast endpoints (accomplished

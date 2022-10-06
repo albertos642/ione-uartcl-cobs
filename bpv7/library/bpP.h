@@ -249,10 +249,6 @@ typedef struct
 
 /*	Administrative record types	*/
 #define	BP_STATUS_REPORT	(1)
-#define	BP_MULTICAST_BRIEFING	(5)
-#define	BP_SAGA_MESSAGE		(6)
-#define	BP_BIBE_PDU		(7)
-#define	BP_BIBE_SIGNAL		(8)	/*	Aggregate, in BIBE.	*/
 
 typedef enum
 {
@@ -306,6 +302,12 @@ typedef struct
 #define BDL_IS_FRAGMENT		(1)	/* 0000 00000000 00000001	*/
 #define BDL_IS_ADMIN		(2)	/* 0000 00000000 00000010	*/
 #define BDL_DOES_NOT_FRAGMENT	(4)	/* 0000 00000000 00000100	*/
+
+	/*	ION innovations for IRF.			*/
+#define BDL_IS_NODE_LOCATOR	(8)	/* 0000 00000000 00001000	*/
+#define BDL_IRF_TRACE_RPT_REQ	(16)	/* 0000 00000000 00010000	*/
+	/*	End of ION innovations for IRF.			*/
+
 #define BDL_APP_ACK_REQUEST	(32)	/* 0000 00000000 00100000	*/
 #define BDL_STATUS_TIME_REQ	(64)	/* 0000 00000000 01000000	*/
 #define BDL_RECEIVED_RPT_REQ	(16384)	/* 0000 01000000 00000000	*/
@@ -360,6 +362,10 @@ typedef struct
 	/*	Stuff in the IPN Multicast extension block.		*/
 
 	Object		destinations;	/*	SDR list of node nbrs.	*/
+
+	/*	Stuff in the IRF passageways trace extension block.	*/
+
+	Object		passageways;	/*	SDR list of node nbrs	*/
 
 	/*	Stuff in Payload block.					*/
 
@@ -868,6 +874,7 @@ typedef struct
 	int		bundleCounter;
 	int		clockPid;	/*	For stopping bpclock.	*/
 	int		cpsdPid;	/*	For stopping cpsd.	*/
+	int		irfdPid;	/*	For stopping irfd.	*/
 	int		transitPid;	/*	For stopping bptransit.	*/
 	sm_SemId	transitSemaphore;
 	int		watching;	/*	Activity watch switch.	*/
@@ -1487,8 +1494,6 @@ extern int		findBundle(char *sourceEid, BpTimestamp *creationTime,
 				Object *bundleAddr);
 extern int		retrieveSerializedBundle(Object bundleZco, Object *obj);
 
-extern int		deliverBundle(Object bundleObj, Bundle *bundle,
-				VEndpoint *vpoint);
 extern int		forwardBundle(Object bundleObj, Bundle *bundle,
 				char *stationEid);
 

@@ -448,6 +448,13 @@ int	main(int argc, char **argv)
 			tccStop(_blocksGroupNbr(NULL));
 		}
 	}
+	else if (strcmp(cmdFileName, "!") == 0)	/*	Resume.		*/
+	{
+		if (tccAttach(_blocksGroupNbr(NULL)) == 0)
+		{
+			tccStart(_blocksGroupNbr(NULL));
+		}
+	}
 	else					/*	Scripted.	*/
 	{
 		cmdFile = iopen(cmdFileName, O_RDONLY, 0777);
