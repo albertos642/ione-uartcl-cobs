@@ -44,6 +44,12 @@ if WINDOWS
 LIBOBJS += -lws2_32 -lwsock32
 endif
 
+if MUSL
+USR_INCLUDE =
+else
+USR_INCLUDE = -I/usr/include
+endif
+
 # This will add CFLAGS to make the valgrind macros compile without
 # warnings/errors on some systems with specific versions of valgrind
 # and gcc (see configure.ac and issue #298 for details). If valgrind
@@ -1610,7 +1616,7 @@ nm_shared_src =	\
 	$(nm_cbor_src)
 
 libamp_la_SOURCES = $(nm_shared_src)
-libamp_la_CFLAGS = -I/usr/include -I$(srcdir)/ici/library -I$(srcdir)/bpv6/library -I$(srcdir)/ltp/library -I$(srcdir)/nm  \
+libamp_la_CFLAGS = $(USR_INCLUDE) -I$(srcdir)/ici/library -I$(srcdir)/bpv6/library -I$(srcdir)/ltp/library -I$(srcdir)/nm  \
                   -I$(srcdir)/nm/agent -I$(srcdir)/bpv6/library/ext/sbsp $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) \
                   $(NM_CBOR_CFLAGS)
 # Note: ici reference is used here only for memory management.  If -DUSE_MALLOC is used for NM (not recommended), this dependency would be unneeded.
@@ -1673,14 +1679,14 @@ nmmans = \
 	$(top_builddir)/nm/doc/nm_mgr.1
 
 libampAgentADM_la_SOURCES = $(nm_agent_ADM_SOURCES)
-libampAgentADM_la_CFLAGS = -I/usr/include -I$(srcdir)/nm -I$(srcdir)/nm/shared/adm -I$(BP_SRC_DIR)/library/ext/sbsp -I$(BP_SRC_DIR) -I$(BP_SRC_DIR)/library -I$(srcdir)/ltp/library $(NM_CBOR_CFLAGS) $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) 
+libampAgentADM_la_CFLAGS = $(USR_INCLUDE) -I$(srcdir)/nm -I$(srcdir)/nm/shared/adm -I$(BP_SRC_DIR)/library/ext/sbsp -I$(BP_SRC_DIR) -I$(BP_SRC_DIR)/library -I$(srcdir)/ltp/library $(NM_CBOR_CFLAGS) $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) 
 libampAgentADM_la_LIBADD = libamp.la libici.la libbp.la libltp.la
 
 
 nm_agent_LDADD = libici.la libbp.la libltp.la libamp.la libampAgentADM.la $(LIBOBJS) $(PTHREAD_LIBS)
 nm_agent_LDFLAGS = -L/usr/local/lib -lm -lpthread 
 
-nm_agent_CFLAGS = -I/usr/include -I$(srcdir)/ici/library -I$(srcdir)/bpv6/library -I$(srcdir)/nm \
+nm_agent_CFLAGS = $(USR_INCLUDE) -I$(srcdir)/ici/library -I$(srcdir)/bpv6/library -I$(srcdir)/nm \
                   -I$(srcdir)/nm/agent -I$(srcdir)/nm/shared/adm $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) \
                   -DAGENT_ROLE $(NM_CBOR_CFLAGS) $(NM_ADM_INCLUDES)
 
@@ -2599,7 +2605,7 @@ nm_shared_src = \
 	$(nm_cbor_src)
 
 libamp_la_SOURCES = $(nm_shared_src)
-libamp_la_CFLAGS = -I/usr/include -I$(srcdir)/ici/library -I$(srcdir)/bpv7/library -I$(srcdir)/ltp/library -I$(srcdir)/nm  \
+libamp_la_CFLAGS = $(USR_INCLUDE) -I$(srcdir)/ici/library -I$(srcdir)/bpv7/library -I$(srcdir)/ltp/library -I$(srcdir)/nm  \
                   -I$(srcdir)/nm/agent $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) \
                   $(NM_CBOR_CFLAGS)
 # Note: ici reference is used here only for memory management.  If -DUSE_MALLOC is used for NM (not recommended), this dependency would be unneeded.
@@ -2658,14 +2664,14 @@ nmmans = \
 	$(top_builddir)/nm/doc/nm_mgr.1
 
 libampAgentADM_la_SOURCES = $(nm_agent_ADM_SOURCES)
-libampAgentADM_la_CFLAGS = -I/usr/include -I$(srcdir)/nm -I$(srcdir)/nm/shared/adm -I$(BP_SRC_DIR) -I$(BP_SRC_DIR)/library/ext/bpsec -I$(BP_SRC_DIR)/library -I$(srcdir)/ltp/library $(NM_CBOR_CFLAGS) $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) 
+libampAgentADM_la_CFLAGS = $(USR_INCLUDE) -I$(srcdir)/nm -I$(srcdir)/nm/shared/adm -I$(BP_SRC_DIR) -I$(BP_SRC_DIR)/library/ext/bpsec -I$(BP_SRC_DIR)/library -I$(srcdir)/ltp/library $(NM_CBOR_CFLAGS) $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) 
 libampAgentADM_la_LIBADD = libamp.la libici.la $(bplib) libltp.la
 
 
 nm_agent_LDADD = libici.la $(bplib) libltp.la libamp.la libampAgentADM.la $(PTHREAD_LIBS)
 nm_agent_LDFLAGS = -L/usr/local/lib -lm -lpthread 
 
-nm_agent_CFLAGS = -I/usr/include -I$(srcdir)/ici/library -I$(srcdir)/bpv7/library -I$(srcdir)/nm \
+nm_agent_CFLAGS = $(USR_INCLUDE) -I$(srcdir)/ici/library -I$(srcdir)/bpv7/library -I$(srcdir)/nm \
                   -I$(srcdir)/nm/agent -I$(srcdir)/nm/shared/adm $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) \
                   -DAGENT_ROLE $(NM_CBOR_CFLAGS) $(NM_ADM_INCLUDES)
 
@@ -3392,7 +3398,7 @@ tests_nm_unit_dotest_SOURCES = tests/nm-unit/dotest.c $(nm_agent_SOURCES) $(nm_s
 #tests_nm_unit_dotest_LDADD = $(nm_agent_LDADD) -lm $(TESTUTILOBJS) $(TESTUNITYOBJS)
 tests_nm_unit_dotest_LDADD = libici.la $(bplib) libltp.la -lm $(TESTUTILOBJS) $(TESTUNITYOBJS)
 tests_nm_unit_dotest_CFLAGS = $(nm_agent_CFLAGS) $(TESTUTILCFLAGS) $(TESTUNITYCFLAGS) -DTEST_MAIN -DUSE_MALLOC \
-	-I/usr/include -I$(srcdir)/nm -I$(srcdir)/$(BP_DIR)/library/ext/sbsp -I$(BP_SRC_DIR) -I$(srcdir)/$(BP_DIR)/library/ext/bpsec -I$(srcdir)/$(BP_DIR)/library -I$(srcdir)/ltp/library -I$(srcdir)/nm/shared
+	$(USR_INCLUDE) -I$(srcdir)/nm -I$(srcdir)/$(BP_DIR)/library/ext/sbsp -I$(BP_SRC_DIR) -I$(srcdir)/$(BP_DIR)/library/ext/bpsec -I$(srcdir)/$(BP_DIR)/library -I$(srcdir)/ltp/library -I$(srcdir)/nm/shared
 
 tests_nm_unit_utils_vector_dotest_SOURCES = tests/nm-unit/utils/vector.c $(nm_shared_src)
 tests_nm_unit_utils_vector_dotest_LDADD = -lm $(TESTUNITYOBJS) libici.la

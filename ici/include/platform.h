@@ -48,6 +48,11 @@ extern "C" {
 #define	SPACE_ORDER	2
 #endif
 
+#ifdef musl			/*	OpenWrt musl library		*/
+#define uClibc			/*	Pick up uClibc tweaks.		*/
+#define	LONG_LONG_OKAY	1	/*	Default value.			*/
+#endif				/*	end of #ifndef musl		*/
+
 #ifdef uClibc
 #ifndef linux
 #define linux
@@ -242,6 +247,10 @@ extern int			rtems_shell_main_cp(int argc, char *argv[]);
 #include <dirent.h>
 #include <sys/stat.h>
 #endif				/*	end of #ifndef ION4WIN		*/
+
+#ifdef musl			/*	OpenWrt musl library		*/
+#include <sys/types.h>
+#endif				/*	end of #ifdef musl		*/
 
 #ifdef ION4WIN			/*	Visual Studio provides most.	*/
 

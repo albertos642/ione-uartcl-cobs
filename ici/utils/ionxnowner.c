@@ -57,7 +57,7 @@ int	main(int argc, char **argv)
 	{
 		isprintf(rpt, sizeof rpt, "SDR owned by PID %d thread "
 				UVAST_FIELDSPEC ".", sdr->sdr->sdrOwnerTask,
-				(uvast) (sdr->sdr->sdrOwnerThread));
+				(uvast) (uintptr_t)(sdr->sdr->sdrOwnerThread));
 		PUTS(rpt);
 		if (echo)
 		{
