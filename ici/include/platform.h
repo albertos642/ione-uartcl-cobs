@@ -779,6 +779,7 @@ extern void			getCurrentTime(struct timeval *);
 extern unsigned long		getClockResolution();	/*	usec	*/
 #if (defined(FSWLAN) || !(defined(ION_NO_DNS)))
 extern unsigned int		getInternetAddress(char *);
+extern char 		getInternet6Address(char *);
 extern char			*getInternetHostName(unsigned int, char *);
 extern int			getNameOfHost(char *, int);
 extern char			*getNameOfUser(char *);
@@ -880,6 +881,9 @@ extern char			*addressToString(struct in_addr, char *buf);
 extern int			parseSocketSpec(char *socketSpec,
 					unsigned short *portNbr,
 					unsigned int *ipAddress);
+extern int			parseSocketSpecSix(char *socketSpec,
+					struct sockaddr_in6 *ipv6Address);
+
 extern void			printDottedString(unsigned int hostNbr,
 					char *buffer);
 
