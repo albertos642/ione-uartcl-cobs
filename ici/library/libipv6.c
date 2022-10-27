@@ -63,3 +63,51 @@ int     parseSocketSpecSix(char *socketSpec, struct sockaddr_in6 *ip6Address)
 	}
 	return 0;
 }
+
+int     itcp_connect6(char *socketSpec, unsigned short defaultPort, int *sock)
+{
+        struct sockaddr_in6      inetName;
+
+        CHKERR(socketSpec);
+        CHKERR(sock);
+        *sock = -1;             /*      Default value.                  */
+        if (*socketSpec == '\0')
+        {
+                return 0;       /*      Don't try to connect.           */
+        }
+
+        /*      Construct socket name.                                  */
+
+        parseSocketSpecSix(socketSpec, &inetName);
+
+        if (inetName.sin6_port == 0)
+        {
+                inetName.sin6_port = htons(4556);
+        }
+
+        *sock = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
+        if (*sock < 0)
+        {
+                putSysErrmsg("Can't open TCP socket", socketSpec);
+                return -1;
+        }
+
+        if (connect(*sock, (struct sockaddr *) &inetName, sizeof(inetName)) < 0)
+        {
+                if (errno == ECONNREFUSED)
+                {
+                        writeMemoNote("[i] Can't connect to TCP socket (refused)", socketSpec);
+                }
+                else
+                {
+                        putSysErrmsg("Can't connect to TCP socket", socketSpec);
+                }
+
+                closesocket(*sock);
+                *sock = -1;
+                return 0;
+        }
+
+        writeMemoNote("[i] Connected to TCP socket", socketSpec);
+        return 1;       /*      Connected to remote socket.             */
+}

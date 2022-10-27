@@ -1813,6 +1813,8 @@ bpbin = \
 	stcpclo \
 	tcpcli \
 	tcpclo \
+	tcpcli6 \
+	tcpclo6 \
 	udpcli \
 	udpclo \
 	udpcli6 \
@@ -2292,6 +2294,14 @@ tcpcli_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 tcpclo_SOURCES = bpv7/tcp/tcpclo.c
 tcpclo_LDADD = libici.la $(bplib) $(PTHREAD_LIBS)
 tcpclo_CFLAGS = $(bpcflags) $(AM_CFLAGS)
+
+tcpcli6_SOURCES = bpv7/tcp/tcpcli6.c
+tcpcli6_LDADD = libici.la $(bplib) $(PTHREAD_LIBS)
+tcpcli6_CFLAGS = $(bpcflags) $(AM_CFLAGS)
+
+tcpclo6_SOURCES = bpv7/tcp/tcpclo6.c
+tcpclo6_LDADD = libici.la $(bplib) $(PTHREAD_LIBS)
+tcpclo6_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 
 # --- STCP Executables --- #
 

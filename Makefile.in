@@ -305,6 +305,7 @@ am__EXEEXT_5 = dgr2file$(EXEEXT) file2dgr$(EXEEXT) file2tcp$(EXEEXT) \
 @BUILD_BPv6_FALSE@	ltpcli$(EXEEXT) ltpclo$(EXEEXT) \
 @BUILD_BPv6_FALSE@	stcpcli$(EXEEXT) stcpclo$(EXEEXT) \
 @BUILD_BPv6_FALSE@	tcpcli$(EXEEXT) tcpclo$(EXEEXT) \
+@BUILD_BPv6_FALSE@	tcpcli6$(EXEEXT) tcpclo6$(EXEEXT) \
 @BUILD_BPv6_FALSE@	udpcli$(EXEEXT) udpclo$(EXEEXT) \
 @BUILD_BPv6_FALSE@	udpcli6$(EXEEXT) udpclo6$(EXEEXT) \
 @BUILD_BPv6_FALSE@	$(am__EXEEXT_6) $(am__EXEEXT_7)
@@ -2260,6 +2261,14 @@ tcpcli_OBJECTS = $(am_tcpcli_OBJECTS)
 tcpcli_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(tcpcli_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+am__tcpcli6_SOURCES_DIST = bpv7/tcp/tcpcli6.c
+@BUILD_BPv6_FALSE@am_tcpcli6_OBJECTS =  \
+@BUILD_BPv6_FALSE@	bpv7/tcp/tcpcli6-tcpcli6.$(OBJEXT)
+tcpcli6_OBJECTS = $(am_tcpcli6_OBJECTS)
+@BUILD_BPv6_FALSE@tcpcli6_DEPENDENCIES = libici.la $(bplib)
+tcpcli6_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(tcpcli6_CFLAGS) \
+	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 am__tcpclo_SOURCES_DIST = bpv7/tcp/tcpclo.c bpv6/tcp/tcpclo.c
 @BUILD_BPv6_FALSE@am_tcpclo_OBJECTS =  \
 @BUILD_BPv6_FALSE@	bpv7/tcp/tcpclo-tcpclo.$(OBJEXT)
@@ -2271,6 +2280,14 @@ tcpclo_OBJECTS = $(am_tcpclo_OBJECTS)
 tcpclo_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(tcpclo_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+am__tcpclo6_SOURCES_DIST = bpv7/tcp/tcpclo6.c
+@BUILD_BPv6_FALSE@am_tcpclo6_OBJECTS =  \
+@BUILD_BPv6_FALSE@	bpv7/tcp/tcpclo6-tcpclo6.$(OBJEXT)
+tcpclo6_OBJECTS = $(am_tcpclo6_OBJECTS)
+@BUILD_BPv6_FALSE@tcpclo6_DEPENDENCIES = libici.la $(bplib)
+tcpclo6_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(tcpclo6_CFLAGS) \
+	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 am_tcputa_OBJECTS = cfdp/tcp/tcputa-tcputa.$(OBJEXT)
 tcputa_OBJECTS = $(am_tcputa_OBJECTS)
 tcputa_DEPENDENCIES = libcfdp.la libici.la $(bplib)
@@ -3005,7 +3022,9 @@ am__depfiles_remade = ams/library/$(DEPDIR)/amsd-amscommon.Po \
 	bpv7/stcp/$(DEPDIR)/stcpcli-stcpcli.Po \
 	bpv7/stcp/$(DEPDIR)/stcpclo-stcpclo.Po \
 	bpv7/tcp/$(DEPDIR)/tcpcli-tcpcli.Po \
+	bpv7/tcp/$(DEPDIR)/tcpcli6-tcpcli6.Po \
 	bpv7/tcp/$(DEPDIR)/tcpclo-tcpclo.Po \
+	bpv7/tcp/$(DEPDIR)/tcpclo6-tcpclo6.Po \
 	bpv7/test/$(DEPDIR)/bpchat-bpchat.Po \
 	bpv7/test/$(DEPDIR)/bpcounter-bpcounter.Po \
 	bpv7/test/$(DEPDIR)/bpcrash-bpcrash.Po \
@@ -3401,8 +3420,9 @@ SOURCES = $(libamp_la_SOURCES) $(libampAgentADM_la_SOURCES) \
 	$(tcaadmin_SOURCES) $(tcaboot_SOURCES) $(tcacompile_SOURCES) \
 	$(tcapublish_SOURCES) $(tcarecv_SOURCES) $(tcc_SOURCES) \
 	$(tccadmin_SOURCES) $(tcp2file_SOURCES) $(tcpbsi_SOURCES) \
-	$(tcpbso_SOURCES) $(tcpcli_SOURCES) $(tcpclo_SOURCES) \
-	$(tcputa_SOURCES) $(tests_1000_loopback_dotest_SOURCES) \
+	$(tcpbso_SOURCES) $(tcpcli_SOURCES) $(tcpcli6_SOURCES) \
+	$(tcpclo_SOURCES) $(tcpclo6_SOURCES) $(tcputa_SOURCES) \
+	$(tests_1000_loopback_dotest_SOURCES) \
 	$(tests_1500_loopback_brs_dotest_SOURCES) \
 	$(tests_bug_0015_tcpclo_bpcp_sig_handling_test_SOURCES) \
 	$(tests_issue_188_common_cos_syntax_dotest_SOURCES) \
@@ -3489,7 +3509,8 @@ DIST_SOURCES = $(am__libamp_la_SOURCES_DIST) \
 	$(am__tcapublish_SOURCES_DIST) $(am__tcarecv_SOURCES_DIST) \
 	$(am__tcc_SOURCES_DIST) $(am__tccadmin_SOURCES_DIST) \
 	$(tcp2file_SOURCES) $(tcpbsi_SOURCES) $(tcpbso_SOURCES) \
-	$(am__tcpcli_SOURCES_DIST) $(am__tcpclo_SOURCES_DIST) \
+	$(am__tcpcli_SOURCES_DIST) $(am__tcpcli6_SOURCES_DIST) \
+	$(am__tcpclo_SOURCES_DIST) $(am__tcpclo6_SOURCES_DIST) \
 	$(tcputa_SOURCES) $(tests_1000_loopback_dotest_SOURCES) \
 	$(tests_1500_loopback_brs_dotest_SOURCES) \
 	$(tests_bug_0015_tcpclo_bpcp_sig_handling_test_SOURCES) \
@@ -4517,8 +4538,8 @@ udp2file_CFLAGS = $(dgrcflags) $(AM_CFLAGS)
 @BUILD_BPv6_FALSE@	dtn2admin dtn2adminep dtn2fw hmackeys \
 @BUILD_BPv6_FALSE@	ipnadmin ipnadminep ipnd ipnfw lgagent \
 @BUILD_BPv6_FALSE@	lgsend ltpcli ltpclo stcpcli stcpclo tcpcli \
-@BUILD_BPv6_FALSE@	tcpclo udpcli udpclo udpcli6 udpclo6 \
-@BUILD_BPv6_FALSE@	$(am__append_22) $(am__append_23)
+@BUILD_BPv6_FALSE@	tcpclo tcpcli6 tcpclo6 udpcli udpclo udpcli6 \
+@BUILD_BPv6_FALSE@	udpclo6 $(am__append_22) $(am__append_23)
 @BUILD_BPv6_TRUE@bpbin = bibeadmin bibeclo bpadmin bpcancel bpclm \
 @BUILD_BPv6_TRUE@	bpclock bpcounter bpcrash bpdriver bpecho \
 @BUILD_BPv6_TRUE@	bping bplist bpnmtest bprecvfile bpsecadmin \
@@ -5767,6 +5788,12 @@ udp2file_CFLAGS = $(dgrcflags) $(AM_CFLAGS)
 @BUILD_BPv6_FALSE@@ENABLE_IMC_TRUE@imcadminep_SOURCES = bpv7/imc/imcadminep.c
 @BUILD_BPv6_FALSE@@ENABLE_IMC_TRUE@imcadminep_LDADD = libici.la $(bplib)
 @BUILD_BPv6_FALSE@@ENABLE_IMC_TRUE@imcadminep_CFLAGS = $(bpcflags) $(AM_CFLAGS)
+@BUILD_BPv6_FALSE@tcpcli6_SOURCES = bpv7/tcp/tcpcli6.c
+@BUILD_BPv6_FALSE@tcpcli6_LDADD = libici.la $(bplib) $(PTHREAD_LIBS)
+@BUILD_BPv6_FALSE@tcpcli6_CFLAGS = $(bpcflags) $(AM_CFLAGS)
+@BUILD_BPv6_FALSE@tcpclo6_SOURCES = bpv7/tcp/tcpclo6.c
+@BUILD_BPv6_FALSE@tcpclo6_LDADD = libici.la $(bplib) $(PTHREAD_LIBS)
+@BUILD_BPv6_FALSE@tcpclo6_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 @BUILD_BPv6_FALSE@udpcli6_SOURCES = bpv7/udp/udpcli6.c
 @BUILD_BPv6_FALSE@udpcli6_LDADD = libici.la $(bplib) $(PTHREAD_LIBS)
 @BUILD_BPv6_FALSE@udpcli6_CFLAGS = $(bpcflags) $(AM_CFLAGS)
@@ -9087,6 +9114,12 @@ bpv6/tcp/tcpcli-tcpcli.$(OBJEXT): bpv6/tcp/$(am__dirstamp) \
 tcpcli$(EXEEXT): $(tcpcli_OBJECTS) $(tcpcli_DEPENDENCIES) $(EXTRA_tcpcli_DEPENDENCIES) 
 	@rm -f tcpcli$(EXEEXT)
 	$(AM_V_CCLD)$(tcpcli_LINK) $(tcpcli_OBJECTS) $(tcpcli_LDADD) $(LIBS)
+bpv7/tcp/tcpcli6-tcpcli6.$(OBJEXT): bpv7/tcp/$(am__dirstamp) \
+	bpv7/tcp/$(DEPDIR)/$(am__dirstamp)
+
+tcpcli6$(EXEEXT): $(tcpcli6_OBJECTS) $(tcpcli6_DEPENDENCIES) $(EXTRA_tcpcli6_DEPENDENCIES) 
+	@rm -f tcpcli6$(EXEEXT)
+	$(AM_V_CCLD)$(tcpcli6_LINK) $(tcpcli6_OBJECTS) $(tcpcli6_LDADD) $(LIBS)
 bpv7/tcp/tcpclo-tcpclo.$(OBJEXT): bpv7/tcp/$(am__dirstamp) \
 	bpv7/tcp/$(DEPDIR)/$(am__dirstamp)
 bpv6/tcp/tcpclo-tcpclo.$(OBJEXT): bpv6/tcp/$(am__dirstamp) \
@@ -9095,6 +9128,12 @@ bpv6/tcp/tcpclo-tcpclo.$(OBJEXT): bpv6/tcp/$(am__dirstamp) \
 tcpclo$(EXEEXT): $(tcpclo_OBJECTS) $(tcpclo_DEPENDENCIES) $(EXTRA_tcpclo_DEPENDENCIES) 
 	@rm -f tcpclo$(EXEEXT)
 	$(AM_V_CCLD)$(tcpclo_LINK) $(tcpclo_OBJECTS) $(tcpclo_LDADD) $(LIBS)
+bpv7/tcp/tcpclo6-tcpclo6.$(OBJEXT): bpv7/tcp/$(am__dirstamp) \
+	bpv7/tcp/$(DEPDIR)/$(am__dirstamp)
+
+tcpclo6$(EXEEXT): $(tcpclo6_OBJECTS) $(tcpclo6_DEPENDENCIES) $(EXTRA_tcpclo6_DEPENDENCIES) 
+	@rm -f tcpclo6$(EXEEXT)
+	$(AM_V_CCLD)$(tcpclo6_LINK) $(tcpclo6_OBJECTS) $(tcpclo6_LDADD) $(LIBS)
 cfdp/tcp/$(am__dirstamp):
 	@$(MKDIR_P) cfdp/tcp
 	@: > cfdp/tcp/$(am__dirstamp)
@@ -10173,7 +10212,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@bpv7/stcp/$(DEPDIR)/stcpcli-stcpcli.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@bpv7/stcp/$(DEPDIR)/stcpclo-stcpclo.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@bpv7/tcp/$(DEPDIR)/tcpcli-tcpcli.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@bpv7/tcp/$(DEPDIR)/tcpcli6-tcpcli6.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@bpv7/tcp/$(DEPDIR)/tcpclo-tcpclo.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@bpv7/tcp/$(DEPDIR)/tcpclo6-tcpclo6.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@bpv7/test/$(DEPDIR)/bpchat-bpchat.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@bpv7/test/$(DEPDIR)/bpcounter-bpcounter.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@bpv7/test/$(DEPDIR)/bpcrash-bpcrash.Po@am__quote@ # am--include-marker
@@ -15279,6 +15320,20 @@ bpv6/tcp/tcpcli-tcpcli.obj: bpv6/tcp/tcpcli.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tcpcli_CFLAGS) $(CFLAGS) -c -o bpv6/tcp/tcpcli-tcpcli.obj `if test -f 'bpv6/tcp/tcpcli.c'; then $(CYGPATH_W) 'bpv6/tcp/tcpcli.c'; else $(CYGPATH_W) '$(srcdir)/bpv6/tcp/tcpcli.c'; fi`
 
+bpv7/tcp/tcpcli6-tcpcli6.o: bpv7/tcp/tcpcli6.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tcpcli6_CFLAGS) $(CFLAGS) -MT bpv7/tcp/tcpcli6-tcpcli6.o -MD -MP -MF bpv7/tcp/$(DEPDIR)/tcpcli6-tcpcli6.Tpo -c -o bpv7/tcp/tcpcli6-tcpcli6.o `test -f 'bpv7/tcp/tcpcli6.c' || echo '$(srcdir)/'`bpv7/tcp/tcpcli6.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) bpv7/tcp/$(DEPDIR)/tcpcli6-tcpcli6.Tpo bpv7/tcp/$(DEPDIR)/tcpcli6-tcpcli6.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='bpv7/tcp/tcpcli6.c' object='bpv7/tcp/tcpcli6-tcpcli6.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tcpcli6_CFLAGS) $(CFLAGS) -c -o bpv7/tcp/tcpcli6-tcpcli6.o `test -f 'bpv7/tcp/tcpcli6.c' || echo '$(srcdir)/'`bpv7/tcp/tcpcli6.c
+
+bpv7/tcp/tcpcli6-tcpcli6.obj: bpv7/tcp/tcpcli6.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tcpcli6_CFLAGS) $(CFLAGS) -MT bpv7/tcp/tcpcli6-tcpcli6.obj -MD -MP -MF bpv7/tcp/$(DEPDIR)/tcpcli6-tcpcli6.Tpo -c -o bpv7/tcp/tcpcli6-tcpcli6.obj `if test -f 'bpv7/tcp/tcpcli6.c'; then $(CYGPATH_W) 'bpv7/tcp/tcpcli6.c'; else $(CYGPATH_W) '$(srcdir)/bpv7/tcp/tcpcli6.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) bpv7/tcp/$(DEPDIR)/tcpcli6-tcpcli6.Tpo bpv7/tcp/$(DEPDIR)/tcpcli6-tcpcli6.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='bpv7/tcp/tcpcli6.c' object='bpv7/tcp/tcpcli6-tcpcli6.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tcpcli6_CFLAGS) $(CFLAGS) -c -o bpv7/tcp/tcpcli6-tcpcli6.obj `if test -f 'bpv7/tcp/tcpcli6.c'; then $(CYGPATH_W) 'bpv7/tcp/tcpcli6.c'; else $(CYGPATH_W) '$(srcdir)/bpv7/tcp/tcpcli6.c'; fi`
+
 bpv7/tcp/tcpclo-tcpclo.o: bpv7/tcp/tcpclo.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tcpclo_CFLAGS) $(CFLAGS) -MT bpv7/tcp/tcpclo-tcpclo.o -MD -MP -MF bpv7/tcp/$(DEPDIR)/tcpclo-tcpclo.Tpo -c -o bpv7/tcp/tcpclo-tcpclo.o `test -f 'bpv7/tcp/tcpclo.c' || echo '$(srcdir)/'`bpv7/tcp/tcpclo.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) bpv7/tcp/$(DEPDIR)/tcpclo-tcpclo.Tpo bpv7/tcp/$(DEPDIR)/tcpclo-tcpclo.Po
@@ -15306,6 +15361,20 @@ bpv6/tcp/tcpclo-tcpclo.obj: bpv6/tcp/tcpclo.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='bpv6/tcp/tcpclo.c' object='bpv6/tcp/tcpclo-tcpclo.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tcpclo_CFLAGS) $(CFLAGS) -c -o bpv6/tcp/tcpclo-tcpclo.obj `if test -f 'bpv6/tcp/tcpclo.c'; then $(CYGPATH_W) 'bpv6/tcp/tcpclo.c'; else $(CYGPATH_W) '$(srcdir)/bpv6/tcp/tcpclo.c'; fi`
+
+bpv7/tcp/tcpclo6-tcpclo6.o: bpv7/tcp/tcpclo6.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tcpclo6_CFLAGS) $(CFLAGS) -MT bpv7/tcp/tcpclo6-tcpclo6.o -MD -MP -MF bpv7/tcp/$(DEPDIR)/tcpclo6-tcpclo6.Tpo -c -o bpv7/tcp/tcpclo6-tcpclo6.o `test -f 'bpv7/tcp/tcpclo6.c' || echo '$(srcdir)/'`bpv7/tcp/tcpclo6.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) bpv7/tcp/$(DEPDIR)/tcpclo6-tcpclo6.Tpo bpv7/tcp/$(DEPDIR)/tcpclo6-tcpclo6.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='bpv7/tcp/tcpclo6.c' object='bpv7/tcp/tcpclo6-tcpclo6.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tcpclo6_CFLAGS) $(CFLAGS) -c -o bpv7/tcp/tcpclo6-tcpclo6.o `test -f 'bpv7/tcp/tcpclo6.c' || echo '$(srcdir)/'`bpv7/tcp/tcpclo6.c
+
+bpv7/tcp/tcpclo6-tcpclo6.obj: bpv7/tcp/tcpclo6.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tcpclo6_CFLAGS) $(CFLAGS) -MT bpv7/tcp/tcpclo6-tcpclo6.obj -MD -MP -MF bpv7/tcp/$(DEPDIR)/tcpclo6-tcpclo6.Tpo -c -o bpv7/tcp/tcpclo6-tcpclo6.obj `if test -f 'bpv7/tcp/tcpclo6.c'; then $(CYGPATH_W) 'bpv7/tcp/tcpclo6.c'; else $(CYGPATH_W) '$(srcdir)/bpv7/tcp/tcpclo6.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) bpv7/tcp/$(DEPDIR)/tcpclo6-tcpclo6.Tpo bpv7/tcp/$(DEPDIR)/tcpclo6-tcpclo6.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='bpv7/tcp/tcpclo6.c' object='bpv7/tcp/tcpclo6-tcpclo6.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tcpclo6_CFLAGS) $(CFLAGS) -c -o bpv7/tcp/tcpclo6-tcpclo6.obj `if test -f 'bpv7/tcp/tcpclo6.c'; then $(CYGPATH_W) 'bpv7/tcp/tcpclo6.c'; else $(CYGPATH_W) '$(srcdir)/bpv7/tcp/tcpclo6.c'; fi`
 
 cfdp/tcp/tcputa-tcputa.o: cfdp/tcp/tcputa.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(tcputa_CFLAGS) $(CFLAGS) -MT cfdp/tcp/tcputa-tcputa.o -MD -MP -MF cfdp/tcp/$(DEPDIR)/tcputa-tcputa.Tpo -c -o cfdp/tcp/tcputa-tcputa.o `test -f 'cfdp/tcp/tcputa.c' || echo '$(srcdir)/'`cfdp/tcp/tcputa.c
@@ -18444,7 +18513,9 @@ distclean: distclean-recursive
 	-rm -f bpv7/stcp/$(DEPDIR)/stcpcli-stcpcli.Po
 	-rm -f bpv7/stcp/$(DEPDIR)/stcpclo-stcpclo.Po
 	-rm -f bpv7/tcp/$(DEPDIR)/tcpcli-tcpcli.Po
+	-rm -f bpv7/tcp/$(DEPDIR)/tcpcli6-tcpcli6.Po
 	-rm -f bpv7/tcp/$(DEPDIR)/tcpclo-tcpclo.Po
+	-rm -f bpv7/tcp/$(DEPDIR)/tcpclo6-tcpclo6.Po
 	-rm -f bpv7/test/$(DEPDIR)/bpchat-bpchat.Po
 	-rm -f bpv7/test/$(DEPDIR)/bpcounter-bpcounter.Po
 	-rm -f bpv7/test/$(DEPDIR)/bpcrash-bpcrash.Po
@@ -19077,7 +19148,9 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f bpv7/stcp/$(DEPDIR)/stcpcli-stcpcli.Po
 	-rm -f bpv7/stcp/$(DEPDIR)/stcpclo-stcpclo.Po
 	-rm -f bpv7/tcp/$(DEPDIR)/tcpcli-tcpcli.Po
+	-rm -f bpv7/tcp/$(DEPDIR)/tcpcli6-tcpcli6.Po
 	-rm -f bpv7/tcp/$(DEPDIR)/tcpclo-tcpclo.Po
+	-rm -f bpv7/tcp/$(DEPDIR)/tcpclo6-tcpclo6.Po
 	-rm -f bpv7/test/$(DEPDIR)/bpchat-bpchat.Po
 	-rm -f bpv7/test/$(DEPDIR)/bpcounter-bpcounter.Po
 	-rm -f bpv7/test/$(DEPDIR)/bpcrash-bpcrash.Po
