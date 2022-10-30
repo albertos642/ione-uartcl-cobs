@@ -3,6 +3,8 @@
 			daemon, designed to serve as an output duct.
 
 	Author: Scott Burleigh, JPL
+	Modified: Jorge Amodio, IPNSIG, Aug 2022
+		  Added engine ID to some logging events
 
 	Copyright (c) 2007, California Institute of Technology.
 	ALL RIGHTS RESERVED.  U.S. Government Sponsorship
@@ -63,6 +65,7 @@ int	main(int argc, char *argv[])
 	BpAncillaryData	ancillaryData;
 	unsigned int	redPartLength;
 	LtpSessionId	sessionId;
+	char		memo[64];	/*	Added by JMA		*/
 
 	if (ductName == NULL)
 	{
@@ -112,7 +115,13 @@ int	main(int argc, char *argv[])
 
 	/*	Can now begin transmitting to remote duct.		*/
 
-	writeMemo("[i] ltpclo is running.");
+	/* JMA */
+	/* writeMemo("[i] ltpclo is running."); */
+
+	isprintf(memo, sizeof memo, "[i] ltpclo is running, rengine = "
+UVAST_FIELDSPEC, destEngineNbr);
+        writeMemo(memo);
+
 	while (running && !(sm_SemEnded(ltpcloSemaphore(NULL))))
 	{
 		if (bpDequeue(vduct, &bundleZco, &ancillaryData, -1) < 0)
@@ -123,7 +132,13 @@ int	main(int argc, char *argv[])
 
 		if (bundleZco == 0)	/*	Outduct closed.		*/
 		{
-			writeMemo("[i] ltpclo outduct closed.");
+			/* JMA */
+			/* writeMemo("[i] ltpclo outduct closed."); */
+
+			isprintf(memo, sizeof memo, "[i] ltpclo outduct \
+closed, rengine = " UVAST_FIELDSPEC, destEngineNbr);
+			writeMemo(memo);
+
 			running = 0;	/*	Terminate CLO.		*/
 			continue;
 		}
@@ -164,7 +179,14 @@ int	main(int argc, char *argv[])
 	}
 
 	writeErrmsgMemos();
-	writeMemo("[i] ltpclo duct has ended.");
+
+	/* JMA */
+	/* writeMemo("[i] ltpclo duct has ended."); */
+
+	isprintf(memo, sizeof memo, "[i] ltpclo duct has ended, rengine = "
+UVAST_FIELDSPEC, destEngineNbr);
+	writeMemo(memo);
+
 	ionDetach();
 	return 0;
 }
