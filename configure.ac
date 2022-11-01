@@ -90,6 +90,9 @@ AM_CFLAGS=""
 AM_LDFLAGS=""
 AM_LIBTOOLFLAGS=""
 PLATFORM=""
+
+long_bit=`(getconf LONG_BIT)`
+
 case $host_os in
 	darwin*)
 		AC_DEFINE([darwin],[1],[Build Darwin specific platform code.])
@@ -104,20 +107,33 @@ case $host_os in
 		else
 			AM_CFLAGS="$AM_CFLAGS -Dunix -Ddarwin -DSPACE_ORDER=2 -m32 "
 			echo "Build 32-bit Darwin specific platform code."
-
 		fi
 		;;
 	linux*)
-		PLATFORM="linux"
-		if test $host_cpu = "x86_64" ; then
-			AC_DEFINE([linux],[1],[Build 64-bit Linux specific platform code.])
-			AM_CFLAGS="$AM_CFLAGS -Dlinux -DSPACE_ORDER=3 -fno-strict-aliasing"
-			echo "Build 64-bit Linux specific platform code."
-		else
-			AC_DEFINE([linux],[1],[Build 32-bit Linux specific platform code.])
-			AM_CFLAGS="$AM_CFLAGS -Dlinux -fno-strict-aliasing"
-			echo "Build 32-bit Linux specific platform code."
-		fi
+                PLATFORM="linux"
+                if test $host_cpu = "x86_64" ; then
+                        AC_DEFINE([linux],[1],[Build 64-bit Linux x86_64 platform code.])
+                        AM_CFLAGS="$AM_CFLAGS -Dlinux -DSPACE_ORDER=3 -fno-strict-aliasing"
+                        echo "Build 64-bit Linux x86_64 platform code."
+                elif test $host_cpu = "aarch64" ; then
+                        if test $long_bit = "32" ; then
+                                AC_DEFINE([linux],[1],[Build 32-bit Linux aarch64 platform code.])
+                                AM_CFLAGS="$AM_CFLAGS -Dlinux -DSPACE_ORDER=2 -fno-strict-aliasing"
+                                echo "Build 32-bit Linux specific aarch64 code."
+                        elif test $long_bit = "64" ; then
+                                AC_DEFINE([linux],[1],[Build 64-bit Linux specific platform code.])
+                                AM_CFLAGS="$AM_CFLAGS -Dlinux -DSPACE_ORDER=3 -fno-strict-aliasing"
+                                echo "Build 64-bit Linux specific aarch64 code."
+                        else
+                                echo "Unknown LONG_BIT value for linux aarch64 build."
+                                exit 1
+                        fi
+                else
+                        AC_DEFINE([linux],[1],[Build 32-bit Linux generic platform code.])
+                        AM_CFLAGS="$AM_CFLAGS -Dlinux -fno-strict-aliasing"
+                        echo "Build 32-bit Linux generic platform code."
+                fi
+
 		#check for DCCP support
 		CHECK_DCCP()
 		;;
