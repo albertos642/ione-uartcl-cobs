@@ -41,6 +41,12 @@ int	main(int argc, char *argv[])
 	pthread_t		receiverThread;
 	int			fd;
 	char			quit = '\0';
+#ifdef LTPGRO
+	unsigned int		groEnable = 1;	/* boolean */
+#endif
+#ifdef LTPPARCEL_CSUM_RX
+	unsigned int		checkRx = 1002;	/* turn of kernel checkRx */
+#endif
 
 	/*	Note that ltpadmin must be run before the first
 	 *	invocation of ltplsi, to initialize the LTP database
@@ -110,6 +116,27 @@ int	main(int argc, char *argv[])
 		return 1;
 	}
 
+#ifdef LTPGRO
+	if (setsockopt (rtp.linkSocket, SOL_UDP, UDP_GRO,
+			&groEnable, sizeof(groEnable)) < 0)
+	{
+		closesocket(rtp.linkSocket);
+		putSysErrmsg("LSI can't set GRO", NULL);
+		return 1;
+	}
+#endif
+
+#ifdef LTPPARCEL_CSUM_RX
+	/* Set sk_no_check_rx */
+	if (setsockopt (rtp.linkSocket, SOL_SOCKET, SO_NO_CHECK,
+			&checkRx, sizeof(checkRx)) < 0)
+	{
+		closesocket(rtp.linkSocket);
+		putSysErrmsg("LSI can't set checkRx", NULL);
+		return 1;
+	}
+#endif
+
 	/*	Set up signal handling; SIGTERM is shutdown signal.	*/
 
 	ionNoteMainThread("udplsi");
@@ -118,6 +145,13 @@ int	main(int argc, char *argv[])
 	/*	Start the receiver thread.				*/
 
 	rtp.running = 1;
+#ifdef LTPSTAT
+	rtp.sendSegs = 0;
+	rtp.recvSegs = 0;
+	rtp.recvGRO = 0;
+	rtp.recvBigMsgs = 0;
+	rtp.recvBigBytes = 0;
+#endif
 	if (pthread_begin(&receiverThread, NULL, udplsa_handle_datagrams,
 			&rtp, "udplsi_receiver"))
 	{

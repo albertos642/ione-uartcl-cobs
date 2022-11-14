@@ -50,13 +50,20 @@
 #define	MULTISEND_SEGMENT_SIZE	(1450)
 #endif
 #ifndef MULTIRECV_BUFFER_COUNT
-#define	MULTIRECV_BUFFER_COUNT	(127)
+/* #define	MULTIRECV_BUFFER_COUNT	(127) <- not a good default! */
+#define	MULTIRECV_BUFFER_COUNT	(16)
 #endif
 #define	_GNU_SOURCE
 #else 	/*	!(defined(linux) && !(defined(bionic)))			*/
 #undef	UDP_MULTISEND
 #endif	/*	End of #if (defined(linux) && !(defined(bionic)))	*/
 #endif	/*	End if #ifdef UDP_MULTISEND				*/
+
+#ifdef	LTPGSO
+#ifndef LTPGSO_LIMIT
+#define	LTPGSO_LIMIT (64)
+#endif
+#endif
 
 #include "rfx.h"
 #include "lyst.h"

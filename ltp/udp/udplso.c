@@ -77,7 +77,7 @@ static int	sendBatch(int linkSocket, struct mmsghdr *msgs,
 
 	return totalBytesSent;
 }
-#else
+#else /* UDP_MULTISEND */
 int	sendSegmentByUDP(int linkSocket, char *from, int length,
 		struct sockaddr_in *destAddr )
 {
@@ -116,7 +116,9 @@ nbytes=%d, rv=%d, errno=%d", (char *) inet_ntoa(saddr->sin_addr),
 		return bytesWritten;
 	}
 }
+#endif /* UDP_MULTISEND */
 
+#ifdef LTPRATE
 static unsigned long	getUsecTimestamp()
 {
 	struct timeval	tv;
@@ -200,7 +202,7 @@ static void	applyRateControl(RateControlState *rc, int bytesSent)
 	microsnooze(balanceDue);
 	rc->prevPaid = balanceDue;
 }
-#endif
+#endif /* LTPRATE */
 
 #if defined (ION_LWT)
 int	udplso(saddr a1, saddr a2, saddr a3, saddr a4, saddr a5,
@@ -238,6 +240,9 @@ int	main(int argc, char *argv[])
 	Object			spanObj;
 	LtpSpan			spanBuf;
 	unsigned int		batchLimit;
+#ifdef LTPGSO
+	unsigned int		gsoLimit;
+#endif
 	char			*buffers;
 	char			*buffer;
 	struct iovec		*iovecs;
@@ -245,9 +250,44 @@ int	main(int argc, char *argv[])
 	struct mmsghdr		*msgs;
 	struct mmsghdr		*msg;
 	unsigned int		batchLength;
-#else
+#ifdef LTPGSO
+	struct cmsghdr		*cmsgs;
+	struct cmsghdr		*cmsg;
+	unsigned int		firstSeg;
+	unsigned int		msgSegs;
+	unsigned int		msgBytes;
+	unsigned int		batchSegments;
+	unsigned int		pmtudisc = IP_PMTUDISC_INTERFACE;
+	/* alternate values: IP_PMTUDISC_{DONT,WANT,DO,PROBE,OMIT} */
+#ifdef LTPPARCEL
+	struct {
+		unsigned char code;
+		unsigned char len;
+		unsigned int payload;
+	} jumbo = {0x0b, 0x06, 0x00};
+	/*
+	 * is_parcel is set globally for now. Goal is to have it as a
+	 * runtime variable tested on a per-message basis, with some
+	 * messages sent as parcels and others sent as simple GSO.
+	 */
+	unsigned int		is_parcel = 1;
+#ifdef LTPPARCEL_CSUM_TX
+	unsigned int		checkTx = 1001;	/* Turn off kernel checkTx */
+#endif
+	char			*checksums;
+	char			*checksum;
+	struct iovec		*cvec;
+	uint16_t		*csum;
+#endif
+#ifdef LTPGSO_NOTDEF
+	unsigned int		gsoSize = 1472;
+#endif
+#endif /* LTPGSO */
+#endif /* UDP_MULTISEND */
+#ifdef LTPRATE
 	RateControlState	rc;
 #endif
+
 	if (txbps != 0 && remoteEngineId == 0)	/*	Now nominal.	*/
 	{
 		remoteEngineId = txbps;
@@ -368,6 +408,73 @@ compatibility, but it is ignored.");
 		return 1;
 	}
 
+#ifdef UDP_MULTISEND
+#ifdef LTPGSO
+	/* PMTUDISC should default to MTU of outgoing interface (i.e., OMNI)
+	 * and leverage link adaptation w/o fragmenting payload packet. */
+
+	if (setsockopt (rtp.linkSocket, IPPROTO_IP, IP_MTU_DISCOVER,
+			&pmtudisc, sizeof(pmtudisc)) < 0)
+	{
+		putSysErrmsg("LSO can't set pmtudisc", NULL);
+	}
+#ifdef LTPGSO_NOTDEF
+	/* No longer use this as a runtime test for GSO support; GSO now
+	 * enabled strictly as a compile-time option and applied on a
+	 * per-message basis. */
+
+	if (setsockopt (rtp.linkSocket, SOL_UDP, UDP_SEGMENT,
+			&gsoSize, sizeof(gsoSize)) < 0)
+	{
+		putSysErrmsg("LSO can't enable GSO", NULL);
+		gsoSize = 0;
+	}
+#endif /* LTPGSO_NOTDEF */
+#ifdef LTPPARCEL
+	/*
+	 * Create the socket to use for sending parcels. No bind since
+	 * this socket is send-only.
+	 */
+	rtp.parcelSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (rtp.parcelSocket < 0)
+	{
+		closesocket(rtp.linkSocket);
+		putSysErrmsg("LSO can't initialize Parcel socket", NULL);
+		return 1;
+	}
+
+	/* PMTUDISC should default to MTU of outgoing interface (i.e., OMNI)
+	 * and leverage link adaptation w/o fragmenting payload packet. */
+
+	if (setsockopt (rtp.parcelSocket, IPPROTO_IP, IP_MTU_DISCOVER,
+			&pmtudisc, sizeof(pmtudisc)) < 0)
+	{
+		putSysErrmsg("LSO can't set pmtudisc", NULL);
+	}
+
+	/* Set socket to include Jumbo Payload option for Parcels.
+	 * Note it would be nice if this could be set or cleared on a
+	 * per-packet basis instead of on the socket as a whole. */
+
+	if (setsockopt (rtp.parcelSocket, IPPROTO_IP, IP_OPTIONS,
+			(void *)&jumbo, sizeof(jumbo)) < 0)
+	{
+		putSysErrmsg("LSO can't set jumbos", NULL);
+	}
+
+#ifdef LTPPARCEL_CSUM_TX
+	/* Set sk_no_check_tx. Means that checksums are calculated
+	 * here at the application layer instead of kernel. */
+
+	if (setsockopt (rtp.parcelSocket, SOL_SOCKET, SO_NO_CHECK,
+                        &checkTx, sizeof(checkTx)) < 0)
+        {
+		putSysErrmsg("LSO can't set checkTx", NULL);
+        }
+#endif
+#endif /* LTPPARCEL */
+#endif /* LTPGSO */
+#endif /* UDP_MULTISEND */
 	/*	Set up signal handling.  SIGTERM is shutdown signal.	*/
 
 	oK(udplsoSemaphore(&(vspan->segSemaphore)));
@@ -376,6 +483,10 @@ compatibility, but it is ignored.");
 	/*	Start the receiver thread.				*/
 
 	rtp.running = 1;
+#ifdef LTPSTAT
+	rtp.sendSegs = 0;
+	rtp.recvSegs = 0;
+#endif
 	if (pthread_begin(&receiverThread, NULL, udplsa_handle_datagrams,
 			&rtp, "udplso_receiver"))
 	{
@@ -408,7 +519,20 @@ compatibility, but it is ignored.");
 #else
 	batchLimit = spanBuf.aggrSizeLimit / spanBuf.maxSegmentSize;
 #endif
+	if (batchLimit < 0)
+		batchLimit = 1;
+
+#ifdef LTPGSO
+	if ((gsoLimit = LTPGSO_LIMIT) < 0)
+		gsoLimit = 1;
+
+	/* (batchLimit+1) in case we get a short segment immediately
+	 * followed by a long which would cause a "double message" */
+
+	buffers = MTAKE((UDPLSA_BUFSZ + 1) * (batchLimit + 1));
+#else
 	buffers = MTAKE(spanBuf.maxSegmentSize * batchLimit);
+#endif
 	if (buffers == NULL)
 	{
 		closesocket(rtp.linkSocket);
@@ -416,7 +540,16 @@ compatibility, but it is ignored.");
 		return 1;
 	}
 
+#ifdef LTPGSO
+#ifdef LTPPARCEL
+	/* (gsoLimit+1) to leave space for checksums. */
+	iovecs = MTAKE(sizeof(struct iovec) * (gsoLimit+1) * (batchLimit + 1));
+#else
+	iovecs = MTAKE(sizeof(struct iovec) * gsoLimit * (batchLimit + 1));
+#endif
+#else
 	iovecs = MTAKE(sizeof(struct iovec) * batchLimit);
+#endif
 	if (iovecs == NULL)
 	{
 		MRELEASE(buffers);
@@ -425,7 +558,11 @@ compatibility, but it is ignored.");
 		return 1;
 	}
 
+#ifdef LTPGSO
+	msgs = MTAKE(sizeof(struct mmsghdr) * (batchLimit + 1));
+#else
 	msgs = MTAKE(sizeof(struct mmsghdr) * batchLimit);
+#endif
 	if (msgs == NULL)
 	{
 		MRELEASE(iovecs);
@@ -435,9 +572,71 @@ compatibility, but it is ignored.");
 		return 1;
 	}
 
+#ifdef LTPGSO
+	memset(msgs, 0, sizeof(struct mmsghdr) * (batchLimit + 1));
+#else
 	memset(msgs, 0, sizeof(struct mmsghdr) * batchLimit);
+#endif
 	batchLength = 0;
 	buffer = buffers;
+	iovec = iovecs;
+#ifdef LTPGSO
+
+	/* Allocate cmsg block, but DO NOT set up individual entries here
+	 * at startup time since the values would get blitzed during runtime.
+	 * Instead, initialize each individual cmsg in conjunction with the
+	 * corresponding msg header at runtime so that good data is given
+	 * to sendmmsg().  */
+
+	/* Parcels differentiated from GSO by cmsg arg value. */
+	cmsgs = MTAKE(CMSG_LEN(sizeof (unsigned int)) * (batchLimit + 1));
+	if (cmsgs == NULL)
+	{
+		MRELEASE(iovecs);
+		MRELEASE(buffers);
+		MRELEASE(msgs);
+		closesocket(rtp.linkSocket);
+		putErrmsg("No space for cmsghdr array.", NULL);
+		return 1;
+	}
+
+	memset(cmsgs, 0, (CMSG_LEN(sizeof (unsigned int)) * (batchLimit + 1)));
+	firstSeg = msgSegs = batchSegments = 0;
+	msgBytes = IPHDR_SIZE;
+
+#ifdef LTPPARCEL
+	/*
+	 * Allocate checksum block. Checksums are included before actual
+	 * message segments and build with each segment added to the current
+	 * message. Checksum block therefore contains between 1-64 two
+	 * octet checksums.
+	 */
+	checksums = MTAKE(128 * (batchLimit + 1));
+	if (checksums == NULL)
+	{
+		MRELEASE(iovecs);
+		MRELEASE(buffers);
+		MRELEASE(msgs);
+		MRELEASE(cmsgs);
+		closesocket(rtp.linkSocket);
+		closesocket(rtp.parcelSocket);
+		putErrmsg("No space for checsksum array.", NULL);
+		return 1;
+	}
+
+	memset(checksums, 0, 128 * (batchLimit + 1));
+	checksum = checksums;
+	cvec = 0;
+#endif /* LTPPARCEL */
+#endif /* LTPGSO */
+
+#ifdef LTPRATE
+	rc.startTimestamp = getUsecTimestamp();
+	rc.prevPaid = 0;
+	rc.remoteEngineId = remoteEngineId;
+	rc.neighbor = NULL;
+#endif
+
 	while (rtp.running && !(sm_SemEnded(vspan->segSemaphore)))
 	{
 		if (sdr_list_length(sdr, spanBuf.segments) == 0)
@@ -453,6 +652,12 @@ compatibility, but it is ignored.");
 
 				if (batchLength > 0)
 				{
+#ifdef LTPPARCEL
+					if (is_parcel) 
+					bytesSent = sendBatch(rtp.parcelSocket,
+							msgs, batchLength);
+					else
+#endif
 					bytesSent = sendBatch(rtp.linkSocket,
 							msgs, batchLength);
 					if (bytesSent < 0)
@@ -463,9 +668,20 @@ segment batch.", NULL);
 						continue;
 					}
 
+#ifdef LTPGSO
+#ifdef LTPRATE
+					applyRateControl(&rc, bytesSent);
+#endif
+#ifdef LTPPARCEL
+					checksum = checksums;
+					csum = 0; cvec = 0;
+#endif
+					firstSeg = msgSegs = batchSegments = 0;
+					msgBytes = IPHDR_SIZE;
+#endif
 					batchLength = 0;
 					buffer = buffers;
-
+					iovec = iovecs;
 					/*	Let other tasks run.	*/
 
 					sm_TaskYield();
@@ -495,6 +711,231 @@ segment batch.", NULL);
 			continue;
 		}
 
+#ifdef LTPGSO
+		/*
+		 * Copy this segment into current batch buffers and set iovec
+		 * params. Physically copy data since multiple segments will
+		 * be processed per syscall (memcpy required)
+		 *
+		 * TBD: determine whether LTP segments can be mapped into
+		 * the message directly without data copies. This may or may
+		 * not be possible in the multi-threaded ION architecture.
+		 */
+
+#ifdef LTPPARCEL
+		if (is_parcel) {
+
+			/* If this will be the first message segment, insert
+			 * checksum block as first iovec.
+			 */
+			if ((!msgSegs) || (segmentLength > firstSeg) ||
+			     (gsoLimit <= 1) ||
+			     ((msgBytes + segmentLength) > UDPLSA_BUFSZ)) {
+				cvec = iovec++;
+				cvec->iov_base = checksum;
+				cvec->iov_len = 0; /* no csum yet - see below */
+				csum = (uint16_t *)checksum;
+			}
+#ifdef LTPPARCEL_CSUM_0
+			*csum = 0;
+#else
+#ifdef LTPPARCEL_CSUM_TX
+			/* insert current segment checksum */
+			*csum = in_csum(segment, segmentLength);
+			*csum = *csum ? : 0xffff;
+#else
+			/* set any non-zero val to turn on kernel checksums */
+			*csum = 0x01;
+#endif
+#endif
+			/* checksum inserted; count it and set up for next */
+			cvec->iov_len += 2;
+			msgBytes += 2;
+			csum++;
+		}
+#endif /* LTPPARCEL */
+
+		memcpy(buffer, segment, segmentLength);
+		iovec->iov_base = buffer;
+		iovec->iov_len = segmentLength;
+
+		/* count this segment */
+		batchSegments++;
+#ifdef LTPSTAT
+		rtp.sendSegs++;
+#endif
+
+		/*
+		 * Advance buffer pointer. Increasing by maxSegmentSize will
+		 * leave an unused "gap" between the end of a short segment
+		 * and the beginning of the next segment but that is OK due
+		 * to the use of iovecs.
+		 */
+		buffer += spanBuf.maxSegmentSize;
+#ifdef LTPPARCEL
+		/* Advance checksum block pointer */
+		checksum += 128;
+#endif
+
+		/*
+		 * Determine whether to start a new mmsghdr. Linux 5.10.67
+		 * returns EMSGSIZE when first messasge of a multi-message
+		 * includes GSO segments totalling more than 64KB
+		 *
+		 * TODO: there is a bug when a short segment is followed
+		 * immediately by a long segment, and MULTISEND_BATCH_LIMIT
+		 * is set to some small number like 1. It will consume a
+		 * message and cause sendmmsg() to be called when that is
+		 * not the desired behavior. This will also cause failures
+		 * when both MULTISEND_BATCH_LIMIT and LTPGSO_LIMIT are
+		 * both small.
+		 */
+		if ((!msgSegs) || (segmentLength > firstSeg) ||
+		     (gsoLimit <= 1) ||
+		     ((msgBytes + segmentLength) > UDPLSA_BUFSZ))
+		{
+
+			/* record first segment length */
+			firstSeg = segmentLength;
+
+			/* init cmsg */
+			cmsg = (struct cmsghdr *)((void *)cmsgs +
+			  (batchLength * CMSG_LEN(sizeof(unsigned int))));
+			cmsg->cmsg_len = CMSG_LEN(sizeof(unsigned int));
+			cmsg->cmsg_level = SOL_UDP;
+			cmsg->cmsg_type = UDP_SEGMENT;
+
+			/* init msg */
+			msg = msgs + batchLength;
+			msg->msg_hdr.msg_name = (struct sockaddr *)peerInetName;
+			msg->msg_hdr.msg_namelen = sizeof(struct sockaddr);
+			msg->msg_hdr.msg_control = (void *)cmsg;
+			msg->msg_hdr.msg_controllen = cmsg->cmsg_len;
+			msg->msg_hdr.msg_iov = iovec;
+
+			/* append current message first segment */
+			msgBytes += firstSeg;
+			msg->msg_hdr.msg_iovlen = msgSegs = 1;
+
+			/* get ready for next segment */
+			iovec++;
+
+#ifdef LTPPARCEL
+			if (is_parcel) {
+
+				/* Jam in the checksum iovec and count it.
+				 * Note that the iovecs are in consecutive
+				 * buffers so that the first data iovec will
+				 * appear immediately after this one */
+				msg->msg_hdr.msg_iov = cvec;
+				msg->msg_hdr.msg_iovlen++;
+
+				/* Keep cmsg API up to date */
+				*((unsigned int *)CMSG_DATA(cmsg)) =
+				  (unsigned int)(((msgSegs & 0xffff) << 16) |
+						 (firstSeg & 0xffff));
+			}
+			else /* else, regular GSO */
+#endif /* LTPPARCEL */
+			*((unsigned int *)CMSG_DATA(cmsg)) =
+				(unsigned int)(firstSeg & 0xffff);
+
+			/* count message */
+			batchLength++;
+		}
+		else
+		{
+			/* apppend current message non-first segment */
+			msgBytes += segmentLength;
+			msg->msg_hdr.msg_iovlen++;
+			msgSegs++;
+			iovec++;
+#ifdef LTPPARCEL
+			/* Update nsegs for API */
+			if (is_parcel) {
+				*((unsigned int *)CMSG_DATA(cmsg)) =
+				  (unsigned int)(((msgSegs & 0xffff) << 16) |
+						 (firstSeg & 0xffff));
+			}
+#endif
+
+			/* Stop on short segment or when segment aggregation
+			 * limit reached (max 64 segments). */
+			if ((segmentLength < firstSeg) ||
+			    (msgSegs == gsoLimit)) {
+#ifdef LTPSTAT_NOTDEF
+				char	txt[500];
+
+#ifdef LTPPARCEL
+				if (is_parcel)
+				isprintf(txt, sizeof(txt),
+				"[i] udplso: GSO (1): (%d / %d / %x / %d)",
+				firstSeg, segmentLength,
+				*((unsigned int *)CMSG_DATA(cmsg)), batchLength);
+				else
+#endif
+				isprintf(txt, sizeof(txt),
+				"[i] udplso: GSO (1): (%d / %d / %d / %d)",
+				firstSeg, segmentLength, msgSegs, batchLength);
+				writeMemo(txt);
+#endif
+				msgSegs = 0;
+			}
+		}
+
+#ifdef LTPGSO
+		if (!msgSegs && (batchLength >= batchLimit))
+#else
+		if (batchSegments >= batchLimit)
+#endif
+		{
+#ifdef LTPSTAT_NOTDEF
+			{
+				char	txt[500];
+
+				isprintf(txt, sizeof(txt),
+				"[i] udplso: GSO (2): (%d / %d / %d / %d)",
+				firstSeg, segmentLength, msgSegs, batchLength);
+				writeMemo(txt);
+			}
+#endif
+#ifdef LTPPARCEL
+			if (is_parcel) 
+				bytesSent = sendBatch(rtp.parcelSocket, msgs,
+						      batchLength);
+			else
+#endif
+			bytesSent = sendBatch(rtp.linkSocket, msgs,
+					batchLength);
+
+			if (bytesSent < 0)
+			{
+				putErrmsg("Failed sending segment batch.",
+						NULL);
+				rtp.running = 0;
+				continue;
+			}
+
+#ifdef LTPRATE
+			applyRateControl(&rc, bytesSent);
+#endif
+
+			firstSeg = msgSegs = 0;
+			msgBytes = IPHDR_SIZE;
+			batchSegments = 0;
+			batchLength = 0;
+			buffer = buffers;
+			iovec = iovecs;
+#ifdef LTPPARCEL
+			checksum = checksums;
+			csum = 0; cvec = 0;
+#endif
+
+			/*	Let other tasks run.			*/
+
+			sm_TaskYield();
+		}
+#else /* LTPGSO */
 		/*	Append this segment to current batch.		*/
 
 		memcpy(buffer, segment, segmentLength);
@@ -508,6 +949,7 @@ segment batch.", NULL);
 		msg->msg_hdr.msg_iovlen = 1;
 		batchLength++;
 		buffer += spanBuf.maxSegmentSize;
+
 		if (batchLength >= batchLimit)
 		{
 			bytesSent = sendBatch(rtp.linkSocket, msgs,
@@ -520,6 +962,12 @@ segment batch.", NULL);
 				continue;
 			}
 
+#ifdef LTPRATE
+			applyRateControl(&rc, bytesSent);
+#endif
+#ifdef LTPSTAT
+			rtp.sendSegs++;
+#endif
 			batchLength = 0;
 			buffer = buffers;
 
@@ -527,16 +975,25 @@ segment batch.", NULL);
 
 			sm_TaskYield();
 		}
+#endif /* LTPGSO */
 	}
 
 	MRELEASE(msgs);
 	MRELEASE(iovecs);
 	MRELEASE(buffers);
-#else
+#ifdef LTPGSO
+	MRELEASE(cmsgs);
+#ifdef LTPPARCEL
+	MRELEASE(checksums);
+#endif
+#endif
+#else /* UDP_MULTISEND */
+#ifdef LTPRATE
 	rc.startTimestamp = getUsecTimestamp();
 	rc.prevPaid = 0;
 	rc.remoteEngineId = remoteEngineId;
 	rc.neighbor = NULL;
+#endif
 	while (rtp.running && !(sm_SemEnded(vspan->segSemaphore)))
 	{
 		segmentLength = ltpDequeueOutboundSegment(vspan, &segment);
@@ -567,14 +1024,20 @@ segment batch.", NULL);
 			continue;
 		}
 
+#ifdef LTPSTAT
+		rtp.sendSegs++;
+#endif
+
 		bytesSent += IPHDR_SIZE;
+#ifdef LTPRATE
 		applyRateControl(&rc, bytesSent);
+#endif
 
 		/*	Let other tasks run.				*/
 
 		sm_TaskYield();
 	}
-#endif
+#endif /* UDP_MULTISEND */
 	/*	Time to shut down.					*/
 
 	rtp.running = 0;
@@ -598,6 +1061,15 @@ segment batch.", NULL);
 	closesocket(rtp.linkSocket);
 	writeErrmsgMemos();
 	writeMemo("[i] udplso has ended.");
+#ifdef LTPSTAT
+	{
+		char	txt[500];
+
+		isprintf(txt, sizeof(txt),
+			"[i] udplso sent %d segments", rtp.sendSegs);
+		writeMemo(txt);
+	}
+#endif
 	ionDetach();
 	return 0;
 }
