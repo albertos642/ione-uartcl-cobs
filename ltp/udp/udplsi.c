@@ -158,14 +158,17 @@ int	main(int argc, char *argv[])
 			pthread_join(receiverThread, NULL);
 		}
 #endif
+		/*	Still don't know why the original code
+		 *	sometimes fails to stop the thread, but this
+		 *	workaround prevents hanging on shutdown.	*/
 
-oK(isendto(fd, &quit, 1, 0, &ownSockName,
-		sizeof(struct sockaddr)));
-microsnooze(10000);
+		oK(isendto(fd, &quit, 1, 0, &ownSockName,
+				sizeof(struct sockaddr)));
+		microsnooze(10000);
 		closesocket(fd);
 	}
 
-pthread_detach(receiverThread);
+	pthread_detach(receiverThread);	/*	Part of workaround.	*/
 	closesocket(rtp.linkSocket);
 	writeErrmsgMemos();
 	writeMemo("[i] udplsi has ended.");
