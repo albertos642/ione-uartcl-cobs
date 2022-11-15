@@ -415,6 +415,7 @@ iciextra = \
 	ici/doc/pod5/ionrc.pod \
 	ici/doc/pod5/ionsecrc.pod \
 	ici/doc/pod3/platform.pod \
+	ici/doc/pod3/libipv6.pod \
 	ici/doc/pod3/memmgr.pod \
 	ici/doc/pod3/ion.pod \
 	ici/doc/pod3/llcv.pod \
@@ -459,6 +460,7 @@ icimans = \
 	$(top_builddir)/ici/doc/lyst.3 \
 	$(top_builddir)/ici/doc/memmgr.3 \
 	$(top_builddir)/ici/doc/platform.3 \
+	$(top_builddir)/ici/doc/libipv6.3 \
 	$(top_builddir)/ici/doc/psm.3 \
 	$(top_builddir)/ici/doc/sdr.3 \
 	$(top_builddir)/ici/doc/sdrhash.3 \
@@ -662,7 +664,9 @@ ltpextra = \
 	ltp/doc/pod1/ltpmeter.pod \
 	ltp/doc/pod1/ltpsecadmin.pod \
 	ltp/doc/pod1/udplsi.pod \
+	ltp/doc/pod1/udplsi6.pod \
 	ltp/doc/pod1/udplso.pod \
+	ltp/doc/pod1/udplso6.pod \
 	ltp/doc/pod3/ltp.pod \
 	ltp/doc/pod5/ltprc.pod
 
@@ -676,7 +680,9 @@ ltpmans = \
 	$(top_builddir)/ltp/doc/ltpmeter.1 \
 	$(top_builddir)/ltp/doc/ltpsecadmin.1 \
 	$(top_builddir)/ltp/doc/udplsi.1 \
+	$(top_builddir)/ltp/doc/udplsi6.1 \
 	$(top_builddir)/ltp/doc/udplso.1 \
+	$(top_builddir)/ltp/doc/udplso6.1 \
 	$(top_builddir)/ltp/doc/ltp.3 \
 	$(top_builddir)/ltp/doc/ltprc.5
 
@@ -1905,9 +1911,13 @@ bpextra = \
 	bpv7/doc/pod1/stcpcli.pod \
 	bpv7/doc/pod1/stcpclo.pod \
 	bpv7/doc/pod1/tcpcli.pod \
+	bpv7/doc/pod1/tcpcli6.pod \
 	bpv7/doc/pod1/tcpclo.pod \
+	bpv7/doc/pod1/tcpclo6.pod \
 	bpv7/doc/pod1/udpcli.pod \
+	bpv7/doc/pod1/udpcli6.pod \
 	bpv7/doc/pod1/udpclo.pod \
+	bpv7/doc/pod1/udpclo6.pod \
 	bpv7/doc/pod3/bp.pod \
 	bpv7/doc/pod3/bpextensions.pod \
 	bpv7/doc/pod5/biberc.pod \
@@ -1996,9 +2006,13 @@ bpmans = \
 	$(top_builddir)/bpv7/doc/stcpcli.1 \
 	$(top_builddir)/bpv7/doc/stcpclo.1 \
 	$(top_builddir)/bpv7/doc/tcpcli.1 \
+	$(top_builddir)/bpv7/doc/tcpcli6.1 \
 	$(top_builddir)/bpv7/doc/tcpclo.1 \
+	$(top_builddir)/bpv7/doc/tcpclo6.1 \
 	$(top_builddir)/bpv7/doc/udpcli.1 \
+	$(top_builddir)/bpv7/doc/udpcli6.1 \
 	$(top_builddir)/bpv7/doc/udpclo.1 \
+	$(top_builddir)/bpv7/doc/udpclo6.1 \
 	$(top_builddir)/bpv7/doc/bp.3 \
 	$(top_builddir)/bpv7/doc/bpextensions.3 \
 	$(top_builddir)/bpv7/doc/biberc.5 \
