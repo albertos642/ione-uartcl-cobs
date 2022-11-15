@@ -1,12 +1,26 @@
 /*
-	tcpcli.c:	ION TCP convergence-layer adapter daemon.
+	tcpcli6.c:	ION IPv6 TCP convergence-layer adapter daemon.
 			Handles both transmission and reception.
 
-	Author: Scott Burleigh, JPL
+        Author: Scott Johnson
+        based on tcpcli.c by Scott Burleigh
+        Copyright (c) 2022, Scott Mitchell Johnson
 
-	Copyright (c) 2015, California Institute of Technology.
-	ALL RIGHTS RESERVED.  U.S. Government Sponsorship
-	acknowledged.
+        This program is free software; you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation; either version 2 of the License, or
+        (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+        along with this program; if not, write to the Free Software
+        Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+
 	
 									*/
 #include "bpP.h"

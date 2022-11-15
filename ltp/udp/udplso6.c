@@ -1,21 +1,26 @@
 /*
-	udplso.c:	LTP UDP-based link service output daemon.
-			Dedicated to UDP datagram transmission to
-			a single remote LTP engine.
+        udplso6.c:      LTP UDP-based IPv6 link service daemon.
 
-	Author: Scott Burleigh, JPL
+        Author: Scott Johnson
+        based on udplso.c by Scott Burleigh
+        Copyright (c) 2022, Scott Mitchell Johnson
 
-	Copyright (c) 2007, California Institute of Technology.
-	ALL RIGHTS RESERVED.  U.S. Government Sponsorship
-	acknowledged.
-	
-	7/6/2010, modified as per issue 132-udplso-tx-rate-limit
-	Greg Menke, Raytheon, under contract METS-MR-679-0909
-	with NASA GSFC.
+        This program is free software; you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation; either version 2 of the License, or
+        (at your option) any later version.
 
-	10/7/2022, modified for IPv6 support.  Scott Johnson,
-	SolarNetOne.org.  Well paid contracts welcome.
-									*/
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+        along with this program; if not, write to the Free Software
+        Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+
+                                                                        */
 
 #include "udplsa.h"
 #include <sys/socket.h>

@@ -10,6 +10,7 @@
 /*      R. Carper: modified for Mac OS X platform (darwin)		*/
 /*      J. Veregge: modified for all platforms to consolidate		*/
 /*      S. Clancy: added STRSOE flag for building with JPL STRS OE	*/
+/*	Scott Johnson: add IPv6 specific variable/function declarations
 /*									*/
 #ifndef _PLATFORM_H_
 #define _PLATFORM_H_
