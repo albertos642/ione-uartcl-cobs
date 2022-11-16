@@ -483,6 +483,20 @@ AC_ARG_ENABLE(
         )
 AM_CONDITIONAL([BUILD_NM_REST], [test "x$BUILD_NM_REST" = "xtrue"])
 
+#
+# allow the user running configure to declare that the platform is MUSL
+#
+AC_ARG_ENABLE(
+    musl,
+    [AC_HELP_STRING([--enable-musl], [declare that the platform is MUSL])],
+    [AM_CFLAGS="$AM_CFLAGS -DMUSL"
+     MUSL=yes],
+    [])
+if test "x$MUSL" = "xyes" ; then
+	echo "Building for MUSL... yes"
+fi
+AM_CONDITIONAL([MUSL], [test "x$MUSL" = "xyes"])
+
 
 # Check for libraries.
 ORIGCFLAGS="$CFLAGS"
