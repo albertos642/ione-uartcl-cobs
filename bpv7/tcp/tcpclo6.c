@@ -35,8 +35,7 @@ int	main(int argc, char **argv)
 		return 0;
 	}
 
-	writeMemo("[i] tcpclo6 is deprecated.  tcpcl outducts are now drained \
-by tcpcli6 threads.");
+	writeMemo("[i] tcpclo6 is deprecated.  tcpcl outducts are now drained by tcpcli6 threads.");
 	bp_detach();
 	return 0;
 }

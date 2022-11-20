@@ -1,8 +1,9 @@
-/*	libipv6.c:	IPv6 elated library functions		*/
-/*
+/*	libipv6.c:	IPv6 elated library functions
+
         Author: Scott Johnson
-        based on functions by Scott Burleigh
+        based on functions from platform.c
         Copyright (c) 2022, Scott Mitchell Johnson
+	Dedicated to Space Pioneer SMSgt Leo B. G. Johnson, USAF, Retired
 
         This program is free software; you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -29,22 +30,48 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
+
+
+char getNameOf6Host(char *buffer, int bufferLength)
+{
+        char     result;
+
+        CHKERR(buffer);
+        CHKERR(bufferLength > 0);
+        result = gethostname(buffer, bufferLength);
+        if (result < 0)
+        {
+                putSysErrmsg("can't get local host name", NULL);
+        }
+        return result;
+}
+
 int     parseSocketSpecSix(char *socketSpec, struct sockaddr_in6 *ip6Address)
 {
 	char            *delimiter;
         char            *hostname;
-	
+        char            *hostAddr;
+	char            hostnameBuf[MAXHOSTNAMELEN + 1];
+	struct addrinfo hints, *res, *res0;
+        int error;
+        char host[NI_MAXHOST];
 
 	CHKERR(ip6Address);
 	if (socketSpec == NULL || *socketSpec == '\0')
         {
                 return 0;               /*      Use defaults.           */
         }
-
+	/*initialize socket structure component values*/
 	ip6Address->sin6_family = AF_INET6;
 	ip6Address->sin6_addr = in6addr_any;
 	ip6Address->sin6_port = htons(0);
 	ip6Address->sin6_flowinfo = 0;
+
+	/*initialize dns lookup stucture component values*/
+        memset(&hints, 0, sizeof hints);
+     	hints.ai_family = AF_INET6;
+        hints.ai_socktype = SOCK_DGRAM;
+
 	
 	delimiter = strchr(socketSpec, '!');	
 	if (delimiter)
@@ -57,14 +84,79 @@ int     parseSocketSpecSix(char *socketSpec, struct sockaddr_in6 *ip6Address)
 	hostname = socketSpec;
 	if (strlen(hostname) != 0)
 	{
-		inet_pton(AF_INET6, hostname, &ip6Address->sin6_addr);
-	}	
+		if (strstr(hostname, ".") != NULL)
+	/*call dns lookup function, and populate struct address component*/
+		{
+			error = getaddrinfo(hostname, NULL, &hints, &res0);
+        		if (error) {
+                	writeMemoNote("Lookup Error A:", (char *) gai_strerror(error));
+                	return 1;
+        		}
+
+        		for (res = res0; res; res = res->ai_next) {
+                		error = getnameinfo(res->ai_addr, res->ai_addrlen, host, sizeof host, NULL, 0, NI_NUMERICHOST);
+                		if (error) {
+                        		writeMemoNote("Lookup Error B:", (char *) gai_strerror(error));
+                        	return 1;
+                		}
+                		else
+                		{
+                        		writeMemoNote("[i] Lookup Successful", hostname);
+                        		writeMemoNote("[i] Resolves to", host);
+                		}
+        		}
+        		freeaddrinfo(res0);
+			hostAddr = (char *) host;
+			inet_pton(AF_INET6, hostAddr, &ip6Address->sin6_addr);
+		}
+
+		else
+
+		if (strcmp(hostname, "@") == 0)
+ 	/* find local hostname, call dns lookup function, and populate 
+	   struct address component*/
+                {
+                        getNameOf6Host(hostnameBuf, sizeof hostnameBuf);
+                	hostname = hostnameBuf;
+                        error = getaddrinfo(hostname, NULL, &hints, &res0);
+                        if (error) {
+                        writeMemoNote("Lookup Error C:", (char *) gai_strerror(error));
+                        return 1;
+                        }
+
+                        for (res = res0; res; res = res->ai_next) {
+                                error = getnameinfo(res->ai_addr, res->ai_addrlen, host, sizeof host, NULL, 0, NI_NUMERICHOST);
+                                if (error) {
+                                        writeMemoNote("Lookup Error D:", (char *) gai_strerror(error));
+                                return 1;
+                                }
+                                else
+                                {
+                                        writeMemoNote("[i] Lookup Successful", hostname);
+                        		writeMemoNote("[i] Resolves to", host);
+                                }
+                        }
+                        freeaddrinfo(res0);
+			hostAddr = (char *) host;
+			inet_pton(AF_INET6, hostAddr, &ip6Address->sin6_addr);
+
+		}
+
+		else
+	/*populate struct address component with user supplied IPv6 address*/
+		{
+			inet_pton(AF_INET6, hostname, &ip6Address->sin6_addr);
+		}	
+	}
+	/* Extract port number, convert to network byte order, and store in value in struct returned to calling daemon*/
+
 
 	if (delimiter == NULL)
 		{
 			return 0;
 		}
-	/* Extract port number, convert to network byte order, and store in value in struct returned to calling daemon*/
+
+
 
 	delimiter = strchr(socketSpec, '!');	
 	if (delimiter)

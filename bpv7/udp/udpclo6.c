@@ -117,9 +117,6 @@ int	main(int argc, char *argv[])
 		hostNbr.sin6_port = htons(4556);
 	}
 
-/*	int sin6_len;
-
-	sin6_len = sizeof(hostNbr);*/
 	if (bpAttach() < 0)
 	{
 		putErrmsg("udpclo can't attach to BP.", NULL);

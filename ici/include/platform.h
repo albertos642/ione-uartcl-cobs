@@ -10,7 +10,7 @@
 /*      R. Carper: modified for Mac OS X platform (darwin)		*/
 /*      J. Veregge: modified for all platforms to consolidate		*/
 /*      S. Clancy: added STRSOE flag for building with JPL STRS OE	*/
-/*	Scott Johnson: add IPv6 specific variable/function declarations
+/*	Scott Johnson: add IPv6 specific variable/function declaration  */
 /*									*/
 #ifndef _PLATFORM_H_
 #define _PLATFORM_H_
@@ -780,9 +780,10 @@ extern void			getCurrentTime(struct timeval *);
 extern unsigned long		getClockResolution();	/*	usec	*/
 #if (defined(FSWLAN) || !(defined(ION_NO_DNS)))
 extern unsigned int		getInternetAddress(char *);
-extern char 		getInternet6Address(char *);
+extern int	 		getInternet6Address(char *, char *);
 extern char			*getInternetHostName(unsigned int, char *);
 extern int			getNameOfHost(char *, int);
+extern char			getNameOf6Host(char *, int);
 extern char			*getNameOfUser(char *);
 extern int			reUseAddress(int);
 extern int			watchSocket(int);

@@ -4069,14 +4069,14 @@ iciextra = ici/README.txt ici/doc/pod1/file2sdr.pod \
 	ici/doc/pod1/sm2file.pod ici/doc/pod1/smlistsh.pod \
 	ici/doc/pod1/smrbtsh.pod ici/doc/pod5/ionconfig.pod \
 	ici/doc/pod5/ionrc.pod ici/doc/pod5/ionsecrc.pod \
-	ici/doc/pod3/platform.pod ici/doc/pod3/memmgr.pod \
-	ici/doc/pod3/ion.pod ici/doc/pod3/llcv.pod \
-	ici/doc/pod3/lyst.pod ici/doc/pod3/psm.pod \
-	ici/doc/pod3/zco.pod ici/doc/pod3/smlist.pod \
-	ici/doc/pod3/smrbt.pod ici/doc/pod3/sdrlist.pod \
-	ici/doc/pod3/sdrstring.pod ici/doc/pod3/sdrtable.pod \
-	ici/doc/pod3/sdrhash.pod ici/doc/pod3/sdr.pod \
-	ici/library/symtab.c $(am__append_5)
+	ici/doc/pod3/platform.pod ici/doc/pod3/libipv6.pod \
+	ici/doc/pod3/memmgr.pod ici/doc/pod3/ion.pod \
+	ici/doc/pod3/llcv.pod ici/doc/pod3/lyst.pod \
+	ici/doc/pod3/psm.pod ici/doc/pod3/zco.pod \
+	ici/doc/pod3/smlist.pod ici/doc/pod3/smrbt.pod \
+	ici/doc/pod3/sdrlist.pod ici/doc/pod3/sdrstring.pod \
+	ici/doc/pod3/sdrtable.pod ici/doc/pod3/sdrhash.pod \
+	ici/doc/pod3/sdr.pod ici/library/symtab.c $(am__append_5)
 icimans = $(top_builddir)/ici/doc/file2sdr.1 \
 	$(top_builddir)/ici/doc/file2sm.1 \
 	$(top_builddir)/ici/doc/ionadmin.1 \
@@ -4099,6 +4099,7 @@ icimans = $(top_builddir)/ici/doc/file2sdr.1 \
 	$(top_builddir)/ici/doc/lyst.3 \
 	$(top_builddir)/ici/doc/memmgr.3 \
 	$(top_builddir)/ici/doc/platform.3 \
+	$(top_builddir)/ici/doc/libipv6.3 \
 	$(top_builddir)/ici/doc/psm.3 $(top_builddir)/ici/doc/sdr.3 \
 	$(top_builddir)/ici/doc/sdrhash.3 \
 	$(top_builddir)/ici/doc/sdrlist.3 \
@@ -4241,7 +4242,9 @@ ltpextra = \
 	ltp/doc/pod1/ltpmeter.pod \
 	ltp/doc/pod1/ltpsecadmin.pod \
 	ltp/doc/pod1/udplsi.pod \
+	ltp/doc/pod1/udplsi6.pod \
 	ltp/doc/pod1/udplso.pod \
+	ltp/doc/pod1/udplso6.pod \
 	ltp/doc/pod3/ltp.pod \
 	ltp/doc/pod5/ltprc.pod
 
@@ -4255,7 +4258,9 @@ ltpmans = \
 	$(top_builddir)/ltp/doc/ltpmeter.1 \
 	$(top_builddir)/ltp/doc/ltpsecadmin.1 \
 	$(top_builddir)/ltp/doc/udplsi.1 \
+	$(top_builddir)/ltp/doc/udplsi6.1 \
 	$(top_builddir)/ltp/doc/udplso.1 \
+	$(top_builddir)/ltp/doc/udplso6.1 \
 	$(top_builddir)/ltp/doc/ltp.3 \
 	$(top_builddir)/ltp/doc/ltprc.5
 
@@ -4644,9 +4649,13 @@ udp2file_CFLAGS = $(dgrcflags) $(AM_CFLAGS)
 @BUILD_BPv6_FALSE@	bpv7/doc/pod1/stcpcli.pod \
 @BUILD_BPv6_FALSE@	bpv7/doc/pod1/stcpclo.pod \
 @BUILD_BPv6_FALSE@	bpv7/doc/pod1/tcpcli.pod \
+@BUILD_BPv6_FALSE@	bpv7/doc/pod1/tcpcli6.pod \
 @BUILD_BPv6_FALSE@	bpv7/doc/pod1/tcpclo.pod \
+@BUILD_BPv6_FALSE@	bpv7/doc/pod1/tcpclo6.pod \
 @BUILD_BPv6_FALSE@	bpv7/doc/pod1/udpcli.pod \
+@BUILD_BPv6_FALSE@	bpv7/doc/pod1/udpcli6.pod \
 @BUILD_BPv6_FALSE@	bpv7/doc/pod1/udpclo.pod \
+@BUILD_BPv6_FALSE@	bpv7/doc/pod1/udpclo6.pod \
 @BUILD_BPv6_FALSE@	bpv7/doc/pod3/bp.pod \
 @BUILD_BPv6_FALSE@	bpv7/doc/pod3/bpextensions.pod \
 @BUILD_BPv6_FALSE@	bpv7/doc/pod5/biberc.pod \
@@ -4801,9 +4810,13 @@ udp2file_CFLAGS = $(dgrcflags) $(AM_CFLAGS)
 @BUILD_BPv6_FALSE@	$(top_builddir)/bpv7/doc/stcpcli.1 \
 @BUILD_BPv6_FALSE@	$(top_builddir)/bpv7/doc/stcpclo.1 \
 @BUILD_BPv6_FALSE@	$(top_builddir)/bpv7/doc/tcpcli.1 \
+@BUILD_BPv6_FALSE@	$(top_builddir)/bpv7/doc/tcpcli6.1 \
 @BUILD_BPv6_FALSE@	$(top_builddir)/bpv7/doc/tcpclo.1 \
+@BUILD_BPv6_FALSE@	$(top_builddir)/bpv7/doc/tcpclo6.1 \
 @BUILD_BPv6_FALSE@	$(top_builddir)/bpv7/doc/udpcli.1 \
+@BUILD_BPv6_FALSE@	$(top_builddir)/bpv7/doc/udpcli6.1 \
 @BUILD_BPv6_FALSE@	$(top_builddir)/bpv7/doc/udpclo.1 \
+@BUILD_BPv6_FALSE@	$(top_builddir)/bpv7/doc/udpclo6.1 \
 @BUILD_BPv6_FALSE@	$(top_builddir)/bpv7/doc/bp.3 \
 @BUILD_BPv6_FALSE@	$(top_builddir)/bpv7/doc/bpextensions.3 \
 @BUILD_BPv6_FALSE@	$(top_builddir)/bpv7/doc/biberc.5 \
