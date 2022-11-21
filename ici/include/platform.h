@@ -10,6 +10,7 @@
 /*      R. Carper: modified for Mac OS X platform (darwin)		*/
 /*      J. Veregge: modified for all platforms to consolidate		*/
 /*      S. Clancy: added STRSOE flag for building with JPL STRS OE	*/
+/*	Scott Johnson: add IPv6 specific variable/function declaration  */
 /*									*/
 #ifndef _PLATFORM_H_
 #define _PLATFORM_H_
@@ -779,8 +780,10 @@ extern void			getCurrentTime(struct timeval *);
 extern unsigned long		getClockResolution();	/*	usec	*/
 #if (defined(FSWLAN) || !(defined(ION_NO_DNS)))
 extern unsigned int		getInternetAddress(char *);
+extern int	 		getInternet6Address(char *, char *);
 extern char			*getInternetHostName(unsigned int, char *);
 extern int			getNameOfHost(char *, int);
+extern char			getNameOf6Host(char *, int);
 extern char			*getNameOfUser(char *);
 extern int			reUseAddress(int);
 extern int			watchSocket(int);
@@ -880,10 +883,15 @@ extern char			*addressToString(struct in_addr, char *buf);
 extern int			parseSocketSpec(char *socketSpec,
 					unsigned short *portNbr,
 					unsigned int *ipAddress);
+extern int			parseSocketSpecSix(char *socketSpec,
+					struct sockaddr_in6 *ipv6Address);
+
 extern void			printDottedString(unsigned int hostNbr,
 					char *buffer);
 
 extern int			itcp_connect(char *socketSpec,
+					unsigned short defaultPort, int *sock);
+extern int			itcp_connect6(char *socketSpec,
 					unsigned short defaultPort, int *sock);
 extern int			itcp_send(int *sock, char *from, int length);
 extern int			itcp_recv(int *sock, char *into, int length);
