@@ -67,11 +67,11 @@ Redundant initiation of B<udplso6>.
 
 =item LSO can't open UDP socket
 
-Operating system error.  Check errtext, correct problem, and restart B<udplso6>.
+Operating system error.  Check errtext, correct problem, restart B<udplso6>.
 
 =item LSO can't connect UDP socket
 
-Operating system error.  Check errtext, correct problem, and restart B<udplso6>.
+Operating system error.  Check errtext, correct problem, restart B<udplso6>.
 
 =item Segment is too big for UDP LSO.
 

@@ -17,9 +17,8 @@
 
         You should have received a copy of the GNU General Public License
         along with this program; if not, write to the Free Software
-        Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-	
+        Foundation, Inc., at:
+		51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 									*/
 #include "udplsa.h"
 #include <sys/socket.h>
@@ -87,7 +86,8 @@ int	main(int argc, char *argv[])
 
 	if (endpointSpec)
 	{
-		if (parseSocketSpecSix(endpointSpec, (struct sockaddr_in6 *) &inetName) != 0)
+		if (parseSocketSpecSix(endpointSpec,
+				(struct sockaddr_in6 *) &inetName) != 0)
 		{
 			putErrmsg("Can't get IP/port for endpointSpec.",
 					endpointSpec);
@@ -97,7 +97,7 @@ int	main(int argc, char *argv[])
 
 	if (inetName.sin6_port == 0)
 	{
-		inetName.sin6_port = htons(1113);
+		inetName.sin6_port = htons(LtpUdpDefaultPortNbr);
 	}
 
 	rtp.linkSocket = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
@@ -110,7 +110,8 @@ int	main(int argc, char *argv[])
 	nameLength = sizeof(inetName);
 	if (reUseAddress(rtp.linkSocket)
 	|| bind(rtp.linkSocket,  (struct sockaddr *) &inetName, nameLength) < 0
-	|| getsockname(rtp.linkSocket, (struct sockaddr *) &inetName, &nameLength) < 0)
+	|| getsockname(rtp.linkSocket, (struct sockaddr *) &inetName,
+			&nameLength) < 0)
 	{
 		closesocket(rtp.linkSocket);
 		putSysErrmsg("LSI can't initialize UDP socket", NULL);
@@ -125,7 +126,7 @@ int	main(int argc, char *argv[])
 	/*	Start the receiver thread.				*/
 
 	rtp.running = 1;
-	if (pthread_begin(&receiverThread, NULL, udplsa_handle_datagrams,
+	if (pthread_begin(&receiverThread, NULL, udplsa6_handle_datagrams,
 			&rtp, "udplsi6_receiver"))
 	{
 		closesocket(rtp.linkSocket);

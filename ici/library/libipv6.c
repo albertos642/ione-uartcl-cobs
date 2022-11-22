@@ -141,7 +141,7 @@ int     parseSocketSpecSix(char *socketSpec, struct sockaddr_in6 *ip6Address)
 			{
                                 error = getnameinfo(res->ai_addr,
 						res->ai_addrlen, host,
-						izeof host, NULL, 0,
+						sizeof host, NULL, 0,
 						NI_NUMERICHOST);
                                 if (error)
 				{

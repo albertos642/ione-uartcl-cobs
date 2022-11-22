@@ -17,6 +17,7 @@ LIBICIOBJS = \
 	llcv.o \
 	platform.o \
 	platform_sm.o \
+	libipv6.o \
 	memmgr.o \
 	lyst.o \
 	psm.o \

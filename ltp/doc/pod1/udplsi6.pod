@@ -63,15 +63,15 @@ Redundant initiation of B<udplsi6>.
 
 =item LSI can't open UDP socket
 
-Operating system error.  Check errtext, correct problem, and restart B<udplsi6>.
+Operating system error.  Check errtext, correct problem, restart B<udplsi6>.
 
 =item LSI can't initialize socket
 
-Operating system error.  Check errtext, correct problem, and restart B<udplsi6>.
+Operating system error.  Check errtext, correct problem, restart B<udplsi6>.
 
 =item LSI can't create receiver thread
 
-Operating system error.  Check errtext, correct problem, and restart B<udplsi6>.
+Operating system error.  Check errtext, correct problem, restart B<udplsi6>.
 
 =back
 

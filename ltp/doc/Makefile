@@ -13,6 +13,8 @@ MANFILES = \
 	./man/man1/sdatest.1 \
 	./man/man1/udplsi.1 \
 	./man/man1/udplso.1 \
+	./man/man1/udplsi6.1 \
+	./man/man1/udplso6.1 \
 	./man/man1/dccplsi.1 \
 	./man/man1/dccplso.1 \
 	./man/man5/ltprc.5 \
@@ -30,6 +32,8 @@ HTMLFILES = \
 	./html/man1/sdatest.html \
 	./html/man1/udplsi.html \
 	./html/man1/udplso.html \
+	./html/man1/udplsi6.html \
+	./html/man1/udplso6.html \
 	./html/man1/dccplsi.html \
 	./html/man1/dccplso.html \
 	./html/man5/ltprc.html \

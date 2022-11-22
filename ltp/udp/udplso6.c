@@ -17,11 +17,9 @@
 
         You should have received a copy of the GNU General Public License
         along with this program; if not, write to the Free Software
-        Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-
+        Foundation, Inc., at:
+		51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
                                                                         */
-
 #include "udplsa.h"
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -31,6 +29,10 @@
 #if defined(linux)
 
 #define IPHDR_SIZE	(sizeof(struct iphdr) + sizeof(struct udphdr))
+
+#elif defined(mingw)
+
+#define	IPHDR_SIZE	(20 + 8)
 
 #else
 
@@ -112,8 +114,8 @@ int	sendSegmentByUDP(int linkSocket, char *from, int length,
 				char			memoBuf[1000];
 
 				isprintf(memoBuf, sizeof(memoBuf),
-					"udplso6 sendto() error, nbytes=%d, rv=%d, errno=%d",  
-					length, bytesWritten, errno);
+					"udplso6 sendto() error, nbytes=%d, \
+rv=%d, errno=%d",  length, bytesWritten, errno);
 				writeMemo(memoBuf);
 			}
 		}
@@ -309,23 +311,22 @@ compatibility, but it is ignored.");
 	parseSocketSpecSix(endpointSpec, (struct sockaddr_in6 *) &peerInetName);
 	if (peerInetName.sin6_port == 0)
 	{
-		peerInetName.sin6_port = htons(1113);
+		peerInetName.sin6_port = htons(LtpUdpDefaultPortNbr);
 	}
 
 	/*	Now compute own socket address, used when the peer
 	 *	responds to the link service output socket rather
-	 *	than to the advertised link service inpud socket.	*/
+	 *	than to the advertised link service inpud socket.
+	 *
+	 *	This socket needs to be bound to the local socket
+	 *	address (just as in udplsi), so that the udplso
+	 *	main thread can send a 1-byte datagram to that
+	 *	socket to shut down the datagram handling thread.	*/
 
 	ownInetName.sin6_family = AF_INET6;
 	ownInetName.sin6_addr = in6addr_any;
 	ownInetName.sin6_port = htons(0);
 	ownInetName.sin6_flowinfo = 0;
-
-	/*	This socket needs to be bound to the local socket
-	 *	address (just as in udplsi), so that the udplso
-	 *	main thread can send a 1-byte datagram to that
-	 *	socket to shut down the datagram handling thread.	*/
-
 
 	/*	Now create the socket that will be used for sending
 	 *	datagrams to the peer LTP engine and possibly for
@@ -344,8 +345,10 @@ compatibility, but it is ignored.");
 
 	nameLength = sizeof(ownInetName);
 	if (reUseAddress(rtp.linkSocket)
-	|| bind(rtp.linkSocket, (struct sockaddr *) &ownInetName, nameLength) < 0
-	|| getsockname(rtp.linkSocket, (struct sockaddr *) &ownInetName, &nameLength) < 0)
+	|| bind(rtp.linkSocket, (struct sockaddr *) &ownInetName, nameLength)
+			< 0
+	|| getsockname(rtp.linkSocket, (struct sockaddr *) &ownInetName,
+			&nameLength) < 0)
 	{
 		closesocket(rtp.linkSocket);
 		putSysErrmsg("LSO can't initialize UDP socket", NULL);
@@ -360,11 +363,11 @@ compatibility, but it is ignored.");
 	/*	Start the receiver thread.				*/
 
 	rtp.running = 1;
-	if (pthread_begin(&receiverThread, NULL, udplsa_handle_datagrams,
+	if (pthread_begin(&receiverThread, NULL, udplsa6_handle_datagrams,
 			&rtp, "udplso6_receiver"))
 	{
 		closesocket(rtp.linkSocket);
-		putSysErrmsg("udplso can't create receiver thread", NULL);
+		putSysErrmsg("udplso6 can't create receiver thread", NULL);
 		return 1;
 	}
 

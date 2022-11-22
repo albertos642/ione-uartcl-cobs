@@ -23,7 +23,7 @@ LTPINCLS = \
 	$(UDP)/udplsa.h \
 	$(DCCP)/dccplsa.h
 
-RUNTIMES = ltpadmin ltpsecadmin ltpclock ltpdeliv ltpmeter udplsi udplso ltpdriver ltpcounter sdatest
+RUNTIMES = ltpadmin ltpsecadmin ltpclock ltpdeliv ltpmeter udplsi udplso udplsi6 udplso6 ltpdriver ltpcounter sdatest
 #dccplsi dccplso
 
 ALL = check libltp.so $(RUNTIMES)
@@ -96,6 +96,18 @@ udplsi:		udplsi.o libltp.so libudplsa.o
 udplso:		udplso.o libltp.so libudplsa.o
 		$(CC) -o udplso udplso.o libudplsa.o -L./lib -L$(ROOT)/lib -lltp -lici -lpthread -lm
 		cp udplso ./bin
+
+libudplsa6:	libudplsa6.o libltp.so
+		$(CC) -o libudplsa6 libudplsa6.o -L./lib -L$(ROOT)/lib -lltp -lici -lpthread -lm
+		cp libudplsa6.o ./bin
+
+udplsi6:	udplsi6.o libltp.so libudplsa6.o
+		$(CC) -o udplsi6 udplsi6.o libudplsa6.o -L./lib -L$(ROOT)/lib -lltp -lici -lpthread -lm
+		cp udplsi6 ./bin
+
+udplso6:	udplso6.o libltp.so libudplsa6.o
+		$(CC) -o udplso6 udplso6.o libudplsa6.o -L./lib -L$(ROOT)/lib -lltp -lici -lpthread -lm
+		cp udplso6 ./bin
 
 #	-	-	DCCP executables-	-	-	-	-
 dccplsi:	dccplsi.o libltp.so

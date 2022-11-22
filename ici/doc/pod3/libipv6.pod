@@ -24,17 +24,17 @@ IPv6 related functions.
 
 =item int     parseSocketSpecSix(char *socketSpec, struct sockaddr_in6 *ip6Address)
 
-This function parses I<socketSpec> to extract IPv6 address and port number from
-the string.  It then populates I<struct sockaddr_in6 *ip6Address> with the data
-necessary to bind to a socket, and passes that data back to the calling daemon.
+This function parses I<socketSpec> to extract IPv6 address and port number
+from the string.  It then populates I<*ip6Address> with the data necessary
+to bind to a socket and passes that data back to the calling daemon.
 
 I<socketSpec> is expected to be of the form "{ @ | hostname }[!<portnbr>]",
 where @ signifies "the host name of the local machine".  If the IPv6 address
-can be determined, it is set to network byte order and written into
-I<ip6Address->sin6_addr>; otherwise I<ip6Address->sin6_addr> is set to
+can be determined, it is set to network byte order and written into the
+I<sin6_addr> member of I<ip6Address>; otherwise I<sin6_addr> is set to
 in6addr_any.  If port number is supplied and is in the range 1024 to 65535,
-writes it into I<ip6Address->sin6_port>; otherwise writes 0 into
-I<ip6Address->sin6_port>.
+it is similarly set to network byte order and written into I<sin6_port>;
+otherwise 0 is written into I<sin6_port>.
 
 =item int     itcp_connect6(char *socketSpec, unsigned short defaultPort, int *sock)
 
