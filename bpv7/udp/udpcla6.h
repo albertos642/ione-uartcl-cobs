@@ -18,8 +18,8 @@
 
         You should have received a copy of the GNU General Public License
         along with this program; if not, write to the Free Software
-        Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
+        Foundation, Inc., at:
+		51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  									*/
 #ifndef _UDPCLA_H_
 #define _UDPCLA_H_
@@ -35,9 +35,9 @@ extern "C" {
 
 extern int	sendBytesBy6UDP(int *bundleSocket, char *from, int length,
 			struct sockaddr_in6 *socketName);
-extern int	sendBundleBy6UDP(struct sockaddr_in6 *socketName, int *bundleSocket,
-			unsigned int bundleLength, Object bundleZco,
-			unsigned char *buffer);
+extern int	sendBundleBy6UDP(struct sockaddr_in6 *socketName,
+			int *bundleSocket, unsigned int bundleLength,
+			Object bundleZco, unsigned char *buffer);
 extern int	receiveBytesBy6UDP(int bundleSocket,
 			struct sockaddr_in6 *fromAddr,char *into, int length);
 

@@ -8,7 +8,6 @@
 	Copyright (c) 2006, California Institute of Technology.
 	ALL RIGHTS RESERVED.  U.S. Government Sponsorship
 	acknowledged.
-	
 									*/
 #include "udpcla.h"
 
@@ -56,6 +55,7 @@ int	main(int argc, char *argv[])
 	char			ownHostName[MAXHOSTNAMELEN];
 	struct sockaddr		socketName;
 	struct sockaddr_in	*inetName;
+
 	unsigned char		*buffer;
 	VOutduct		*vduct;
 	PsmAddress		vductElt;
@@ -120,6 +120,9 @@ int	main(int argc, char *argv[])
 	inetName->sin_family = AF_INET;
 	inetName->sin_port = portNbr;
 	memcpy((char *) &(inetName->sin_addr.s_addr), (char *) &hostNbr, 4);
+
+	/*	Finish validating command-line arguments.		*/
+
 	if (bpAttach() < 0)
 	{
 		putErrmsg("udpclo can't attach to BP.", NULL);

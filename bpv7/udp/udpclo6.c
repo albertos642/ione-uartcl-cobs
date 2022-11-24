@@ -18,10 +18,8 @@
 
         You should have received a copy of the GNU General Public License
         along with this program; if not, write to the Free Software
-        Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-
-	
+        Foundation, Inc., at:
+		51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 									*/
 #include "udpcla6.h"
 
@@ -64,8 +62,8 @@ int	main(int argc, char *argv[])
 	char			*rttString = (argc > 1 ? argv[1] : NULL);
 	char			*endpointSpec = (argc > 2 ? argv[2] : NULL);
 #endif
-/*	char			ownHostName[MAXHOSTNAMELEN];*/
 	struct sockaddr_in6	hostNbr;
+
 	unsigned char		*buffer;
 	VOutduct		*vduct;
 	PsmAddress		vductElt;
@@ -114,8 +112,10 @@ int	main(int argc, char *argv[])
 	parseSocketSpecSix(endpointSpec, &hostNbr);
 	if (hostNbr.sin6_port == 0)
 	{
-		hostNbr.sin6_port = htons(4556);
+		hostNbr.sin6_port = htons(BpUdpDefaultPortNbr);
 	}
+
+	/*	Finish validating command-line arguments.		*/
 
 	if (bpAttach() < 0)
 	{

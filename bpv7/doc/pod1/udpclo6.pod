@@ -4,7 +4,7 @@ udpclo6 - UDP-based BP convergence layer output task
 
 =head1 SYNOPSIS
 
-B<udpclo6> I<remote_hostname>[:I<remote_port_nbr>]
+B<udpclo6> I<remote_hostname>[!I<remote_port_nbr>]
 
 =head1 DESCRIPTION
 

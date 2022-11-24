@@ -18,8 +18,8 @@
 
         You should have received a copy of the GNU General Public License
         along with this program; if not, write to the Free Software
-        Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-	
+        Foundation, Inc., at:
+		51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 									*/
 #include "udpcla6.h"
 
@@ -48,7 +48,8 @@ int	sendBytesBy6UDP(int *bundleSocket, char *from, int length,
 	while (1)	/*	Continue until not interrupted.		*/
 	{
 		bytesWritten = isendto(*bundleSocket, from, length, 0,
-			(struct sockaddr *) socketName, sizeof(struct sockaddr_in6));
+			(struct sockaddr *) socketName,
+			sizeof(struct sockaddr_in6));
 		if (bytesWritten < 0)
 		{
 			switch (errno)

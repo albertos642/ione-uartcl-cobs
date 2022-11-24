@@ -48,6 +48,10 @@ MANFILES = \
 	./man/man1/tcpclo.1 \
 	./man/man1/udpcli.1 \
 	./man/man1/udpclo.1 \
+	./man/man1/tcpcli6.1 \
+	./man/man1/tcpclo6.1 \
+	./man/man1/udpcli6.1 \
+	./man/man1/udpclo6.1 \
 	./man/man1/bibeclo.1 \
 	./man/man1/dccpcli.1 \
 	./man/man1/dccpclo.1 \
@@ -106,6 +110,10 @@ HTMLFILES = \
 	./html/man1/tcpclo.html \
 	./html/man1/udpcli.html \
 	./html/man1/udpclo.html \
+	./html/man1/tcpcli6.html \
+	./html/man1/tcpclo6.html \
+	./html/man1/udpcli6.html \
+	./html/man1/udpclo6.html \
 	./html/man1/bibeclo.html \
 	./html/man1/dccpcli.html \
 	./html/man1/dccpclo.html \

@@ -19,8 +19,8 @@
 
         You should have received a copy of the GNU General Public License
         along with this program; if not, write to the Free Software
-        Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
+        Foundation, Inc., at:
+		51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 	
 									*/
 #include "udpcla6.h"
@@ -97,6 +97,7 @@ static void	*handle6Datagrams(void *parm)
 		default:
 			break;			/*	Out of switch.	*/
 		}
+
 		sin6_len = sizeof(fromAddr.sin6_addr);
 		memcpy((char *) &hostNbr.s6_addr,
 			(char *) &(fromAddr.sin6_addr), sin6_len);
@@ -105,7 +106,7 @@ static void	*handle6Datagrams(void *parm)
 		|| bpContinueAcq(work, buffer, bundleLength, 0, 0) < 0
 		|| bpEndAcq(work) < 0)
 		{
-			putErrmsg("Can't acquire bundle.", NULL);
+			putErrmsg("Can't acquire bundle.", hostName);
 			ionKillMainThread(procName);
 			rtp->running = 0;
 			continue;
@@ -193,12 +194,11 @@ int	main(int argc, char *argv[])
 
 	if (hostNbr.sin6_port == 0)
 	{
-		hostNbr.sin6_port = htons(4556);
+		hostNbr.sin6_port = htons(BpUdpDefautlPortNbr);
 	}
 
 	rtp.vduct = vduct;
 	rtp.ductSocket = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
-
 	if (rtp.ductSocket < 0)
 	{
 		putSysErrmsg("Can't open UDP socket", NULL);
@@ -208,7 +208,8 @@ int	main(int argc, char *argv[])
 	nameLength = sizeof(hostNbr);
 	if (reUseAddress(rtp.ductSocket)
 	|| bind(rtp.ductSocket, (struct sockaddr *) &hostNbr, nameLength) < 0 
-	|| getsockname(rtp.ductSocket, (struct sockaddr *) &hostNbr, &nameLength) < 0)
+	|| getsockname(rtp.ductSocket, (struct sockaddr *) &hostNbr,
+			&nameLength) < 0)
 	{
 		closesocket(rtp.ductSocket);
 		putSysErrmsg("Can't initialize socket", NULL);
@@ -235,6 +236,7 @@ int	main(int argc, char *argv[])
 
 	{
 		char	txt[500];
+
 		isprintf(txt, sizeof(txt),
 			"[i] udpcli6 is running, spec=[%s:%d].",
 			ductName, ntohs(hostNbr.sin6_port));
@@ -248,14 +250,15 @@ int	main(int argc, char *argv[])
 	rtp.running = 0;
 
 	/*	Create one-use socket for the closing quit byte.	*/
-
-/*	if (strcmp (char *) hostNbr.sin6_addr, "0")
-	{*/
+#if 0
+	if (strcmp (char *) hostNbr.sin6_addr, "0")
+	{
+#endif
 		/*	Can't send to host number 0, so send to
 		 *	loopback address.				*/
-
-/*		hostNbr.sin6_addr =  in6addr_loopback;		ipv6 localhost*/	
-	
+#if 0
+		hostNbr.sin6_addr =  in6addr_loopback;	//	ipv6 localhost	
+#endif
 
 	/*	Wake up the receiver thread by opening a single-use
 	 *	transmission socket and sending a 1-byte datagram

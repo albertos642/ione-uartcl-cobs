@@ -4,7 +4,7 @@ udpcli6 - UDP-based BP convergence layer input task
 
 =head1 SYNOPSIS
 
-B<udpcli6> I<local_hostname>[:I<local_port_nbr>]
+B<udpcli6> I<local_hostname>[!I<local_port_nbr>]
 
 =head1 DESCRIPTION
 

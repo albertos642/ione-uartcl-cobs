@@ -92,7 +92,7 @@ static void	*handleDatagrams(void *parm)
 		|| bpContinueAcq(work, buffer, bundleLength, 0, 0) < 0
 		|| bpEndAcq(work) < 0)
 		{
-			putErrmsg("Can't acquire bundle.", NULL);
+			putErrmsg("Can't acquire bundle.", hostName);
 			ionKillMainThread(procName);
 			rtp->running = 0;
 			continue;

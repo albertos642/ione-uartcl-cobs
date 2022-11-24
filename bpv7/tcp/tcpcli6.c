@@ -18,10 +18,8 @@
 
         You should have received a copy of the GNU General Public License
         along with this program; if not, write to the Free Software
-        Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-
-	
+        Foundation, Inc., at:
+		51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 									*/
 #include "bpP.h"
 #include "llcv.h"
@@ -29,8 +27,6 @@
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <netdb.h>
-
-
 
 #ifdef ENABLE_HIGH_SPEED
 #define	TCPCL_BUFSZ		(512 * 1024)
@@ -897,7 +893,7 @@ failed.", session->outductName);
 		pthread_mutex_unlock(&(session->plMutex));
 		if (elt == NULL)
 		{
-			putErrmsg("Can't append transmitted ZCO to tcpcli \
+			putErrmsg("Can't append transmitted ZCO to tcpcli6 \
 pipeline.", session->outductName);
 			return -1;
 		}
@@ -2812,7 +2808,7 @@ int	main(int argc, char *argv[])
 
 	if (ductName == NULL)
 	{
-		PUTS("Usage: tcpcli6 <local host name>[:<port number>]");
+		PUTS("Usage: tcpcli6 <local host name>[!<port number>]");
 		return 0;
 	}
 
@@ -2831,7 +2827,7 @@ int	main(int argc, char *argv[])
 
 	if (socketName.sin6_port == 0)
 	{
-		socketName.sin6_port = htons(4556);
+		socketName.sin6_port = htons(BpTcpDefaultPortNbr);
 	}
 
 	findInduct("tcp", ductName, &vduct, &vductElt);
@@ -2875,6 +2871,7 @@ int	main(int argc, char *argv[])
 	pthread_mutex_init(&backlogMutex, NULL);
 
 	/*	Now create the server socket.				*/
+
 	stp.serverSocket = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
 	if (stp.serverSocket < 0)
 	{
@@ -2886,9 +2883,11 @@ int	main(int argc, char *argv[])
 
 	nameLength = sizeof(socketName);
 	if (reUseAddress(stp.serverSocket)
-	|| bind(stp.serverSocket, (struct sockaddr *) &socketName, nameLength) < 0
+	|| bind(stp.serverSocket, (struct sockaddr *) &socketName, nameLength)
+			< 0
 	|| listen(stp.serverSocket, 5) < 0
-	|| getsockname(stp.serverSocket, (struct sockaddr *) &socketName, &nameLength) < 0)
+	|| getsockname(stp.serverSocket, (struct sockaddr *) &socketName,
+			&nameLength) < 0)
 	{
 		closesocket(stp.serverSocket);
 		lyst_destroy(backlog);
