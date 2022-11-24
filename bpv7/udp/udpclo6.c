@@ -1,15 +1,27 @@
 /*
-	udpclo.c:	BP UDP-based convergence-layer output
+	udpclo6.c:	BP IPv6 UDP-based convergence-layer output
 			daemon.
 
-	Author: Ted Piotrowski, APL
-		Scott Burleigh, JPL
+        Author: Scott Johnson
+        based on udpclo.c by Scott Burleigh and Ted Piotrowski
+        Copyright (c) 2022, Scott Mitchell Johnson
 
-	Copyright (c) 2006, California Institute of Technology.
-	ALL RIGHTS RESERVED.  U.S. Government Sponsorship
-	acknowledged.
+        This program is free software; you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation; either version 2 of the License, or
+        (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+        along with this program; if not, write to the Free Software
+        Foundation, Inc., at:
+		51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 									*/
-#include "udpcla.h"
+#include "udpcla6.h"
 
 static sm_SemId		udpcloSemaphore(sm_SemId *semid)
 {
@@ -39,7 +51,7 @@ static unsigned long	getUsecTimestamp()
 }
 
 #if defined (ION_LWT)
-int	udpclo(saddr a1, saddr a2, saddr a3, saddr a4, saddr a5,
+int	udpclo6(saddr a1, saddr a2, saddr a3, saddr a4, saddr a5,
 		saddr a6, saddr a7, saddr a8, saddr a9, saddr a10)
 {
 	char			*rttString = (a1 != 0 ? (char *) a1 : NULL);
@@ -50,11 +62,7 @@ int	main(int argc, char *argv[])
 	char			*rttString = (argc > 1 ? argv[1] : NULL);
 	char			*endpointSpec = (argc > 2 ? argv[2] : NULL);
 #endif
-	unsigned short		portNbr;
-	unsigned int		hostNbr;
-	char			ownHostName[MAXHOSTNAMELEN];
-	struct sockaddr		socketName;
-	struct sockaddr_in	*inetName;
+	struct sockaddr_in6	hostNbr;
 
 	unsigned char		*buffer;
 	VOutduct		*vduct;
@@ -91,8 +99,8 @@ int	main(int argc, char *argv[])
 	{
 		if (rttString == NULL)
 		{
-			PUTS("Usage: udpclo {<remote node's host name> | \
-@} [:<its port number>]");
+			PUTS("Usage: udpclo6 {<remote node's host name> | \
+@} [!<its port number>]");
 			return 0;
 		}
 		else
@@ -101,25 +109,11 @@ int	main(int argc, char *argv[])
 		}
 	}
 
-	parseSocketSpec(endpointSpec, &portNbr, &hostNbr);
-	if (portNbr == 0)
+	parseSocketSpecSix(endpointSpec, &hostNbr);
+	if (hostNbr.sin6_port == 0)
 	{
-		portNbr = BpUdpDefaultPortNbr;
+		hostNbr.sin6_port = htons(BpUdpDefaultPortNbr);
 	}
-
-	portNbr = htons(portNbr);
-	if (hostNbr == 0)		/*	Default to local host.	*/
-	{
-		getNameOfHost(ownHostName, sizeof ownHostName);
-		hostNbr = getInternetAddress(ownHostName);
-	}
-
-	hostNbr = htonl(hostNbr);
-	memset((char *) &socketName, 0, sizeof socketName);
-	inetName = (struct sockaddr_in *) &socketName;
-	inetName->sin_family = AF_INET;
-	inetName->sin_port = portNbr;
-	memcpy((char *) &(inetName->sin_addr.s_addr), (char *) &hostNbr, 4);
 
 	/*	Finish validating command-line arguments.		*/
 
@@ -182,7 +176,7 @@ int	main(int argc, char *argv[])
 		char	memoBuf[1024];
 
 		isprintf(memoBuf, sizeof(memoBuf),
-				"[i] udpclo is running, spec = '%s'",
+				"[i] udpclo6 is running, spec = '%s'",
 				endpointSpec);
 		writeMemo(memoBuf);
 	}
@@ -198,7 +192,7 @@ int	main(int argc, char *argv[])
 
 		if (bundleZco == 0)	/*	Outduct closed.		*/
 		{
-			writeMemo("[i] udpclo outduct closed.");
+			writeMemo("[i] udpclo6 outduct closed.");
 			sm_SemEnd(udpcloSemaphore(NULL));/*	Stop.	*/
 			continue;
 		}
@@ -211,7 +205,7 @@ int	main(int argc, char *argv[])
 		CHKZERO(sdr_begin_xn(sdr));
 		bundleLength = zco_length(sdr, bundleZco);
 		sdr_exit_xn(sdr);
-		bytesSent = sendBundleByUDP(&socketName, &ductSocket,
+		bytesSent = sendBundleBy6UDP(&hostNbr, &ductSocket,
 				bundleLength, bundleZco, buffer);
 		if (bytesSent < bundleLength)
 		{
@@ -295,7 +289,7 @@ int	main(int argc, char *argv[])
 	}
 
 	writeErrmsgMemos();
-	writeMemo("[i] udpclo duct has ended.");
+	writeMemo("[i] udpclo6 duct has ended.");
 	MRELEASE(buffer);
 	ionDetach();
 	return 0;

@@ -28,6 +28,7 @@ MANFILES = \
 	./man/man3/platform.3 \
 	./man/man3/memmgr.3 \
 	./man/man3/ion.3 \
+	./man/man3/libipv6.3 \
 	./man/man3/llcv.3 \
 	./man/man3/lyst.3 \
 	./man/man3/ioncbor.3 \
@@ -67,6 +68,7 @@ HTMLFILES = \
 	./html/man3/platform.html \
 	./html/man3/memmgr.html \
 	./html/man3/ion.html \
+	./html/man3/libipv6.html \
 	./html/man3/llcv.html \
 	./html/man3/lyst.html \
 	./html/man3/ioncbor.html \

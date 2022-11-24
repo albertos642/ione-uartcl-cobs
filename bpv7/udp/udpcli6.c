@@ -1,24 +1,37 @@
 /*
-	udpcli.c:	BP UDP-based convergence-layer input
+	udpcli6.c:	BP IPv6 UDP-based convergence-layer input
 			daemon, designed to serve as an input
 			duct.
 
-	Author: Ted Piotrowski, APL
-		Scott Burleigh, JPL
+        Author: Scott Johnson
+        based on udpcli.c by Scott Burleigh and Ted Piotrowski
+        Copyright (c) 2022, Scott Mitchell Johnson
 
-	Copyright (c) 2006, California Institute of Technology.
-	ALL RIGHTS RESERVED.  U.S. Government Sponsorship
-	acknowledged.
+        This program is free software; you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation; either version 2 of the License, or
+        (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+        along with this program; if not, write to the Free Software
+        Foundation, Inc., at:
+		51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 	
 									*/
-#include "udpcla.h"
+#include "udpcla6.h"
 #include "ipnfw.h"
 #include "dtn2fw.h"
+#include <sys/socket.h>
 
 static void	interruptThread(int signum)
 {
 	isignal(SIGTERM, interruptThread);
-	ionKillMainThread("udpcli");
+	ionKillMainThread("udpcli6");
 }
 
 /*	*	*	Receiver thread functions	*	*	*/
@@ -30,24 +43,25 @@ typedef struct
 	int		running;
 } ReceiverThreadParms;
 
-static void	*handleDatagrams(void *parm)
+static void	*handle6Datagrams(void *parm)
 {
 	/*	Main loop for UDP datagram reception and handling.	*/
 
 	ReceiverThreadParms	*rtp = (ReceiverThreadParms *) parm;
-	char			*procName = "udpcli";
+	char			*procName = "udpcli6";
 	AcqWorkArea		*work;
 	char			*buffer;
 	int			bundleLength;
-	struct sockaddr_in	fromAddr;
-	unsigned int		hostNbr;
+	struct sockaddr_in6	fromAddr;
+	struct in6_addr		hostNbr;
 	char			hostName[MAXHOSTNAMELEN + 1];
+	int			sin6_len; 
 
 	snooze(1);	/*	Let main thread become interruptible.	*/
 	work = bpGetAcqArea(rtp->vduct);
 	if (work == NULL)
 	{
-		putErrmsg("udpcli can't get acquisition work area.", NULL);
+		putErrmsg("udpcli6 can't get acquisition work area.", NULL);
 		ionKillMainThread(procName);
 		return NULL;
 	}
@@ -55,7 +69,7 @@ static void	*handleDatagrams(void *parm)
 	buffer = MTAKE(UDPCLA_BUFSZ);
 	if (buffer == NULL)
 	{
-		putErrmsg("udpcli can't get UDP buffer.", NULL);
+		putErrmsg("udpcli6 can't get UDP buffer.", NULL);
 		ionKillMainThread(procName);
 		return NULL;
 	}
@@ -65,7 +79,7 @@ static void	*handleDatagrams(void *parm)
 
 	while (rtp->running)
 	{	
-		bundleLength = receiveBytesByUDP(rtp->ductSocket, &fromAddr,
+		bundleLength = receiveBytesBy6UDP(rtp->ductSocket, &fromAddr,
 				buffer, UDPCLA_BUFSZ);
 		switch (bundleLength)
 		{
@@ -84,10 +98,10 @@ static void	*handleDatagrams(void *parm)
 			break;			/*	Out of switch.	*/
 		}
 
-		memcpy((char *) &hostNbr,
-				(char *) &(fromAddr.sin_addr.s_addr), 4);
-		hostNbr = ntohl(hostNbr);
-		printDottedString(hostNbr, hostName);
+		sin6_len = sizeof(fromAddr.sin6_addr);
+		memcpy((char *) &hostNbr.s6_addr,
+			(char *) &(fromAddr.sin6_addr), sin6_len);
+		inet_ntop(AF_INET6, &hostNbr, (char* )hostName, sin6_len);
 		if (bpBeginAcq(work, 0, NULL) < 0
 		|| bpContinueAcq(work, buffer, bundleLength, 0, 0) < 0
 		|| bpEndAcq(work) < 0)
@@ -104,7 +118,7 @@ static void	*handleDatagrams(void *parm)
 	}
 
 	writeErrmsgMemos();
-	writeMemo("[i] udpcli receiver thread has ended.");
+	writeMemo("[i] udpcli6 receiver thread has ended.");
 
 	/*	Free resources.						*/
 
@@ -116,7 +130,7 @@ static void	*handleDatagrams(void *parm)
 /*	*	*	Main thread functions	*	*	*	*/
 
 #if defined (ION_LWT)
-int	udpcli(saddr a1, saddr a2, saddr a3, saddr a4, saddr a5,
+int	udpcli6(saddr a1, saddr a2, saddr a3, saddr a4, saddr a5,
 		saddr a6, saddr a7, saddr a8, saddr a9, saddr a10)
 {
 	char	*ductName = (char *) a1;
@@ -131,25 +145,21 @@ int	main(int argc, char *argv[])
 	Induct			duct;
 	ClProtocol		protocol;
 	char			*hostName;
-	unsigned short		portNbr;
-	unsigned int		hostNbr;
-	struct sockaddr		socketName;
-	struct sockaddr_in	*inetName;
+	struct sockaddr_in6	hostNbr;
 	socklen_t		nameLength;
 	ReceiverThreadParms	rtp;
 	pthread_t		receiverThread;
 	int			fd;
 	char			quit = 0;
-
 	if (ductName == NULL)
 	{
-		PUTS("Usage: udpcli <local host name>[:<port number>]");
+		PUTS("Usage: udpcli6 <local host name>[!<port number>]");
 		return 0;
 	}
 
 	if (bpAttach() < 0)
 	{
-		putErrmsg("udpcli can't attach to BP.", NULL);
+		putErrmsg("udpcli6 can't attach to BP.", NULL);
 		return -1;
 	}
 
@@ -176,36 +186,30 @@ int	main(int argc, char *argv[])
 	sdr_read(sdr, (char *) &protocol, duct.protocol, sizeof(ClProtocol));
 	sdr_exit_xn(sdr);
 	hostName = ductName;
-	if (parseSocketSpec(ductName, &portNbr, &hostNbr) != 0)
+	if (parseSocketSpecSix(ductName, &hostNbr) != 0)
 	{
 		putErrmsg("Can't get IP/port for host.", hostName);
 		return -1;
 	}
 
-	if (portNbr == 0)
+	if (hostNbr.sin6_port == 0)
 	{
-		portNbr = BpUdpDefaultPortNbr;
+		hostNbr.sin6_port = htons(BpUdpDefautlPortNbr);
 	}
 
-	portNbr = htons(portNbr);
-	hostNbr = htonl(hostNbr);
 	rtp.vduct = vduct;
-	memset((char *) &socketName, 0, sizeof socketName);
-	inetName = (struct sockaddr_in *) &socketName;
-	inetName->sin_family = AF_INET;
-	inetName->sin_port = portNbr;
-	memcpy((char *) &(inetName->sin_addr.s_addr), (char *) &hostNbr, 4);
-	rtp.ductSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	rtp.ductSocket = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
 	if (rtp.ductSocket < 0)
 	{
 		putSysErrmsg("Can't open UDP socket", NULL);
 		return -1;
 	}
 
-	nameLength = sizeof(struct sockaddr);
+	nameLength = sizeof(hostNbr);
 	if (reUseAddress(rtp.ductSocket)
-	|| bind(rtp.ductSocket, &socketName, nameLength) < 0
-	|| getsockname(rtp.ductSocket, &socketName, &nameLength) < 0)
+	|| bind(rtp.ductSocket, (struct sockaddr *) &hostNbr, nameLength) < 0 
+	|| getsockname(rtp.ductSocket, (struct sockaddr *) &hostNbr,
+			&nameLength) < 0)
 	{
 		closesocket(rtp.ductSocket);
 		putSysErrmsg("Can't initialize socket", NULL);
@@ -214,16 +218,16 @@ int	main(int argc, char *argv[])
 
 	/*	Set up signal handling; SIGTERM is shutdown signal.	*/
 
-	ionNoteMainThread("udpcli");
+	ionNoteMainThread("udpcli6");
 	isignal(SIGTERM, interruptThread);
 
 	/*	Start the receiver thread.				*/
 
 	rtp.running = 1;
-	if (pthread_begin(&receiverThread, NULL, handleDatagrams, &rtp))
+	if (pthread_begin(&receiverThread, NULL, handle6Datagrams, &rtp))
 	{
 		closesocket(rtp.ductSocket);
-		putSysErrmsg("udpcli can't create receiver thread", NULL);
+		putSysErrmsg("udpcli6 can't create receiver thread", NULL);
 		return -1;
 	}
 
@@ -234,8 +238,8 @@ int	main(int argc, char *argv[])
 		char	txt[500];
 
 		isprintf(txt, sizeof(txt),
-			"[i] udpcli is running, spec=[%s:%d].", 
-			inet_ntoa(inetName->sin_addr), ntohs(portNbr));
+			"[i] udpcli6 is running, spec=[%s:%d].",
+			ductName, ntohs(hostNbr.sin6_port));
 		writeMemo(txt);
 	}
 
@@ -246,27 +250,25 @@ int	main(int argc, char *argv[])
 	rtp.running = 0;
 
 	/*	Create one-use socket for the closing quit byte.	*/
-
-	if (hostNbr == 0)	/*	Receiving on INADDR_ANY.	*/
+#if 0
+	if (strcmp (char *) hostNbr.sin6_addr, "0")
 	{
+#endif
 		/*	Can't send to host number 0, so send to
 		 *	loopback address.				*/
-
-		hostNbr = (127 << 24) + 1;	/*	127.0.0.1	*/
-		hostNbr = htonl(hostNbr);
-		memcpy((char *) &(inetName->sin_addr.s_addr),
-				(char *) &hostNbr, 4);
-	}
+#if 0
+		hostNbr.sin6_addr =  in6addr_loopback;	//	ipv6 localhost	
+#endif
 
 	/*	Wake up the receiver thread by opening a single-use
 	 *	transmission socket and sending a 1-byte datagram
 	 *	to the reception socket.				*/
 
-	fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	fd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
 	if (fd >= 0)
 	{
-		if (isendto(fd, &quit, 1, 0, &socketName,
-				sizeof(struct sockaddr)) == 1)
+		if (isendto(fd, &quit, 1, 0, (struct sockaddr *) &hostNbr,
+				sizeof(struct sockaddr_in6)) == 1)
 		{
 			pthread_join(receiverThread, NULL);
 		}
@@ -276,7 +278,7 @@ int	main(int argc, char *argv[])
 
 	closesocket(rtp.ductSocket);
 	writeErrmsgMemos();
-	writeMemo("[i] udpcli duct has ended.");
+	writeMemo("[i] udpcli6 duct has ended.");
 	ionDetach();
 	return 0;
 }

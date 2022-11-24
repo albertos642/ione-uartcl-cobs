@@ -56,6 +56,16 @@ MANFILES = \
 	./man/man1/tcpclo.1 \
 	./man/man1/udpcli.1 \
 	./man/man1/udpclo.1 \
+	./man/man1/tcpcli6.1 \
+	./man/man1/tcpclo6.1 \
+	./man/man1/udpcli6.1 \
+	./man/man1/udpclo6.1 \
+	./man/man1/bibeclo.1 \
+	./man/man1/dccpcli.1 \
+	./man/man1/dccpclo.1 \
+	./man/man1/cgrfetch.1 \
+	./man/man1/dnac.1 \
+	./man/man1/dnacc.1 \
 	./man/man5/biberc.5 \
 	./man/man5/bprc.5 \
 	./man/man5/bpsecrc.5 \
@@ -65,9 +75,6 @@ MANFILES = \
 	./man/man5/lgfile.5 \
 	./man/man3/bpextensions.3 \
 	./man/man3/bp.3
-
-#	./man/man1/dnac.1 \
-#	./man/man1/dnacc.1 \
 
 HTMLFILES = \
 	./html/man1/bibeadmin.html \
@@ -122,6 +129,16 @@ HTMLFILES = \
 	./html/man1/tcpclo.html \
 	./html/man1/udpcli.html \
 	./html/man1/udpclo.html \
+	./html/man1/tcpcli6.html \
+	./html/man1/tcpclo6.html \
+	./html/man1/udpcli6.html \
+	./html/man1/udpclo6.html \
+	./html/man1/bibeclo.html \
+	./html/man1/dccpcli.html \
+	./html/man1/dccpclo.html \
+	./html/man1/cgrfetch.html \
+	./html/man1/dnac.html \
+	./html/man1/dnacc.html \
 	./html/man5/biberc.html \
 	./html/man5/bprc.html \
 	./html/man5/bpsecrc.html \
@@ -131,9 +148,6 @@ HTMLFILES = \
 	./html/man5/lgfile.html \
 	./html/man3/bpextensions.html \
 	./html/man3/bp.html
-
-#	./html/man1/dnac.html \
-#	./html/man1/dnacc.html \
 
 ALL = $(MANFILES) $(HTMLFILES)
 

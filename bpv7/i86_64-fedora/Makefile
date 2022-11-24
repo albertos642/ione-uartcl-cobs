@@ -43,6 +43,7 @@ BPINCLS = \
 	$(DTN2)/dtn2fw.h \
 	$(BRS)/brscla.h \
 	$(UDP)/udpcla.h \
+	$(UDP)/udpcla6.h \
 	$(STCP)/stcpcla.h \
 	$(LTP)/ltpcla.h \
 	$(DCCP)/dccpcla.h
@@ -59,7 +60,7 @@ CGROBJS = libcgr.o
 
 LBP = -lbp -limcfw -lipnfw -ldtn2fw
 
-RUNTIMES = bpadmin bpsecadmin bpsink bpsource bpdriver bpecho bpcounter bpsendfile bprecvfile bpclock bptransit bpclm ipnadmin ipnfw ipnadminep dtn2admin dtn2fw dtn2adminep tcpcli tcpclo stcpcli stcpclo brsscla brsccla udpcli udpclo dgrcli dgrclo ltpcli ltpclo lgsend lgagent bptrace bpstats bplist bpcancel hmackeys bping bpstats2 bpchat imcfw imcadminep bsspcli bsspclo bibeclo bibeadmin bpnmtest ipnd cgrfetch bpversion cpsd irfadmin irfd 
+RUNTIMES = bpadmin bpsecadmin bpsink bpsource bpdriver bpecho bpcounter bpsendfile bprecvfile bpclock bptransit bpclm ipnadmin ipnfw ipnadminep dtn2admin dtn2fw dtn2adminep tcpcli tcpclo tcpcli6 tcpclo6 stcpcli stcpclo brsscla brsccla udpcli udpclo dgrcli dgrclo ltpcli ltpclo lgsend lgagent bptrace bpstats bplist bpcancel hmackeys bping bpstats2 bpchat imcfw imcadminep bsspcli bsspclo bibeclo bibeadmin bpnmtest ipnd cgrfetch bpversion cpsd irfadmin irfd
 # dccpcli dccpclo
 
 ALL = check $(BPLIBS) libcgr.so libipnfw.so libimcfw.so libdtn2fw.so libstcpcla.so libudpcla.so $(RUNTIMES)
@@ -229,6 +230,14 @@ tcpclo:		tcpclo.o $(BPLIBS)
 		$(CC) -o tcpclo tcpclo.o -L./lib -L$(ROOT)/lib $(LBP) -lici -lpthread -lm
 		cp tcpclo ./bin
 
+tcpcli6:	tcpcli6.o $(BPLIBS)
+		$(CC) -o tcpcli6 tcpcli6.o -L./lib -L$(ROOT)/lib $(LBP) -lici -lpthread -lm
+		cp tcpcli6 ./bin
+
+tcpclo6:	tcpclo6.o $(BPLIBS)
+		$(CC) -o tcpclo6 tcpclo6.o -L./lib -L$(ROOT)/lib $(LBP) -lici -lpthread -lm
+		cp tcpclo6 ./bin
+
 #	-	-	STCP executables	-	-	-	-
 
 stcpcli:	stcpcli.o $(BPLIBS) libstcpcla.so
@@ -248,6 +257,14 @@ udpcli:		udpcli.o $(BPLIBS) libudpcla.so
 udpclo:		udpclo.o $(BPLIBS) libudpcla.so
 		$(CC) -o udpclo udpclo.o -L./lib -L$(ROOT)/lib -ludpcla $(LBP) -lici -lpthread -lm
 		cp udpclo ./bin
+
+udpcli6:	udpcli6.o $(BPLIBS) libudpcla6.so
+		$(CC) -o udpcli6 udpcli6.o -L./lib -L$(ROOT)/lib -ludpcla6 $(LBP) -lici -lpthread -lm
+		cp udpcli6 ./bin
+
+udpclo6:	udpclo6.o $(BPLIBS) libudpcla6.so
+		$(CC) -o udpclo6 udpclo6.o -L./lib -L$(ROOT)/lib -ludpcla6 $(LBP) -lici -lpthread -lm
+		cp udpclo6 ./bin
 
 #	-	-	BSSP executables	-	-	-	-
 
@@ -364,6 +381,10 @@ libstcpcla.so:	libstcpcla.o
 libudpcla.so:	libudpcla.o
 		$(LD) -o libudpcla.so libudpcla.o
 		cp libudpcla.so ./lib
+
+libudpcla6.so:	libudpcla6.o
+		$(LD) -o libudpcla6.so libudpcla6.o
+		cp libudpcla6.so ./lib
 
 #	-	-	Object modules	-	-	-	-	-
 

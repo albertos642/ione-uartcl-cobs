@@ -1,15 +1,32 @@
 /*
-	tcpcli.c:	ION TCP convergence-layer adapter daemon.
+	tcpcli6.c:	ION IPv6 TCP convergence-layer adapter daemon.
 			Handles both transmission and reception.
 
-	Author: Scott Burleigh, JPL
+        Author: Scott Johnson
+        based on tcpcli.c by Scott Burleigh
+        Copyright (c) 2022, Scott Mitchell Johnson
 
-	Copyright (c) 2015, California Institute of Technology.
-	ALL RIGHTS RESERVED.  U.S. Government Sponsorship
-	acknowledged.
+        This program is free software; you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation; either version 2 of the License, or
+        (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+        along with this program; if not, write to the Free Software
+        Foundation, Inc., at:
+		51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 									*/
 #include "bpP.h"
 #include "llcv.h"
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <netdb.h>
 
 #ifdef ENABLE_HIGH_SPEED
 #define	TCPCL_BUFSZ		(512 * 1024)
@@ -153,7 +170,7 @@ static void	*handleContacts(void *parm);
 
 static char	*procName()
 {
-	return "tcpcli";
+	return "tcpcli6";
 }
 
 #ifndef mingw
@@ -286,7 +303,7 @@ static LystElt	addTcpclNeighbor(VPlan *vplan, VInduct *induct, Lyst neighbors)
 	neighbor = (TcpclNeighbor *) MTAKE(sizeof(TcpclNeighbor));
 	if (neighbor == NULL)
 	{
-		putErrmsg("tcpcli can't allocate new neighbor.", eid);
+		putErrmsg("tcpcli6 can't allocate new neighbor.", eid);
 		return NULL;
 	}
 
@@ -307,7 +324,7 @@ static LystElt	addTcpclNeighbor(VPlan *vplan, VInduct *induct, Lyst neighbors)
 	if (elt == NULL)
 	{
 		MRELEASE(neighbor);
-		putErrmsg("tcpcli can't insert new neighbor into list.", eid);
+		putErrmsg("tcpcli6 can't insert new neighbor into list.", eid);
 		return NULL;
 	}
 
@@ -325,7 +342,7 @@ static void	cancelXmit(LystElt elt, void *userdata)
 
        	if (bpHandleXmitFailure(bundleZco) < 0)
 	{
-		putErrmsg("tcpcli neighbor closure can't handle failed xmit.",
+		putErrmsg("tcpcli6 neighbor closure can't handle failed xmit.",
 				NULL);
 		ionKillMainThread(procName());
 	}
@@ -356,7 +373,7 @@ static int	beginSession(LystElt neighborElt, int newSocket, int sessionIdx)
 	session->pipeline = lyst_create_using(getIonMemoryMgr());
 	if (session->pipeline == NULL)
 	{
-		putErrmsg("tcpcli can't create pipeline list.", NULL);
+		putErrmsg("tcpcli6 can't create pipeline list.", NULL);
 		closesocket(newSocket);
 		session->sock = -1;
 		return -1;
@@ -369,7 +386,7 @@ static int	beginSession(LystElt neighborElt, int newSocket, int sessionIdx)
 	{
 		lyst_destroy(session->pipeline);
 		session->pipeline = NULL;
-		putErrmsg("tcpcli can't open pipeline.", NULL);
+		putErrmsg("tcpcli6 can't open pipeline.", NULL);
 		closesocket(newSocket);
 		session->sock = -1;
 		return -1;
@@ -384,7 +401,7 @@ static int	beginSession(LystElt neighborElt, int newSocket, int sessionIdx)
 		session->throttle = NULL;
 		lyst_destroy(session->pipeline);
 		session->pipeline = NULL;
-		putErrmsg("tcpcli can't create signals list.", NULL);
+		putErrmsg("tcpcli6 can't create signals list.", NULL);
 		ionKillMainThread(procName());
 		return -1;
 	}
@@ -398,7 +415,7 @@ static int	beginSession(LystElt neighborElt, int newSocket, int sessionIdx)
 		session->throttle = NULL;
 		lyst_destroy(session->pipeline);
 		session->pipeline = NULL;
-		putErrmsg("tcpcli can't open signals list.", NULL);
+		putErrmsg("tcpcli6 can't open signals list.", NULL);
 		ionKillMainThread(procName());
 		return -1;
 	}
@@ -416,7 +433,7 @@ static int	beginSession(LystElt neighborElt, int newSocket, int sessionIdx)
 		session->throttle = NULL;
 		lyst_destroy(session->pipeline);
 		session->pipeline = NULL;
-		putErrmsg("tcpcli can't allocate new receiver parms.", NULL);
+		putErrmsg("tcpcli6 can't allocate new receiver parms.", NULL);
 		closesocket(newSocket);
 		session->sock = -1;
 		return -1;
@@ -450,7 +467,7 @@ static int	beginSession(LystElt neighborElt, int newSocket, int sessionIdx)
 		session->throttle = NULL;
 		lyst_destroy(session->pipeline);
 		session->pipeline = NULL;
-		putSysErrmsg("tcpcli can't create new receiver thread", NULL);
+		putSysErrmsg("tcpcli6 can't create new receiver thread", NULL);
 		closesocket(newSocket);
 		session->sock = -1;
 		return -1;
@@ -470,16 +487,16 @@ static int	reopenSession(TcpclSession *session)
 
 	/*	Okay to make next session attempt.			*/
 
-	switch (itcp_connect(session->outductName, BpTcpDefaultPortNbr,
+	switch (itcp_connect6(session->outductName, BpTcpDefaultPortNbr,
 			&(session->sock)))
 	{
 	case -1:		/*	System failure.			*/
-		putErrmsg("tcpcli failed on TCP reconnect.",
+		putErrmsg("tcpcli6 failed on TCP reconnect.",
 				neighbor->vplan->neighborEid);
 		return -1;
 
 	case 0:			/*	Neighbor still refuses.		*/
-		writeMemoNote("[i] tcpcli unable to reconnect",
+		writeMemoNote("[i] tcpcli6 unable to reconnect",
 				neighbor->vplan->neighborEid);
 		session->reconnectInterval <<= 1;
 		if (session->reconnectInterval > MAX_RECONNECT_INTERVAL)
@@ -496,7 +513,7 @@ static int	reopenSession(TcpclSession *session)
 	if (watchSocket(session->sock) < 0)
 	{
 		closesocket(session->sock);
-		putErrmsg("tcpcli can't watch socket.", session->outductName);
+		putErrmsg("tcpcli6 can't watch socket.", session->outductName);
 		return -1;
 	}
 
@@ -520,7 +537,7 @@ static int	sendSignal(TcpclSession *session, saddr lengthReceived)
 	pthread_mutex_unlock(&session->sigMutex);
        	if (result== NULL)
 	{
-		putErrmsg("tcpcli can't enqueue admin signal", NULL);
+		putErrmsg("tcpcli6 can't enqueue admin signal", NULL);
 		return -1;
 	}
 
@@ -876,7 +893,7 @@ failed.", session->outductName);
 		pthread_mutex_unlock(&(session->plMutex));
 		if (elt == NULL)
 		{
-			putErrmsg("Can't append transmitted ZCO to tcpcli \
+			putErrmsg("Can't append transmitted ZCO to tcpcli6 \
 pipeline.", session->outductName);
 			return -1;
 		}
@@ -960,7 +977,7 @@ static int	sendOneBundle(SenderThreadParms *stp)
 	{
 		if (sm_SemEnded(session->vduct->semaphore))
 		{
-			writeMemoNote("[i] tcpcli session output stopped",
+			writeMemoNote("[i] tcpcli6 session output stopped",
 					session->outductName);
 			return 0;	/*	Time to give up.	*/
 		}
@@ -976,7 +993,7 @@ static int	sendOneBundle(SenderThreadParms *stp)
 
 		if (bundleZco == 0)	/*	Outduct stopped.	*/
 		{
-			writeMemoNote("[i] tcpcli session output stopped",
+			writeMemoNote("[i] tcpcli6 session output stopped",
 					session->outductName);
 			return 0;
 		}
@@ -1000,7 +1017,7 @@ static void	*sendBundles(void *parm)
 
 	session->hasSender = 1;
 	session->newlyAdded = 0;
-	writeMemoNote("[i] tcpcli sender thread has started",
+	writeMemoNote("[i] tcpcli6 sender thread has started",
 			neighbor->vplan->neighborEid);
 
 	/*	Load other required sender thread parms.		*/
@@ -1024,7 +1041,7 @@ static void	*sendBundles(void *parm)
 		switch (sendOneBundle(stp))
 		{
 		case -1:		/*	System failure.		*/
-			putErrmsg("tcpcli failed sending bundle.",
+			putErrmsg("tcpcli6 failed sending bundle.",
 					neighbor->vplan->neighborEid);
 			ionKillMainThread(procName());
 
@@ -1053,7 +1070,7 @@ static void	*sendBundles(void *parm)
 	}
 
 	writeErrmsgMemos();
-	writeMemoNote("[i] tcpcli sender thread has ended",
+	writeMemoNote("[i] tcpcli6 sender thread has ended",
 			neighbor->vplan->neighborEid);
 	MRELEASE(stp->buffer);
 	MRELEASE(stp);
@@ -1088,7 +1105,7 @@ static void	*sendSignals(void *parm)
 		tag = neighbor->vplan->neighborEid;
 	}
 
-	writeMemoNote("[i] tcpcli admin thread has started", tag);
+	writeMemoNote("[i] tcpcli6 admin thread has started", tag);
 
 	/*	ready to  start sending signals.			*/
 
@@ -1164,7 +1181,7 @@ lost (keepalive)", tag);
 	}
 
 	writeErrmsgMemos();
-	writeMemoNote("[i] tcpcli admin thread has ended", tag);
+	writeMemoNote("[i] tcpcli6 admin thread has ended", tag);
 #if defined(bionic)
 	int task_id = sm_TaskIdSelf();
 	sm_TaskForget(task_id);
@@ -1238,7 +1255,7 @@ static int	receiveContactHeader(ReceiverThreadParms *rtp)
 	findOutduct("tcp", session->outductName, &vduct, &vductElt);
 	if (vductElt == 0)
 	{
-		putErrmsg("tcpli can't find outduct.", session->outductName);
+		putErrmsg("tcpli6 can't find outduct.", session->outductName);
 		return -1;
 	}
 
@@ -1515,7 +1532,7 @@ plan for neighbor.", eidbuf);
 	stp = (SenderThreadParms *) MTAKE(sizeof(SenderThreadParms));
 	if (stp == NULL)
 	{
-		putErrmsg("tcpcli can't allocate space for sender parms.", 
+		putErrmsg("tcpcli6 can't allocate space for sender parms.", 
 				neighbor->vplan->neighborEid);
 		return -1;
 	}
@@ -1524,7 +1541,7 @@ plan for neighbor.", eidbuf);
 	if (pthread_begin(&(session->sender), NULL, sendBundles, stp))
 	{
 		MRELEASE(stp);
-		putSysErrmsg("tcpcli can't create new sender thread", 
+		putSysErrmsg("tcpcli6 can't create new sender thread", 
 				neighbor->vplan->neighborEid);
 		return -1;
 	}
@@ -1532,7 +1549,7 @@ plan for neighbor.", eidbuf);
 	if (pthread_begin(&(session->admin), NULL, sendSignals, stp))
 	{
 		stopSenderThread(session);
-		putSysErrmsg("tcpcli can't create new admin thread", 
+		putSysErrmsg("tcpcli6 can't create new admin thread", 
 				neighbor->vplan->neighborEid);
 		return -1;
 	}
@@ -1893,7 +1910,7 @@ static int	handleMessages(ReceiverThreadParms *rtp)
 			switch (handleDataSegment(rtp, msgtypeByte))
 			{
 			case -1:
-				putErrmsg("tcpcli segment handling error.",
+				putErrmsg("tcpcli6 segment handling error.",
 						session->outductName);
 				return -1;
 
@@ -1907,7 +1924,7 @@ static int	handleMessages(ReceiverThreadParms *rtp)
 			switch (handleAck(rtp, msgtypeByte))
 			{
 			case -1:
-				putErrmsg("tcpcli segment handling error.",
+				putErrmsg("tcpcli6 segment handling error.",
 						session->outductName);
 				return -1;
 
@@ -1921,7 +1938,7 @@ static int	handleMessages(ReceiverThreadParms *rtp)
 			switch (handleRefusal(rtp, msgtypeByte))
 			{
 			case -1:
-				putErrmsg("tcpcli segment handling error.",
+				putErrmsg("tcpcli6 segment handling error.",
 						session->outductName);
 				return -1;
 
@@ -1935,7 +1952,7 @@ static int	handleMessages(ReceiverThreadParms *rtp)
 			switch (handleKeepalive(rtp, msgtypeByte))
 			{
 			case -1:
-				putErrmsg("tcpcli segment handling error.",
+				putErrmsg("tcpcli6 segment handling error.",
 						session->outductName);
 				return -1;
 
@@ -1949,7 +1966,7 @@ static int	handleMessages(ReceiverThreadParms *rtp)
 			switch (handleShutdown(rtp, msgtypeByte))
 			{
 			case -1:
-				putErrmsg("tcpcli segment handling error.",
+				putErrmsg("tcpcli6 segment handling error.",
 						session->outductName);
 				return -1;
 
@@ -1963,7 +1980,7 @@ static int	handleMessages(ReceiverThreadParms *rtp)
 			switch (handleLength(rtp, msgtypeByte))
 			{
 			case -1:
-				putErrmsg("tcpcli segment handling error.",
+				putErrmsg("tcpcli6 segment handling error.",
 						session->outductName);
 				return -1;
 
@@ -2002,7 +2019,7 @@ static void	*handleContacts(void *parm)
 	if (rtp->work == NULL)
 	{
 		MRELEASE(rtp);
-		putErrmsg("tcpcli can't get acquisition work area.", tag);
+		putErrmsg("tcpcli6 can't get acquisition work area.", tag);
 		ionKillMainThread(procName());
 		return NULL;
 	}
@@ -2075,7 +2092,7 @@ static void	*handleContacts(void *parm)
 		session->isOpen = 1;
 		if (sendContactHeader(session) < 1)
 		{
-			writeMemoNote("[i] tcpcli did not send contact header",
+			writeMemoNote("[i] tcpcli6 did not send contact header",
 					tag);
 			closeSession(session);
 			continue;	/*	Try again.		*/
@@ -2099,7 +2116,7 @@ static void	*handleContacts(void *parm)
 			continue;	/*	Terminate the loop.	*/
 
 		case 0:			/*	Protocol faiure.	*/
-			writeMemoNote("[i] tcpcli got no valid contact header",
+			writeMemoNote("[i] tcpcli6 got no valid contact header",
 					tag);
 			closeSession(session);
 			continue;	/*	Try again.		*/
@@ -2142,7 +2159,7 @@ static void	*handleContacts(void *parm)
 	ionPauseAttendant(&(rtp->attendant));
 	ionStopAttendant(&(rtp->attendant));
 	writeErrmsgMemos();
-	writeMemoNote("[i] tcpcli receiver thread has ended", tag);
+	writeMemoNote("[i] tcpcli6 receiver thread has ended", tag);
 	MRELEASE(rtp->buffer);
 	bpReleaseAcqArea(rtp->work);
 	MRELEASE(rtp);
@@ -2187,7 +2204,7 @@ static void	*spawnReceivers(void *parm)
 				&socknamelen);
 		if (newSocket < 0)
 		{
-			putSysErrmsg("tcpcli accept() failed", NULL);
+			putSysErrmsg("tcpcli6 accept() failed", NULL);
 			ionKillMainThread(procName());
 			stp->running = 0;
 			continue;
@@ -2202,7 +2219,7 @@ static void	*spawnReceivers(void *parm)
 		if (watchSocket(newSocket) < 0)
 		{
 			closesocket(newSocket);
-			putErrmsg("tcpcli can't watch socket.", NULL);
+			putErrmsg("tcpcli6 can't watch socket.", NULL);
 			ionKillMainThread(procName());
 			stp->running = 0;
 			continue;
@@ -2213,7 +2230,7 @@ static void	*spawnReceivers(void *parm)
 		pthread_mutex_unlock(stp->backlogMutex);
 		if (elt == NULL)
 		{
-			putErrmsg("tcpcli backlog insertion failed.", NULL);
+			putErrmsg("tcpcli6 backlog insertion failed.", NULL);
 			ionKillMainThread(procName());
 			stp->running = 0;
 			continue;
@@ -2225,7 +2242,7 @@ static void	*spawnReceivers(void *parm)
 	}
 
 	writeErrmsgMemos();
-	writeMemo("[i] tcpcli server thread has ended.");
+	writeMemo("[i] tcpcli6 server thread has ended.");
 #if defined(bionic)
 	int task_id = sm_TaskIdSelf();
 	sm_TaskForget(task_id);
@@ -2284,7 +2301,7 @@ session with this neighbor", eid);
 		if ((session->outductName = MTAKE(len)) == NULL)
 		{
 			closesocket(sock);
-			putErrmsg("tcpcli can't copy duct name.", outductName);
+			putErrmsg("tcpcli6 can't copy duct name.", outductName);
 			return -1;
 		}
 
@@ -2304,18 +2321,18 @@ session with this neighbor", eid);
 	{
 		if ((session->outductName = MTAKE(len)) == NULL)
 		{
-			putErrmsg("tcpcli can't copy socket spec.", eid);
+			putErrmsg("tcpcli6 can't copy socket spec.", eid);
 			return -1;
 		}
 
 		oK(istrcpy(session->outductName, outductName, len));
 	}
 
-	switch (itcp_connect(session->outductName, BpTcpDefaultPortNbr,
+	switch (itcp_connect6(session->outductName, BpTcpDefaultPortNbr,
 				&sock))
 	{
 	case -1:	/*	System failure.				*/
-		putErrmsg("tcpcli can't connect to remote node.",
+		putErrmsg("tcpcli6 can't connect to remote node.",
 				session->outductName);
 		return -1;
 
@@ -2326,7 +2343,7 @@ session with this neighbor", eid);
 	if (watchSocket(sock) < 0)
 	{
 		closesocket(sock);
-		putErrmsg("tcpcli can't watch socket.", session->outductName);
+		putErrmsg("tcpcli6 can't watch socket.", session->outductName);
 		return -1;
 	}
 
@@ -2405,7 +2422,7 @@ static int	rescanPlans(ClockThreadParms *ctp)
 					outduct->name) < 0)
 			{
 				sdr_cancel_xn(sdr);
-				putErrmsg("tcpcli can't add planned session.",
+				putErrmsg("tcpcli6 can't add planned session.",
 						NULL);
 				return -1;
 			}
@@ -2414,7 +2431,7 @@ static int	rescanPlans(ClockThreadParms *ctp)
 
 	if (sdr_end_xn(sdr) < 0)
 	{
-		putErrmsg("tcpcli failed rescanning plans.", NULL);
+		putErrmsg("tcpcli6 failed rescanning plans.", NULL);
 		return -1;
 	}
 
@@ -2532,7 +2549,7 @@ static int	clearBacklog(ClockThreadParms *ctp)
 		{
 			closesocket(sock);
 			pthread_mutex_unlock(ctp->backlogMutex);
-			putErrmsg("tcpcli can't add temporary tcpcl neighbor.",
+			putErrmsg("tcpcli6 can't add temporary tcpcl neighbor.",
 					NULL);
 			return -1;
 		}
@@ -2544,7 +2561,7 @@ static int	clearBacklog(ClockThreadParms *ctp)
 		{
 			closesocket(sock);
 			pthread_mutex_unlock(ctp->backlogMutex);
-			putErrmsg("tcpcli can't add automatic outduct.",
+			putErrmsg("tcpcli6 can't add automatic outduct.",
 					outductName);
 			return -1;
 		}
@@ -2730,7 +2747,7 @@ static void	*handleEvents(void *parm)
 	}
 
 	writeErrmsgMemos();
-	writeMemo("[i] tcpcli clock thread has ended.");
+	writeMemo("[i] tcpcli6 clock thread has ended.");
 #if defined(bionic)
 	int task_id = sm_TaskIdSelf();
 	sm_TaskForget(task_id);
@@ -2756,10 +2773,10 @@ static void	wakeUpServerThread(struct sockaddr *socketName)
 
 	/*	Wake up the server thread by connecting to it.		*/
 
-	sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	sock = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
 	if (sock >= 0)
 	{
-		oK(connect(sock, socketName, sizeof(struct sockaddr)));
+		oK(connect(sock, socketName, sizeof(struct sockaddr_in6)));
 
 		/*	Immediately discard the connected socket.	*/
 
@@ -2779,10 +2796,7 @@ int	main(int argc, char *argv[])
 #endif
 	VInduct			*vduct;
 	PsmAddress		vductElt;
-	unsigned short		portNbr;
-	unsigned int		hostNbr;
-	struct sockaddr		socketName;
-	struct sockaddr_in	*inetName;
+	struct sockaddr_in6	socketName;
 	ServerThreadParms	stp;
 	socklen_t		nameLength;
 	Lyst			neighbors;
@@ -2794,32 +2808,32 @@ int	main(int argc, char *argv[])
 
 	if (ductName == NULL)
 	{
-		PUTS("Usage: tcpcli <local host name>[:<port number>]");
+		PUTS("Usage: tcpcli6 <local host name>[!<port number>]");
 		return 0;
 	}
 
 	if (bpAttach() < 0)
 	{
-		writeMemo("[?] tcpcli can't attach to bundle protocol.");
+		writeMemo("[?] tcpcli6 can't attach to bundle protocol.");
 		return 1;
 	}
 
-	if (parseSocketSpec(ductName, &portNbr, &hostNbr) != 0)
+	if (parseSocketSpecSix(ductName, &socketName) != 0)
 	{
-		writeMemoNote("[?] tcpcli: can't get induct IP address",
+		writeMemoNote("[?] tcpcli6: can't get induct IP address",
 				ductName);
 		return 1;
 	}
 
-	if (portNbr == 0)
+	if (socketName.sin6_port == 0)
 	{
-		portNbr = BpTcpDefaultPortNbr;
+		socketName.sin6_port = htons(BpTcpDefaultPortNbr);
 	}
 
 	findInduct("tcp", ductName, &vduct, &vductElt);
 	if (vductElt == 0)
 	{
-		writeMemoNote("[?] tcpcli: no induct", ductName);
+		writeMemoNote("[?] tcpcli6: no induct", ductName);
 		return 1;
 	}
 
@@ -2830,7 +2844,7 @@ int	main(int argc, char *argv[])
 
 	if (vduct->cliPid != ERROR && vduct->cliPid != sm_TaskIdSelf())
 	{
-		writeMemoNote("[?] tcpcli task is already started",
+		writeMemoNote("[?] tcpcli6 task is already started",
 				itoa(vduct->cliPid));
 		return 1;
 	}
@@ -2841,14 +2855,14 @@ int	main(int argc, char *argv[])
 	neighbors = lyst_create_using(getIonMemoryMgr());
 	if (neighbors == NULL)
 	{
-		putErrmsg("tcpcli can't create lyst of neighbors.", NULL);
+		putErrmsg("tcpcl6 can't create lyst of neighbors.", NULL);
 		return 1;
 	}
 
 	backlog = lyst_create_using(getIonMemoryMgr());
 	if (backlog == NULL)
 	{
-		putErrmsg("tcpcli can't create backlog lyst.", NULL);
+		putErrmsg("tcpcli6 can't create backlog lyst.", NULL);
 		lyst_destroy(neighbors);
 		return 1;
 	}
@@ -2858,14 +2872,7 @@ int	main(int argc, char *argv[])
 
 	/*	Now create the server socket.				*/
 
-	portNbr = htons(portNbr);
-	hostNbr = htonl(hostNbr);
-	memset((char *) &(socketName), 0, sizeof(struct sockaddr));
-	inetName = (struct sockaddr_in *) &(socketName);
-	inetName->sin_family = AF_INET;
-	inetName->sin_port = portNbr;
-	memcpy((char *) &(inetName->sin_addr.s_addr), (char *) &hostNbr, 4);
-	stp.serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	stp.serverSocket = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
 	if (stp.serverSocket < 0)
 	{
 		putSysErrmsg("Can't open TCP server socket", NULL);
@@ -2874,11 +2881,13 @@ int	main(int argc, char *argv[])
 		return 1;
 	}
 
-	nameLength = sizeof(struct sockaddr);
+	nameLength = sizeof(socketName);
 	if (reUseAddress(stp.serverSocket)
-	|| bind(stp.serverSocket, &socketName, nameLength) < 0
+	|| bind(stp.serverSocket, (struct sockaddr *) &socketName, nameLength)
+			< 0
 	|| listen(stp.serverSocket, 5) < 0
-	|| getsockname(stp.serverSocket, &socketName, &nameLength) < 0)
+	|| getsockname(stp.serverSocket, (struct sockaddr *) &socketName,
+			&nameLength) < 0)
 	{
 		closesocket(stp.serverSocket);
 		lyst_destroy(backlog);
@@ -2889,7 +2898,7 @@ int	main(int argc, char *argv[])
 
 	/*	Set up signal handling: SIGTERM is shutdown signal.	*/
 
-	ionNoteMainThread("tcpcli");
+	ionNoteMainThread("tcpcli6");
 #ifndef mingw
 	isignal(SIGPIPE, itcp_handleConnectionLoss);
 	isignal(SIGINT, handleStopThread);
@@ -2909,7 +2918,7 @@ int	main(int argc, char *argv[])
 		closesocket(stp.serverSocket);
 		lyst_destroy(backlog);
 		lyst_destroy(neighbors);
-		putSysErrmsg("tcpcli can't create clock thread", NULL);
+		putSysErrmsg("tcpcli6 can't create clock thread", NULL);
 		return 1;
 	}
 
@@ -2932,7 +2941,7 @@ int	main(int argc, char *argv[])
 		closesocket(stp.serverSocket);
 		lyst_destroy(backlog);
 		lyst_destroy(neighbors);
-		putSysErrmsg("tcpcli can't create server thread", NULL);
+		putSysErrmsg("tcpcli6 can't create server thread", NULL);
 		return 1;
 	}
 
@@ -2943,9 +2952,8 @@ int	main(int argc, char *argv[])
 		char	txt[500];
 
 		isprintf(txt, sizeof(txt),
-				"[i] tcpcli is running [%s:%d].", 
-				inet_ntoa(inetName->sin_addr),
-				ntohs(inetName->sin_port));
+				"[i] tcpcli6 is running [%s:%d].", 
+				ductName, ntohs(socketName.sin6_port));
 		writeMemo(txt);
 	}
 
@@ -2954,7 +2962,7 @@ int	main(int argc, char *argv[])
 	/*	Time to shut down.					*/
 
 	stp.running = 0;
-	wakeUpServerThread(&socketName);
+	wakeUpServerThread((struct sockaddr *) &socketName);
 	if (pthread_kill(serverThread, SIGCONT) == 0)
 	{
 		pthread_join(serverThread, NULL);

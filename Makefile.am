@@ -421,6 +421,7 @@ iciextra = \
 	ici/doc/pod5/ionrc.pod \
 	ici/doc/pod5/ionsecrc.pod \
 	ici/doc/pod3/platform.pod \
+	ici/doc/pod3/libipv6.pod \
 	ici/doc/pod3/memmgr.pod \
 	ici/doc/pod3/ion.pod \
 	ici/doc/pod3/llcv.pod \
@@ -465,6 +466,7 @@ icimans = \
 	$(top_builddir)/ici/doc/lyst.3 \
 	$(top_builddir)/ici/doc/memmgr.3 \
 	$(top_builddir)/ici/doc/platform.3 \
+	$(top_builddir)/ici/doc/libipv6.3 \
 	$(top_builddir)/ici/doc/psm.3 \
 	$(top_builddir)/ici/doc/sdr.3 \
 	$(top_builddir)/ici/doc/sdrhash.3 \
@@ -506,6 +508,7 @@ libici_la_SOURCES =	\
 	ici/library/ion.c \
 	ici/library/ionsec.c \
 	ici/library/libicinm.c \
+	ici/library/libipv6.c \
 	ici/library/llcv.c \
 	ici/library/lyst.c \
 	ici/library/memmgr.c \
@@ -638,7 +641,9 @@ ltpbin = \
 	ltpsecadmin \
 	sdatest \
 	udplsi \
-	udplso
+	udplso \
+	udplso6 \
+	udplsi6
 
 ltplib = \
 	libltp.la \
@@ -665,7 +670,9 @@ ltpextra = \
 	ltp/doc/pod1/ltpmeter.pod \
 	ltp/doc/pod1/ltpsecadmin.pod \
 	ltp/doc/pod1/udplsi.pod \
+	ltp/doc/pod1/udplsi6.pod \
 	ltp/doc/pod1/udplso.pod \
+	ltp/doc/pod1/udplso6.pod \
 	ltp/doc/pod3/ltp.pod \
 	ltp/doc/pod5/ltprc.pod
 
@@ -679,7 +686,9 @@ ltpmans = \
 	$(top_builddir)/ltp/doc/ltpmeter.1 \
 	$(top_builddir)/ltp/doc/ltpsecadmin.1 \
 	$(top_builddir)/ltp/doc/udplsi.1 \
+	$(top_builddir)/ltp/doc/udplsi6.1 \
 	$(top_builddir)/ltp/doc/udplso.1 \
+	$(top_builddir)/ltp/doc/udplso6.1 \
 	$(top_builddir)/ltp/doc/ltp.3 \
 	$(top_builddir)/ltp/doc/ltprc.5
 
@@ -761,6 +770,14 @@ udplsi_CFLAGS = $(ltpcflags) $(AM_CFLAGS)
 udplso_SOURCES = ltp/udp/udplso.c
 udplso_LDADD = libltp.la libudplsa.la libici.la $(PTHREAD_LIBS)
 udplso_CFLAGS = $(ltpcflags) $(AM_CFLAGS)
+
+udplsi6_SOURCES = ltp/udp/udplsi6.c
+udplsi6_LDADD = libltp.la libudplsa.la libici.la $(PTHREAD_LIBS)
+udplsi6_CFLAGS = $(ltpcflags) $(AM_CFLAGS)
+
+udplso6_SOURCES = ltp/udp/udplso6.c
+udplso6_LDADD = libltp.la libudplsa.la libici.la $(PTHREAD_LIBS)
+udplso6_CFLAGS = $(ltpcflags) $(AM_CFLAGS)
 
 # --- AOS Executables --- #
 
@@ -1808,8 +1825,12 @@ bpbin = \
 	stcpclo \
 	tcpcli \
 	tcpclo \
+	tcpcli6 \
+	tcpclo6 \
 	udpcli \
-	udpclo
+	udpclo \
+	udpcli6 \
+	udpclo6
 
 if !WINDOWS
 bpbin += \
@@ -1829,7 +1850,8 @@ bplib = \
 	libbp.la \
 	libcgr.la \
 	libstcpcla.la \
-	libudpcla.la
+	libudpcla.la \
+	libudpcla6.la
 
 bpinclude = \
 	bpv7/include/bp.h \
@@ -1895,9 +1917,13 @@ bpextra = \
 	bpv7/doc/pod1/stcpcli.pod \
 	bpv7/doc/pod1/stcpclo.pod \
 	bpv7/doc/pod1/tcpcli.pod \
+	bpv7/doc/pod1/tcpcli6.pod \
 	bpv7/doc/pod1/tcpclo.pod \
+	bpv7/doc/pod1/tcpclo6.pod \
 	bpv7/doc/pod1/udpcli.pod \
+	bpv7/doc/pod1/udpcli6.pod \
 	bpv7/doc/pod1/udpclo.pod \
+	bpv7/doc/pod1/udpclo6.pod \
 	bpv7/doc/pod3/bp.pod \
 	bpv7/doc/pod3/bpextensions.pod \
 	bpv7/doc/pod5/biberc.pod \
@@ -1986,9 +2012,13 @@ bpmans = \
 	$(top_builddir)/bpv7/doc/stcpcli.1 \
 	$(top_builddir)/bpv7/doc/stcpclo.1 \
 	$(top_builddir)/bpv7/doc/tcpcli.1 \
+	$(top_builddir)/bpv7/doc/tcpcli6.1 \
 	$(top_builddir)/bpv7/doc/tcpclo.1 \
+	$(top_builddir)/bpv7/doc/tcpclo6.1 \
 	$(top_builddir)/bpv7/doc/udpcli.1 \
+	$(top_builddir)/bpv7/doc/udpcli6.1 \
 	$(top_builddir)/bpv7/doc/udpclo.1 \
+	$(top_builddir)/bpv7/doc/udpclo6.1 \
 	$(top_builddir)/bpv7/doc/bp.3 \
 	$(top_builddir)/bpv7/doc/bpextensions.3 \
 	$(top_builddir)/bpv7/doc/biberc.5 \
@@ -2161,6 +2191,10 @@ libudpcla_la_SOURCES = bpv7/udp/libudpcla.c
 libudpcla_la_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 libudpcla_la_LIBADD = libbp.la libici.la
 
+libudpcla6_la_SOURCES = bpv7/udp/libudpcla6.c
+libudpcla6_la_CFLAGS = $(bpcflags) $(AM_CFLAGS)
+libudpcla6_la_LIBADD = libbp.la libici.la
+
 # --- Utility Programs --- #
 
 bpadmin_SOURCES = bpv7/utils/bpadmin.c
@@ -2281,6 +2315,14 @@ tcpclo_SOURCES = bpv7/tcp/tcpclo.c
 tcpclo_LDADD = libici.la $(bplib) $(PTHREAD_LIBS)
 tcpclo_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 
+tcpcli6_SOURCES = bpv7/tcp/tcpcli6.c
+tcpcli6_LDADD = libici.la $(bplib) $(PTHREAD_LIBS)
+tcpcli6_CFLAGS = $(bpcflags) $(AM_CFLAGS)
+
+tcpclo6_SOURCES = bpv7/tcp/tcpclo6.c
+tcpclo6_LDADD = libici.la $(bplib) $(PTHREAD_LIBS)
+tcpclo6_CFLAGS = $(bpcflags) $(AM_CFLAGS)
+
 # --- STCP Executables --- #
 
 stcpcli_SOURCES = bpv7/stcp/stcpcli.c
@@ -2300,6 +2342,14 @@ udpcli_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 udpclo_SOURCES = bpv7/udp/udpclo.c
 udpclo_LDADD = libici.la $(bplib)
 udpclo_CFLAGS = $(bpcflags) $(AM_CFLAGS)
+
+udpcli6_SOURCES = bpv7/udp/udpcli6.c
+udpcli6_LDADD = libici.la $(bplib) $(PTHREAD_LIBS)
+udpcli6_CFLAGS = $(bpcflags) $(AM_CFLAGS)
+
+udpclo6_SOURCES = bpv7/udp/udpclo6.c
+udpclo6_LDADD = libici.la $(bplib)
+udpclo6_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 
 # --- BIBE Executables --- #
 

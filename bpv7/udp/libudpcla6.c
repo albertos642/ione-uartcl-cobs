@@ -1,23 +1,35 @@
 /*
-	libudpcla.c:	common functions for BP UDP-based
-			convergence-layer daemons.
+	libudpcla6.c:	common functions for BP UDP-based
+			IPv6 convergence-layer daemons.
 
-	Author: Ted Piotrowski, APL 
-		Scott Burleigh, JPL
+	Author: Scott Johnson
+        based on libudpcla.c by Scott Burleigh and Ted Piotrowski
+        Copyright (c) 2022, Scott Mitchell Johnson
 
-	Copyright (c) 2006, California Institute of Technology.
-	ALL RIGHTS RESERVED.  U.S. Government Sponsorship
-	acknowledged.
+        This program is free software; you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation; either version 2 of the License, or
+        (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+        along with this program; if not, write to the Free Software
+        Foundation, Inc., at:
+		51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 									*/
-#include "udpcla.h"
+#include "udpcla6.h"
 
 /*	*	*	Sender functions	*	*	*	*/
 
-static int	openUdpSocket(int *sock)
+static int	openUdp6Socket(int *sock)
 {
 	*sock = -1;
 
-	*sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	*sock = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
 	if (*sock < 0)
 	{
 		putSysErrmsg("CLO can't open UDP socket", NULL);
@@ -27,8 +39,8 @@ static int	openUdpSocket(int *sock)
 	return 0;
 }
 
-int	sendBytesByUDP(int *bundleSocket, char *from, int length,
-		struct sockaddr* socketName)
+int	sendBytesBy6UDP(int *bundleSocket, char *from, int length,
+		struct sockaddr_in6 *socketName)
 {
 	int	bytesWritten;
 
@@ -36,7 +48,8 @@ int	sendBytesByUDP(int *bundleSocket, char *from, int length,
 	while (1)	/*	Continue until not interrupted.		*/
 	{
 		bytesWritten = isendto(*bundleSocket, from, length, 0,
-			socketName, sizeof(struct sockaddr));
+			(struct sockaddr *) socketName,
+			sizeof(struct sockaddr_in6));
 		if (bytesWritten < 0)
 		{
 			switch (errno)
@@ -59,7 +72,7 @@ int	sendBytesByUDP(int *bundleSocket, char *from, int length,
 	}
 }
 
-int	sendBundleByUDP(struct sockaddr *socketName, int *bundleSocket,
+int	sendBundleBy6UDP(struct sockaddr_in6 *socketName, int *bundleSocket,
 		unsigned int bundleLength, Object bundleZco,
 		unsigned char *buffer)
 {
@@ -79,7 +92,7 @@ int	sendBundleByUDP(struct sockaddr *socketName, int *bundleSocket,
 
 	if (*bundleSocket < 0)
 	{
-		if (openUdpSocket(bundleSocket) < 0)
+		if (openUdp6Socket(bundleSocket) < 0)
 		{
 			/*	Treat I/O error as a transient anomaly,
 			 *	note incomplete transmission.		*/
@@ -101,8 +114,8 @@ int	sendBundleByUDP(struct sockaddr *socketName, int *bundleSocket,
 		return -1;
 	}
 
-	bytesSent = sendBytesByUDP(bundleSocket, (char *) buffer, bytesToSend,
-			socketName);
+	bytesSent = sendBytesBy6UDP(bundleSocket, (char *) buffer, bytesToSend,
+			 socketName);
 	if (bytesSent < 0)
 	{
 		if (bpHandleXmitFailure(bundleZco) < 0)
@@ -143,14 +156,14 @@ when connectivity is restored.");
 
 /*	*	*	Receiver functions	*	*	*	*/
 
-int	receiveBytesByUDP(int bundleSocket, struct sockaddr_in *fromAddr,
+int	receiveBytesBy6UDP(int bundleSocket, struct sockaddr_in6 *fromAddr,
 		char *into, int length)
 {
 	int		bytesRead;
 	socklen_t	fromSize;
 
 	CHKERR(fromAddr && length);
-	fromSize = sizeof(struct sockaddr_in);
+	fromSize = sizeof(struct sockaddr_in6);
 	bytesRead = irecvfrom(bundleSocket, into, length, 0,
 			(struct sockaddr *) fromAddr, &fromSize);
 	if (bytesRead < 0)
