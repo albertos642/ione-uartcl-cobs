@@ -49,6 +49,8 @@ withbpv7:
 #	gmake -C nm install
 	gmake -C restart all BP=$(BP)
 	gmake -C restart install BP=$(BP)
+	gmake -C tc all
+	gmake -C tc install
 
 clean:
 	gmake -C ici clean
@@ -62,6 +64,7 @@ clean:
 	gmake -C dtpc clean
 	gmake -C nm clean
 	gmake -C restart clean BP=$(BP)
+	gmake -C tc clean
 
 test:
 	cd tests && ./runtestset normaltests
