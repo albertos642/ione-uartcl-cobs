@@ -803,7 +803,6 @@ extern int			initResourceLock(ResourceLock *);
 extern void			killResourceLock(ResourceLock *);
 extern void			lockResource(ResourceLock *);
 extern void			unlockResource(ResourceLock *);
-
 extern char			*itoa(int);
 extern char			*utoa(unsigned int);
 #define postErrmsg(txt, arg)	_postErrmsg(__FILE__, __LINE__, txt, arg)
@@ -895,6 +894,15 @@ extern int			parseSocketSpec(char *socketSpec,
 extern int			parseSocketSpecSix(char *socketSpec,
 					struct sockaddr_in6 *ipv6Address);
 
+struct uartdescriptor
+{
+	char		uart_file_descriptor[50];
+	uint32_t	baud_rate;
+	int		isOpen;
+};
+
+extern int			parseUartSpec(char *socketSpec,
+					struct uartdescriptor *uart);
 extern void			printDottedString(unsigned int hostNbr,
 					char *buffer);
 

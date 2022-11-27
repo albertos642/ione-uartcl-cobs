@@ -509,6 +509,7 @@ libici_la_SOURCES =	\
 	ici/library/ionsec.c \
 	ici/library/libicinm.c \
 	ici/library/libipv6.c \
+	ici/library/libuart.c \
 	ici/library/llcv.c \
 	ici/library/lyst.c \
 	ici/library/memmgr.c \
@@ -642,8 +643,8 @@ ltpbin = \
 	sdatest \
 	udplsi \
 	udplso \
-	udplso6 \
-	udplsi6
+	udplsi6 \
+	udplso6
 
 ltplib = \
 	libltp.la \
@@ -981,7 +982,8 @@ bplib = \
 	libbp.la \
 	libcgr.la \
 	libstcpcla.la \
-	libudpcla.la
+	libudpcla.la \
+	libuartcla.la
 
 bpinclude = \
 	bpv6/include/bp.h \
@@ -1830,7 +1832,9 @@ bpbin = \
 	udpcli \
 	udpclo \
 	udpcli6 \
-	udpclo6
+	udpclo6 \
+	uartcli \
+	uartclo
 
 if !WINDOWS
 bpbin += \
@@ -1851,7 +1855,8 @@ bplib = \
 	libcgr.la \
 	libstcpcla.la \
 	libudpcla.la \
-	libudpcla6.la
+	libudpcla6.la \
+	libuartcla.la
 
 bpinclude = \
 	bpv7/include/bp.h \
@@ -1868,7 +1873,8 @@ bpnoinst = \
 	bpv7/ltp/ltpcla.h \
 	bpv7/saga/saga.h \
 	bpv7/stcp/stcpcla.h \
-	bpv7/udp/udpcla.h
+	bpv7/udp/udpcla.h \
+	bpv7/uart/uartcla.h
 
 bpextra = \
 	bpv7/README.txt \
@@ -2195,6 +2201,10 @@ libudpcla6_la_SOURCES = bpv7/udp/libudpcla6.c
 libudpcla6_la_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 libudpcla6_la_LIBADD = libbp.la libici.la
 
+libuartcla_la_SOURCES = bpv7/uart/libuartcla.c
+libuartcla_la_CFLAGS = $(bpcflags) $(AM_CFLAGS)
+libuartcla_la_LIBADD = libbp.la libici.la
+
 # --- Utility Programs --- #
 
 bpadmin_SOURCES = bpv7/utils/bpadmin.c
@@ -2350,6 +2360,16 @@ udpcli6_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 udpclo6_SOURCES = bpv7/udp/udpclo6.c
 udpclo6_LDADD = libici.la $(bplib)
 udpclo6_CFLAGS = $(bpcflags) $(AM_CFLAGS)
+
+# --- UART Executables --- #
+
+uartcli_SOURCES = bpv7/uart/uartcli.c
+uartcli_LDADD = libici.la $(bplib) $(PTHREAD_LIBS)
+uartcli_CFLAGS = $(bpcflags) $(AM_CFLAGS)
+
+uartclo_SOURCES = bpv7/uart/uartclo.c
+uartclo_LDADD = libici.la $(bplib)
+uartclo_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 
 # --- BIBE Executables --- #
 
