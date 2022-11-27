@@ -1,9 +1,12 @@
 /*
 	uartcli.c:	BP UART convergence-layer input daemon.
 
-	Author: Samo Grasic (samo@grasic.net), Luleå University of Technology, Sweden
+	Author:	Samo Grasic (samo@grasic.net), Luleå University of
+		Technology, Sweden
 
-*/
+	Copyright (c) 2022, Luleå University of Technology.
+	ALL RIGHTS RESERVED/
+									*/
 #include "uartcla.h"
 #include "ipnfw.h"
 #include "dtn2fw.h"
@@ -57,16 +60,18 @@ static void	*handleDatagrams(void *parm)
 
 	while (rtp->running)
 	{	
-		bundleLength = receiveBytesByUart(rtp->ductSocket, rtp->uartPort,buffer, UARTCLA_BUFSZ);
+		bundleLength = receiveBytesByUart(rtp->ductSocket,
+				rtp->uartPort, buffer, UARTCLA_BUFSZ);
 		switch (bundleLength)
 		{
 		case -1:
 		case 0:
-		//	putErrmsg("Can't acquire bundle.", NULL);
+			// putErrmsg("Can't acquire bundle.", NULL);
 			break;
 			//ionKillMainThread(procName);
-
+#if 0
 			/*	Intentional fall-through to next case.	*/
+#endif
 
 		case 1:				/*	Normal stop.	*/
 			//rtp->running = 0;
@@ -75,17 +80,20 @@ static void	*handleDatagrams(void *parm)
 		default:
 			break;			/*	Out of switch.	*/
 		}
-		if(bundleLength>0)
-		{		if (bpBeginAcq(work, 0, NULL) < 0
-		|| bpContinueAcq(work, buffer, bundleLength, 0, 0) < 0
-		|| bpEndAcq(work) < 0)
+
+		if (bundleLength > 0)
 		{
-			putErrmsg("Can't acquire bundle.", NULL);
-			ionKillMainThread(procName);
-			rtp->running = 0;
-			continue;
+			if (bpBeginAcq(work, 0, NULL) < 0
+			|| bpContinueAcq(work, buffer, bundleLength, 0, 0) < 0
+			|| bpEndAcq(work) < 0)
+			{
+				putErrmsg("Can't acquire bundle.", NULL);
+				ionKillMainThread(procName);
+				rtp->running = 0;
+				continue;
+			}
 		}
-		}
+
 		/*	Make sure other tasks have a chance to run.	*/
 
 		sm_TaskYield();
@@ -121,13 +129,14 @@ int	main(int argc, char *argv[])
 	struct uartdescriptor	hostNbr;
 	ReceiverThreadParms	rtp;
 	pthread_t		receiverThread;
-	int ductSocket = -1;
+	int			ductSocket = -1;
 
 	if (ductName == NULL)
 	{
 		PUTS("Usage: uartcli {<uart file descriptor>,<uart speed>}");
 		return 0;
 	}
+
 	if (bpAttach() < 0)
 	{
 		putErrmsg("uartcli can't attach to BP.", NULL);
@@ -161,6 +170,7 @@ int	main(int argc, char *argv[])
 		putErrmsg("UART CLI Can't get UART spec.", ductName);
 		return -1;
 	}
+
 	rtp.vduct = vduct;
 	rtp.ductSocket = &ductSocket;
 	rtp.uartPort = &hostNbr;
@@ -184,7 +194,9 @@ int	main(int argc, char *argv[])
 
 	{
 		char	mBuf[1024]; //Debug string buffer
-		isprintf(mBuf, sizeof(mBuf),"[i] uartcli is running, spec = '%s'",	ductName);
+		isprintf(mBuf, sizeof(mBuf),
+				"[i] uartcli is running, spec = '%s'",
+				ductName);
 		writeMemo(mBuf);
 		writeErrmsgMemos();
 	}
@@ -194,7 +206,6 @@ int	main(int argc, char *argv[])
 	/*	Time to shut down.					*/
 
 	rtp.running = 0;
-	
 	writeErrmsgMemos();
 	writeMemo("[i] uart CLI duct has ended.");
 	ionDetach();

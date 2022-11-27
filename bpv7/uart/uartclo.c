@@ -1,9 +1,12 @@
 /*
 	uartclo.c:	BP UART convergence-layer output daemon.
 
-	Author: Samo Grasic (samo@grasic.net), Luleå University of Technology, Sweden
+	Author: Samo Grasic (samo@grasic.net), Luleå University of
+		Technology, Sweden
 
-*/
+	Copyright (c) 2022, Luleå University of Technology.
+	ALL RIGHTS RESERVED.
+									*/
 
 #include "uartcla.h"
 
@@ -44,9 +47,7 @@ int	main(int argc, char *argv[])
 {
 	char			*fileDescriptor = (argc > 1 ? argv[1] : NULL);
 #endif
-/*	char			ownHostName[MAXHOSTNAMELEN];*/
 	struct uartdescriptor	hostNbr;
-
 	unsigned char		*buffer;
 	VOutduct		*vduct;
 	PsmAddress		vductElt;
@@ -75,47 +76,40 @@ int	main(int argc, char *argv[])
 	unsigned int		balanceDue;	/*	Until next seg.	*/
 	unsigned int		prevPaid = 0;	/*	Prior snooze.	*/
 
-	/*	Note: for backward compatibility, we accept and ignore
-	 *	a round-trip time value that precedes the fileDescriptor.	*/
-
-char	mBuf[1024]; //Debug string buffer
-
-
+	char	mBuf[1024]; // Debug string buffer
 
 	if (fileDescriptor == NULL)
 	{
 		PUTS("Usage: uartclo {<uart file descriptor>,<uart speed>}");
-			return 0;
+		return 0;
 	}
-	parseUartSpec(fileDescriptor, &hostNbr);
 
-	isprintf(mBuf, sizeof(mBuf),"[i] uartclo uses fileDescriptor = '%s'",fileDescriptor);
+	parseUartSpec(fileDescriptor, &hostNbr);
+	isprintf(mBuf, sizeof(mBuf), "[i] uartclo uses fileDescriptor = '%s'",
+			fileDescriptor);
 	writeMemo(mBuf);
 	writeErrmsgMemos();
-
-
-
 	if (bpAttach() < 0)
 	{
 		putErrmsg("uartclo can't attach to BP.", NULL);
 		return -1;
 	}
-	isprintf(mBuf, sizeof(mBuf),"[i] UART, attached to the BP",fileDescriptor);
+
+	isprintf(mBuf, sizeof(mBuf), "[i] UART '%s' attached to BP.",
+			fileDescriptor);
 	writeMemo(mBuf);
 	writeErrmsgMemos();
-
-
-
 	buffer = MTAKE(UARTCLA_BUFSZ);
 	if (buffer == NULL)
 	{
 		putErrmsg("No memory for uart buffer in uartclo.", NULL);
 		return -1;
 	}
-			isprintf(mBuf, sizeof(mBuf),"[i] UART Memory buffer OK",fileDescriptor);
-		writeMemo(mBuf);
-	writeErrmsgMemos();
 
+	isprintf(mBuf, sizeof(mBuf),"[i] UART Memory buffer OK for '%s'",
+			fileDescriptor);
+	writeMemo(mBuf);
+	writeErrmsgMemos();
 	findOutduct("uart", fileDescriptor, &vduct, &vductElt);
 	if (vductElt == 0)
 	{
@@ -124,10 +118,10 @@ char	mBuf[1024]; //Debug string buffer
 		return -1;
 	}
 
-	isprintf(mBuf, sizeof(mBuf),"[i] UART duct found, OK",fileDescriptor);
+	isprintf(mBuf, sizeof(mBuf),"[i] UART outduct '%s' found, OK",
+			fileDescriptor);
 	writeMemo(mBuf);
 	writeErrmsgMemos();
-
 	if (vduct->cloPid != ERROR && vduct->cloPid != sm_TaskIdSelf())
 	{
 		putErrmsg("CLO task is already started for this duct.",
@@ -135,7 +129,9 @@ char	mBuf[1024]; //Debug string buffer
 		MRELEASE(buffer);
 		return -1;
 	}
-	isprintf(mBuf, sizeof(mBuf),"[i] UART CLO task started for this duct., OK",hostNbr.uart_file_descriptor);
+
+	isprintf(mBuf, sizeof(mBuf),"[i] UART CLO task started for duct '%s'.",
+			hostNbr.uart_file_descriptor);
 	writeMemo(mBuf);
 	writeErrmsgMemos();
 
@@ -198,12 +194,10 @@ char	mBuf[1024]; //Debug string buffer
 		CHKZERO(sdr_begin_xn(sdr));
 		bundleLength = zco_length(sdr, bundleZco);
 		sdr_exit_xn(sdr);
-		isprintf(mBuf, sizeof(mBuf),"[i] UART: Sending out BUNDLE with length:%d",bundleLength);
+		isprintf(mBuf, sizeof(mBuf), "[i] UART: Sending out BUNDLE \
+with length:%d", bundleLength);
 		writeMemo(mBuf);
 		writeErrmsgMemos();
-
-
-
 		bytesSent = sendBundleByUart(&hostNbr, &ductSocket,
 				bundleLength, bundleZco, buffer);
 		if (bytesSent < bundleLength)

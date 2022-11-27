@@ -779,7 +779,7 @@ extern void			getCurrentTime(struct timeval *);
 extern unsigned long		getClockResolution();	/*	usec	*/
 #if (defined(FSWLAN) || !(defined(ION_NO_DNS)))
 extern unsigned int		getInternetAddress(char *);
-extern char 		getInternet6Address(char *);
+extern char 			getInternet6Address(char *);
 extern char			*getInternetHostName(unsigned int, char *);
 extern int			getNameOfHost(char *, int);
 extern char			*getNameOfUser(char *);
@@ -791,7 +791,7 @@ extern void			closeOnExec(int);
 extern int			initResourceLock(ResourceLock *);
 extern void			killResourceLock(ResourceLock *);
 extern void			lockResource(ResourceLock *);
-extern void			unlockResource(ResourceLock *); 
+extern void			unlockResource(ResourceLock *);
 extern char			*itoa(int);
 extern char			*utoa(unsigned int);
 #define postErrmsg(txt, arg)	_postErrmsg(__FILE__, __LINE__, txt, arg)
@@ -883,14 +883,12 @@ extern int			parseSocketSpec(char *socketSpec,
 extern int			parseSocketSpecSix(char *socketSpec,
 					struct sockaddr_in6 *ipv6Address);
 
-
 struct uartdescriptor
-  {
-    char uart_file_descriptor[50];	/* UART File Descriptor# */
-    uint32_t baud_rate;	/* UART Baud Rate */
-    int isOpen;
-    
- };
+{
+	char		uart_file_descriptor[50];
+	uint32_t	baud_rate;
+	int		isOpen;
+};
 
 extern int			parseUartSpec(char *socketSpec,
 					struct uartdescriptor *uart);

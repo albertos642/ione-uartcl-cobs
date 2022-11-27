@@ -635,8 +635,8 @@ ltpbin = \
 	sdatest \
 	udplsi \
 	udplso \
-	udplso6 \
-	udplsi6
+	udplsi6 \
+	udplso6
 
 ltplib = \
 	libltp.la \
@@ -944,7 +944,7 @@ bpbin = \
 	tcpcli \
 	tcpclo \
 	udpcli \
-	udpclo  
+	udpclo
 
 if !WINDOWS
 bpbin += \
@@ -971,7 +971,7 @@ bplib = \
 	libbp.la \
 	libcgr.la \
 	libstcpcla.la \
-	libudpcla.la
+	libudpcla.la \
 	libuartcla.la
 
 bpinclude = \
@@ -1318,8 +1318,6 @@ libstcpcla_la_LIBADD = libbp.la libici.la
 libudpcla_la_SOURCES = bpv6/udp/libudpcla.c
 libudpcla_la_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 libudpcla_la_LIBADD = libbp.la libici.la
-
-
 
 # --- Utility Programs --- #
 
@@ -2343,7 +2341,6 @@ uartcli_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 uartclo_SOURCES = bpv7/uart/uartclo.c
 uartclo_LDADD = libici.la $(bplib)
 uartclo_CFLAGS = $(bpcflags) $(AM_CFLAGS)
-
 
 # --- BIBE Executables --- #
 
