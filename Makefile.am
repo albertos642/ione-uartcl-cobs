@@ -44,7 +44,7 @@ if WINDOWS
 LIBOBJS += -lws2_32 -lwsock32
 endif
 
-if MUSL
+if musl
 USR_INCLUDE =
 else
 USR_INCLUDE = -I/usr/include
