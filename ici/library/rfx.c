@@ -3038,7 +3038,8 @@ void	rfx_brief_passageways(uint32_t regionNbr)
 	return;
 }
 
-void	rfx_contact_state(uvast nodeNbr, size_t *secRemaining, size_t *xmitRate)
+void	rfx_contact_state(uvast nodeNbr, time_t *fromTime, size_t *secRemaining,
+		size_t *xmitRate)
 {
 	int		regionIdx;
 	uint32_t	regionNbr;
@@ -3092,6 +3093,7 @@ void	rfx_contact_state(uvast nodeNbr, size_t *secRemaining, size_t *xmitRate)
 			break;		/*	Not current contact.	*/
 		}
 
+		*fromTime = contact->fromTime;
 		*secRemaining = contact->toTime - currentTime;
 		*xmitRate = contact->xmitRate;
 		return;

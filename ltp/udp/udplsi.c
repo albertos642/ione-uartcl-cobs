@@ -59,13 +59,13 @@ int	main(int argc, char *argv[])
 	sdr_exit_xn(sdr);
 	if (vseatElt == 0)
 	{
-		putErrmsg("Undefined LSI", lsiCmd);
+		writeMemoNote("[?] Undefined LSI", lsiCmd);
 		return 1;
 	}
 
 	if (vseat->lsiPid != ERROR && vseat->lsiPid != sm_TaskIdSelf())
 	{
-		putErrmsg("LSI task is already started.", itoa(vseat->lsiPid));
+		writeMemoNote("[?] LSI task is already started", lsiCmd);
 		return 1;
 	}
 
@@ -73,9 +73,9 @@ int	main(int argc, char *argv[])
 
 	if (endpointSpec)
 	{
-		if(parseSocketSpec(endpointSpec, &portNbr, &ipAddress) != 0)
+		if (parseSocketSpec(endpointSpec, &portNbr, &ipAddress) != 0)
 		{
-			putErrmsg("Can't get IP/port for endpointSpec.",
+			writeMemoNote("LSI can't get own IP/port",
 					endpointSpec);
 			return -1;
 		}

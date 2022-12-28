@@ -204,8 +204,8 @@ extern void		rfx_stop();
 
 /*	*	Additional database management functions.		*/
 
-extern void		rfx_contact_state(uvast nodeNbr, size_t *secRemaining,
-				size_t *xmitRate);
+extern void		rfx_contact_state(uvast nodeNbr, time_t *fromTime,
+				size_t *secRemaining, size_t *xmitRate);
 
 extern IonNeighbor	*findNeighbor(IonVdb *ionvdb, uvast nodeNbr,
 				PsmAddress *nextElt);
