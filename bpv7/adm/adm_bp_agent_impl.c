@@ -25,7 +25,7 @@
 /*   STOP CUSTOM INCLUDES HERE  */
 
 
-#include "shared/adm/adm.h"
+#include "adm.h"
 #include "adm_bp_agent_impl.h"
 
 /*   START CUSTOM FUNCTIONS HERE */

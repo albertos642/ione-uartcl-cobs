@@ -16,13 +16,13 @@
  ****************************************************************************/
 
 /*   START CUSTOM INCLUDES HERE  */
-#include "../shared/primitives/table.h"
+#include "table.h"
 #include "ltpP.h"
 
 /*   STOP CUSTOM INCLUDES HERE  */
 
 
-#include "shared/adm/adm.h"
+#include "adm.h"
 #include "adm_ltp_agent_impl.h"
 
 /*   START CUSTOM FUNCTIONS HERE */

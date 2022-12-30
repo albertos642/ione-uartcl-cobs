@@ -194,7 +194,7 @@ int	main(int argc, char *argv[])
 
 	if (hostNbr.sin6_port == 0)
 	{
-		hostNbr.sin6_port = htons(BpUdpDefautlPortNbr);
+		hostNbr.sin6_port = htons(BpUdpDefaultPortNbr);
 	}
 
 	rtp.vduct = vduct;

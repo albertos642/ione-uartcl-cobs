@@ -19,11 +19,11 @@
 #include "ion.h"
 #include "platform.h"
 #include "adm_bpsec.h"
-#include "shared/utils/utils.h"
-#include "shared/primitives/report.h"
-#include "shared/primitives/blob.h"
+#include "utils.h"
+#include "report.h"
+#include "blob.h"
 #include "adm_bpsec_impl.h"
-#include "agent/rda.h"
+#include "rda.h"
 
 
 #include "adm_amp_agent.h"

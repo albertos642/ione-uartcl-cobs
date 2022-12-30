@@ -21,8 +21,8 @@
 #define _HAVE_DTN_LTP_AGENT_ADM_
 #ifdef _HAVE_DTN_LTP_AGENT_ADM_
 
-#include "shared/utils/nm_types.h"
-#include "shared/adm/adm.h"
+#include "nm_types.h"
+#include "adm.h"
 
 
 /*

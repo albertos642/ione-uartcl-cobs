@@ -20,7 +20,7 @@
 /*   STOP CUSTOM INCLUDES HERE  */
 
 
-#include "shared/adm/adm.h"
+#include "adm.h"
 #include "adm_ion_admin_impl.h"
 
 /*   START CUSTOM FUNCTIONS HERE */

@@ -50,6 +50,8 @@ else
 USR_INCLUDE = -I/usr/include
 endif
 
+ACLOCAL_AMFLAGS = -I m4
+
 # This will add CFLAGS to make the valgrind macros compile without
 # warnings/errors on some systems with specific versions of valgrind
 # and gcc (see configure.ac and issue #298 for details). If valgrind
@@ -643,12 +645,13 @@ ltpbin = \
 	sdatest \
 	udplsi \
 	udplso \
-	udplsi6 \
-	udplso6
+	udplso6 \
+	udplsi6
 
 ltplib = \
 	libltp.la \
-	libudplsa.la
+	libudplsa.la \
+	libudplsa6.la 
 
 ltpinclude = \
 	ltp/include/ltp.h \
@@ -671,9 +674,7 @@ ltpextra = \
 	ltp/doc/pod1/ltpmeter.pod \
 	ltp/doc/pod1/ltpsecadmin.pod \
 	ltp/doc/pod1/udplsi.pod \
-	ltp/doc/pod1/udplsi6.pod \
 	ltp/doc/pod1/udplso.pod \
-	ltp/doc/pod1/udplso6.pod \
 	ltp/doc/pod3/ltp.pod \
 	ltp/doc/pod5/ltprc.pod
 
@@ -687,9 +688,7 @@ ltpmans = \
 	$(top_builddir)/ltp/doc/ltpmeter.1 \
 	$(top_builddir)/ltp/doc/ltpsecadmin.1 \
 	$(top_builddir)/ltp/doc/udplsi.1 \
-	$(top_builddir)/ltp/doc/udplsi6.1 \
 	$(top_builddir)/ltp/doc/udplso.1 \
-	$(top_builddir)/ltp/doc/udplso6.1 \
 	$(top_builddir)/ltp/doc/ltp.3 \
 	$(top_builddir)/ltp/doc/ltprc.5
 
@@ -723,6 +722,10 @@ libltp_la_LIBADD = libici.la -lm
 libudplsa_la_SOURCES = ltp/udp/libudplsa.c
 libudplsa_la_CFLAGS = $(ltpcflags) $(AM_CFLAGS) $(PTHREAD_LIBS)
 libudplsa_la_LIBADD = libici.la libltp.la -lm
+
+libudplsa6_la_SOURCES = ltp/udp/libudplsa6.c
+libudplsa6_la_CFLAGS = $(ltpcflags) $(AM_CFLAGS) $(PTHREAD_LIBS)
+libudplsa6_la_LIBADD = libici.la libltp.la -lm
 
 # --- Utility Programs --- #
 
@@ -773,11 +776,11 @@ udplso_LDADD = libltp.la libudplsa.la libici.la $(PTHREAD_LIBS)
 udplso_CFLAGS = $(ltpcflags) $(AM_CFLAGS)
 
 udplsi6_SOURCES = ltp/udp/udplsi6.c
-udplsi6_LDADD = libltp.la libudplsa.la libici.la $(PTHREAD_LIBS)
+udplsi6_LDADD = libltp.la libudplsa6.la libici.la $(PTHREAD_LIBS)
 udplsi6_CFLAGS = $(ltpcflags) $(AM_CFLAGS)
 
 udplso6_SOURCES = ltp/udp/udplso6.c
-udplso6_LDADD = libltp.la libudplsa.la libici.la $(PTHREAD_LIBS)
+udplso6_LDADD = libltp.la libudplsa6.la libici.la $(PTHREAD_LIBS)
 udplso6_CFLAGS = $(ltpcflags) $(AM_CFLAGS)
 
 # --- AOS Executables --- #
@@ -984,6 +987,7 @@ bplib = \
 	libstcpcla.la \
 	libudpcla.la \
 	libuartcla.la
+
 
 bpinclude = \
 	bpv6/include/bp.h \
@@ -1635,7 +1639,7 @@ nm_shared_src =	\
 	$(nm_cbor_src)
 
 libamp_la_SOURCES = $(nm_shared_src)
-libamp_la_CFLAGS = $(USR_INCLUDE) -I$(srcdir)/ici/library -I$(srcdir)/bpv6/library -I$(srcdir)/ltp/library -I$(srcdir)/nm  \
+libamp_la_CFLAGS = -I$(USR_INCLUDE) -I$(srcdir)/ici/library -I$(srcdir)/bpv6/library -I$(srcdir)/ltp/library -I$(srcdir)/nm  \
                   -I$(srcdir)/nm/agent -I$(srcdir)/bpv6/library/ext/sbsp $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) \
                   $(NM_CBOR_CFLAGS)
 # Note: ici reference is used here only for memory management.  If -DUSE_MALLOC is used for NM (not recommended), this dependency would be unneeded.
@@ -1654,7 +1658,7 @@ nm_agent_SOURCES = \
 	nm/agent/adm_amp_agent_agent.c \
 	nm/shared/adm/adm_init.c
 
-NM_ADM_INCLUDES = -I$(srcdir)/nm/shared/adm -I$(BP_SRC_DIR)/adm -I$(BP_SRC_DIR)
+NM_ADM_INCLUDES = -I$(srcdir)/nm/shared/adm -I$(srcdir)/nm/agent -I$(srcdir)/nm/shared/utils -I$(srcdir)/nm/shared/primitives -I$(BP_SRC_DIR)/adm -I$(BP_SRC_DIR)
 
 nm_agent_ADM_SOURCES = \
 	bpv6/adm/adm_bp_agent_impl.c \
@@ -1698,15 +1702,15 @@ nmmans = \
 	$(top_builddir)/nm/doc/nm_mgr.1
 
 libampAgentADM_la_SOURCES = $(nm_agent_ADM_SOURCES)
-libampAgentADM_la_CFLAGS = $(USR_INCLUDE) -I$(srcdir)/nm -I$(srcdir)/nm/shared/adm -I$(BP_SRC_DIR)/library/ext/sbsp -I$(BP_SRC_DIR) -I$(BP_SRC_DIR)/library -I$(srcdir)/ltp/library $(NM_CBOR_CFLAGS) $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) 
+libampAgentADM_la_CFLAGS = -I$(USR_INCLUDE) -I$(srcdir)/nm -I$(srcdir)/nm/shared/adm -I$(srcdir)/nm/agent -I$(srcdir)/nm/shared/utils -I$(srcdir)/nm/shared/primitives -I$(BP_SRC_DIR)/library/ext/sbsp -I$(BP_SRC_DIR) -I$(BP_SRC_DIR)/library -I$(srcdir)/ltp/library $(NM_CBOR_CFLAGS) $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) 
 libampAgentADM_la_LIBADD = libamp.la libici.la libbp.la libltp.la
 
 
 nm_agent_LDADD = libici.la libbp.la libltp.la libamp.la libampAgentADM.la $(LIBOBJS) $(PTHREAD_LIBS)
 nm_agent_LDFLAGS = -L/usr/local/lib -lm -lpthread 
 
-nm_agent_CFLAGS = $(USR_INCLUDE) -I$(srcdir)/ici/library -I$(srcdir)/bpv6/library -I$(srcdir)/nm \
-                  -I$(srcdir)/nm/agent -I$(srcdir)/nm/shared/adm $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) \
+nm_agent_CFLAGS = -I$(USR_INCLUDE) -I$(srcdir)/ici/library -I$(srcdir)/bpv6/library -I$(srcdir)/nm \
+                  -I$(srcdir)/nm/agent -I$(srcdir)/nm/shared/adm -I$(srcdir)/nm/agent -I$(srcdir)/nm/shared/utils -I$(srcdir)/nm/shared/primitives $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) \
                   -DAGENT_ROLE $(NM_CBOR_CFLAGS) $(NM_ADM_INCLUDES)
 
 
@@ -1737,7 +1741,7 @@ nm_mgr_LDADD = libamp.la libici.la libbp.la libltp.la $(LIBOBJS) $(PTHREAD_LIBS)
 
 # Note: NCURSES and MySql support are optional and controlled at configure time with --with-mysql or --with-ncurses
 nm_mgr_LDFLAGS = -L/usr/local/mysql/lib -lpthread ${MYSQL_LIBS} ${NCURSES_LIBS}
-nm_mgr_CFLAGS = -I/usr/local/mysql/include -I$(srcdir)/ici/library -I$(srcdir)/bpv6/library -I$(srcdir)/bpv6/library/ext/sbsp -I$(srcdir)/ltp/library -I$(srcdir)/nm  -I$(srcdir)/nm/mgr -I/usr/include/mysql $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) $(NM_CBOR_CFLAGS) $(NM_ADM_INCLUDES)
+nm_mgr_CFLAGS = -I/usr/local/mysql/include -I$(srcdir)/ici/library -I$(srcdir)/bpv6/library -I$(srcdir)/bpv6/library/ext/sbsp -I$(srcdir)/ltp/library -I$(srcdir)/nm  -I$(srcdir)/nm/mgr -I$(USR_INCLUDE)/mysql $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) $(NM_CBOR_CFLAGS) $(NM_ADM_INCLUDES)
 
 if BUILD_NM_REST
 nm_mgr_LDFLAGS += $(CIVETWEB_LDFLAGS)
@@ -1819,6 +1823,8 @@ bpbin = \
 	ipnadminep \
 	ipnd \
 	ipnfw \
+	irfadmin \
+	irfd \
 	lgagent \
 	lgsend \
 	ltpcli \
@@ -1860,6 +1866,7 @@ bplib = \
 
 bpinclude = \
 	bpv7/include/bp.h \
+	bpv7/library/ext/ipt/ipt.h \
 	bpv7/include/eureka.h
 
 bpnoinst = \
@@ -1916,6 +1923,8 @@ bpextra = \
 	bpv7/doc/pod1/ipnadminep.pod \
 	bpv7/doc/pod1/ipnd.pod \
 	bpv7/doc/pod1/ipnfw.pod \
+	bpv7/doc/pod1/irfadmin.pod \
+	bpv7/doc/pod1/irfd.pod \
 	bpv7/doc/pod1/lgagent.pod \
 	bpv7/doc/pod1/lgsend.pod \
 	bpv7/doc/pod1/ltpcli.pod \
@@ -1923,13 +1932,9 @@ bpextra = \
 	bpv7/doc/pod1/stcpcli.pod \
 	bpv7/doc/pod1/stcpclo.pod \
 	bpv7/doc/pod1/tcpcli.pod \
-	bpv7/doc/pod1/tcpcli6.pod \
 	bpv7/doc/pod1/tcpclo.pod \
-	bpv7/doc/pod1/tcpclo6.pod \
 	bpv7/doc/pod1/udpcli.pod \
-	bpv7/doc/pod1/udpcli6.pod \
 	bpv7/doc/pod1/udpclo.pod \
-	bpv7/doc/pod1/udpclo6.pod \
 	bpv7/doc/pod3/bp.pod \
 	bpv7/doc/pod3/bpextensions.pod \
 	bpv7/doc/pod5/biberc.pod \
@@ -1937,6 +1942,7 @@ bpextra = \
 	bpv7/doc/pod5/bpsecrc.pod \
 	bpv7/doc/pod5/dtn2rc.pod \
 	bpv7/doc/pod5/ipnrc.pod \
+	bpv7/doc/pod5/irfrc.pod \
 	bpv7/doc/pod5/lgfile.pod \
 	bpv7/include/bpsec.h \
 	bpv7/library/bei.c \
@@ -2018,13 +2024,9 @@ bpmans = \
 	$(top_builddir)/bpv7/doc/stcpcli.1 \
 	$(top_builddir)/bpv7/doc/stcpclo.1 \
 	$(top_builddir)/bpv7/doc/tcpcli.1 \
-	$(top_builddir)/bpv7/doc/tcpcli6.1 \
 	$(top_builddir)/bpv7/doc/tcpclo.1 \
-	$(top_builddir)/bpv7/doc/tcpclo6.1 \
 	$(top_builddir)/bpv7/doc/udpcli.1 \
-	$(top_builddir)/bpv7/doc/udpcli6.1 \
 	$(top_builddir)/bpv7/doc/udpclo.1 \
-	$(top_builddir)/bpv7/doc/udpclo6.1 \
 	$(top_builddir)/bpv7/doc/bp.3 \
 	$(top_builddir)/bpv7/doc/bpextensions.3 \
 	$(top_builddir)/bpv7/doc/biberc.5 \
@@ -2084,7 +2086,10 @@ libbp_la_SOURCES = \
 	bpv7/library/ext/pnb/pnb.c \
 	bpv7/library/ext/pnb/pnb.h \
 	bpv7/library/ext/snw/snw.c \
+	bpv7/cgr/libcgr.c \
 	bpv7/ipn/libipnfw.c \
+	bpv7/imc/libimcfwP.c \
+	bpv7/irf/libirf.c \
 	bpv7/saga/saga.c \
 	bpv7/library/ext/cgrr/cgrr.h \
 	bpv7/library/ext/cgrr/cgrr.c \
@@ -2097,6 +2102,7 @@ libbp_la_SOURCES = \
 	bpv7/library/ext/rgr/rgr.c \
 	bpv7/library/ext/rgr/rgr_utils.h \
 	bpv7/library/ext/rgr/rgr_utils.c \
+	bpv7/library/ext/ipt/ipt.c \
 	ici/libbloom-master/bloom.h \
 	ici/libbloom-master/bloom.c \
 	ici/libbloom-master/murmur2/MurmurHash2.c
@@ -2127,8 +2133,12 @@ libbp_la_SOURCES = \
 	bpv7/library/ext/meb/meb.c \
 	bpv7/library/ext/pnb/pnb.c \
 	bpv7/library/ext/pnb/pnb.h \
+	bpv7/library/ext/ipt/ipt.c \
 	bpv7/library/ext/snw/snw.c \
+	bpv7/cgr/libcgr.c \
 	bpv7/ipn/libipnfw.c \
+	bpv7/imc/libimcfwP.c \
+	bpv7/irf/libirf.c \
 	bpv7/saga/saga.c \
 	ici/libbloom-master/bloom.h \
 	ici/libbloom-master/bloom.c \
@@ -2205,6 +2215,7 @@ libuartcla_la_SOURCES = bpv7/uart/libuartcla.c
 libuartcla_la_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 libuartcla_la_LIBADD = libbp.la libici.la
 
+
 # --- Utility Programs --- #
 
 bpadmin_SOURCES = bpv7/utils/bpadmin.c
@@ -2252,6 +2263,10 @@ imcfw_SOURCES = bpv7/imc/imcfw.c
 imcfw_LDADD = libici.la $(bplib)
 imcfw_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 endif # end ENABLE_IMC
+
+irfadmin_SOURCES = bpv7/irf/irfadmin.c
+irfadmin_LDADD = libici.la $(bplib)
+irfadmin_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 
 ipnadmin_SOURCES = bpv7/ipn/ipnadmin.c
 ipnadmin_LDADD = libici.la $(bplib)
@@ -2483,6 +2498,10 @@ cpsd_SOURCES = bpv7/daemon/cpsd.c
 cpsd_LDADD = libici.la $(bplib)
 cpsd_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 
+irfd_SOURCES = bpv7/daemon/irfd.c
+irfd_LDADD = libici.la $(bplib)
+irfd_CFLAGS = $(bpcflags) $(AM_CFLAGS)
+
 ############################
 #
 # TRUSTED COLLECTIVE SECTION
@@ -2494,7 +2513,7 @@ tcPODM1 = pod2man -s 1 -c "TC executables"
 tcPODM3 = pod2man -s 3 -c "TC library functions"
 tcPODM5 = pod2man -s 5 -c "TC configuration files"
 
-tccflags = -I$(srcdir)/tc/authority -I$(srcdir)/tc/client -I$(srcdir)/tc/include -I$(srcdir)/ici/zfec-1.4.24/zfec -I$(BP_SRC_DIR)/library -I$(BP_SRC_DIR)/include
+tccflags = -I$(srcdir)/tc/authority -I$(srcdir)/tc/client -I$(srcdir)/tc/include -I$(srcdir)/ici/zfec-1.4.24/zfec -I$(BP_SRC_DIR)/library -I$(BP_SRC_DIR)/include -I$(BP_SRC_DIR)/ipn
 
 tcbin = \
 	dtka \
@@ -2505,8 +2524,9 @@ tcbin = \
 	tcapublish \
 	tcarecv \
 	tcc \
-	tccadmin
-
+	tccadmin \
+	dnac \
+	dnacc
 tclib = \
 	libdtka.la \
 	libtc.la \
@@ -2519,7 +2539,7 @@ tcinclude = \
 	tc/authority/tcaP.h \
 	tc/client/tcc.h \
 	tc/client/tccP.h \
-	tc/include/tc.h
+	tc/include/tc.h 
 
 tcextra = \
 	tc/doc/pod1/dtka.pod \
@@ -2534,7 +2554,9 @@ tcextra = \
 	tc/doc/pod3/tc.pod \
 	tc/doc/pod5/dtkarc.pod \
 	tc/doc/pod5/tcarc.pod \
-	tc/doc/pod5/tccrc.pod
+	tc/doc/pod5/tccrc.pod \
+	dnac-core/doc/pod1/dnacc.pod \
+	dnac-core/doc/pod1/dnac.pod
 
 tcmans = \
 	$(top_builddir)/tc/doc/dtka.1 \
@@ -2549,7 +2571,7 @@ tcmans = \
 	$(top_builddir)/tc/doc/tc.3 \
 	$(top_builddir)/tc/doc/dtkarc.5 \
 	$(top_builddir)/tc/doc/tcarc.5 \
-	$(top_builddir)/tc/doc/tccrc.5
+	$(top_builddir)/tc/doc/tccrc.5 \
 
 tcclean-local:
 	rm -f $(top_builddir)/tc/doc/*.1
@@ -2629,6 +2651,17 @@ tccadmin_SOURCES = tc/client/tccadmin.c
 tccadmin_LDADD = libici.la $(tclib) $(bplib) -lm
 tccadmin_CFLAGS = $(tccflags) $(AM_CFLAGS)
 
+# --- DNAC executables --- #
+
+dnac_SOURCES = dnac-core/dnac/dnac.c
+dnac_LDADD = libici.la $(tclib) $(bplib) $(PTHREAD_LIBS) -lm
+dnac_CFLAGS = $(tccflags) $(AM_CFLAGS)
+
+dnacc_SOURCES = dnac-core/dnac/dnacc.c
+dnacc_LDADD = libici.la $(tclib) $(bplib) $(PTHREAD_LIBS) -lm
+dnacc_CFLAGS = $(tccflags) $(AM_CFLAGS)
+
+
 ############################
 #
 # NETWORK MANAGEMENT SECTION
@@ -2675,7 +2708,7 @@ nm_shared_src = \
 	$(nm_cbor_src)
 
 libamp_la_SOURCES = $(nm_shared_src)
-libamp_la_CFLAGS = $(USR_INCLUDE) -I$(srcdir)/ici/library -I$(srcdir)/bpv7/library -I$(srcdir)/ltp/library -I$(srcdir)/nm  \
+libamp_la_CFLAGS = -I$(USR_INCLUDE) -I$(srcdir)/ici/library -I$(srcdir)/bpv7/library -I$(srcdir)/ltp/library -I$(srcdir)/nm  \
                   -I$(srcdir)/nm/agent $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) \
                   $(NM_CBOR_CFLAGS)
 # Note: ici reference is used here only for memory management.  If -DUSE_MALLOC is used for NM (not recommended), this dependency would be unneeded.
@@ -2694,7 +2727,7 @@ nm_agent_SOURCES = \
 	nm/agent/adm_amp_agent_agent.c \
 	nm/shared/adm/adm_init.c
 
-NM_ADM_INCLUDES = -I$(srcdir)/nm/shared/adm -I$(BP_SRC_DIR)/adm -I$(BP_SRC_DIR)
+NM_ADM_INCLUDES = -I$(srcdir)/nm/shared/adm -I$(srcdir)/nm/agent -I$(srcdir)/nm/shared/utils -I$(srcdir)/nm/shared/primitives -I$(BP_SRC_DIR)/adm -I$(BP_SRC_DIR)
 
 nm_agent_ADM_SOURCES = \
 	bpv7/adm/adm_bp_agent_impl.c \
@@ -2734,15 +2767,15 @@ nmmans = \
 	$(top_builddir)/nm/doc/nm_mgr.1
 
 libampAgentADM_la_SOURCES = $(nm_agent_ADM_SOURCES)
-libampAgentADM_la_CFLAGS = $(USR_INCLUDE) -I$(srcdir)/nm -I$(srcdir)/nm/shared/adm -I$(BP_SRC_DIR) -I$(BP_SRC_DIR)/library/ext/bpsec -I$(BP_SRC_DIR)/library -I$(srcdir)/ltp/library $(NM_CBOR_CFLAGS) $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) 
+libampAgentADM_la_CFLAGS = -I$(USR_INCLUDE) -I$(srcdir)/nm -I$(srcdir)/nm/shared/adm -I$(srcdir)/nm/agent -I$(srcdir)/nm/shared/utils -I$(srcdir)/nm/shared/primitives -I$(BP_SRC_DIR) -I$(BP_SRC_DIR)/library/ext/bpsec -I$(BP_SRC_DIR)/library -I$(srcdir)/ltp/library $(NM_CBOR_CFLAGS) $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) 
 libampAgentADM_la_LIBADD = libamp.la libici.la $(bplib) libltp.la
 
 
 nm_agent_LDADD = libici.la $(bplib) libltp.la libamp.la libampAgentADM.la $(PTHREAD_LIBS)
 nm_agent_LDFLAGS = -L/usr/local/lib -lm -lpthread 
 
-nm_agent_CFLAGS = $(USR_INCLUDE) -I$(srcdir)/ici/library -I$(srcdir)/bpv7/library -I$(srcdir)/nm \
-                  -I$(srcdir)/nm/agent -I$(srcdir)/nm/shared/adm $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) \
+nm_agent_CFLAGS = -I$(USR_INCLUDE) -I$(srcdir)/ici/library -I$(srcdir)/bpv7/library -I$(srcdir)/nm \
+                  -I$(srcdir)/nm/agent -I$(srcdir)/nm/shared/adm -I$(srcdir)/nm/agent -I$(srcdir)/nm/shared/utils -I$(srcdir)/nm/shared/primitives $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) \
                   -DAGENT_ROLE $(NM_CBOR_CFLAGS) $(NM_ADM_INCLUDES)
 
 
@@ -2773,7 +2806,7 @@ nm_mgr_LDADD = libamp.la libici.la $(bplib) libltp.la $(PTHREAD_LIBS)
 
 # Note: NCURSES and MySql support are optional and controlled at configure time with --with-mysql or --with-ncurses
 nm_mgr_LDFLAGS = -L/usr/local/mysql/lib -lpthread ${MYSQL_LIBS} ${NCURSES_LIBS}
-nm_mgr_CFLAGS = -I/usr/local/mysql/include -I$(srcdir)/ici/library -I$(srcdir)/bpv7/library -I$(srcdir)/ltp/library -I$(srcdir)/nm  -I$(srcdir)/nm/mgr -I/usr/include/mysql $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) $(NM_CBOR_CFLAGS) $(NM_ADM_INCLUDES)
+nm_mgr_CFLAGS = -I/usr/local/mysql/include -I$(srcdir)/ici/library -I$(srcdir)/bpv7/library -I$(srcdir)/ltp/library -I$(srcdir)/nm  -I$(srcdir)/nm/mgr -I$(USR_INCLUDE)/mysql $(AM_CFLAGS) $(NO_UNUSED_VARIABLE) $(NM_CBOR_CFLAGS) $(NM_ADM_INCLUDES)
 
 if BUILD_NM_REST
 nm_mgr_LDFLAGS += $(CIVETWEB_LDFLAGS)
@@ -3468,7 +3501,7 @@ tests_nm_unit_dotest_SOURCES = tests/nm-unit/dotest.c $(nm_agent_SOURCES) $(nm_s
 #tests_nm_unit_dotest_LDADD = $(nm_agent_LDADD) -lm $(TESTUTILOBJS) $(TESTUNITYOBJS)
 tests_nm_unit_dotest_LDADD = libici.la $(bplib) libltp.la -lm $(TESTUTILOBJS) $(TESTUNITYOBJS)
 tests_nm_unit_dotest_CFLAGS = $(nm_agent_CFLAGS) $(TESTUTILCFLAGS) $(TESTUNITYCFLAGS) -DTEST_MAIN -DUSE_MALLOC \
-	$(USR_INCLUDE) -I$(srcdir)/nm -I$(srcdir)/$(BP_DIR)/library/ext/sbsp -I$(BP_SRC_DIR) -I$(srcdir)/$(BP_DIR)/library/ext/bpsec -I$(srcdir)/$(BP_DIR)/library -I$(srcdir)/ltp/library -I$(srcdir)/nm/shared
+	-I$(USR_INCLUDE) -I$(srcdir)/nm -I$(srcdir)/$(BP_DIR)/library/ext/sbsp -I$(BP_SRC_DIR) -I$(srcdir)/$(BP_DIR)/library/ext/bpsec -I$(srcdir)/$(BP_DIR)/library -I$(srcdir)/ltp/library -I$(srcdir)/nm/shared
 
 tests_nm_unit_utils_vector_dotest_SOURCES = tests/nm-unit/utils/vector.c $(nm_shared_src)
 tests_nm_unit_utils_vector_dotest_LDADD = -lm $(TESTUNITYOBJS) libici.la

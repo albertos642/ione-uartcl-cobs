@@ -21,16 +21,16 @@
 /*   START CUSTOM INCLUDES HERE  */
 #include "adm_bpsec.h"
 //#include "shared/adm/adm_bp.h"
-#include "shared/primitives/expr.h"
+#include "expr.h"
 
 #include "library/ext/bpsec/bpsec_instr.h"
 /*   STOP CUSTOM INCLUDES HERE  */
 
 
-#include "shared/utils/utils.h"
-#include "shared/primitives/ctrl.h"
-#include "shared/primitives/table.h"
-#include "shared/primitives/tnv.h"
+#include "utils.h"
+#include "ctrl.h"
+#include "table.h"
+#include "tnv.h"
 
 /*   START typeENUM */
 

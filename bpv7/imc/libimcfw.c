@@ -552,7 +552,7 @@ writeMemoNote("In imcReplicate, group member not in rolodex", itoa(nodeNbr));
 
 		/*	Found one.					*/
 
-		if (lyst_insert_last(members, (void *) nodeNbr) == NULL)
+		if (lyst_insert_last(members, (void *) (uintptr_t)nodeNbr) == NULL)
 		{
 			lyst_destroy(members);
 			putErrmsg("Can't insert member into lyst.",
@@ -596,7 +596,7 @@ writeMemoNote("Number of group members in region", itoa(lyst_length(members)));
 	for (destinationElt = lyst_first(members); destinationElt;
 			destinationElt = lyst_next(destinationElt))
 	{
-		nodeNbr = (uvast) lyst_data(destinationElt);
+		nodeNbr = (uvast) (uintptr_t)lyst_data(destinationElt);
 		if (sdr_list_insert_last(sdr, newBundle.destinations, nodeNbr)
 				== 0)
 		{

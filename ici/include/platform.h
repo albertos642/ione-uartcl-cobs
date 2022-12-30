@@ -175,8 +175,8 @@ typedef unsigned long long	uaddr;	/*	Pointer-sized integer.	*/
 #define	strtoaddr(x)		strtoull(x, NULL, 0)
 #define LARGE1			1ULL
 #else				/*	Not Windows.			*/
-typedef long			vast;
-typedef unsigned long		uvast;
+typedef long 			vast;
+typedef unsigned long 		uvast;
 typedef long			saddr;	/*	Pointer-sized integer.	*/
 typedef unsigned long		uaddr;	/*	Pointer-sized integer.	*/
 #define	VAST_FIELDSPEC		"%ld"

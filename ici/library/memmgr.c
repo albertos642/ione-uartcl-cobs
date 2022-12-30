@@ -112,6 +112,11 @@ static int	_mem_mgrs(int nbr, char *name, MemAllocator take,
 		CHKERR(name);
 		for (i = 0, mgr = mem_mgrs; i < mem_mgr_count; i++, mgr++)
 		{
+			if (name == NULL)
+			{
+				name = "0";
+			}
+
 			if (strcmp(mgr->name, name) != 0)
 			{
 				continue;
