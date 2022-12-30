@@ -7,8 +7,8 @@
 
 
 
-AC_PREREQ([2.71])
-AC_INIT([ion],[open source 4.1.1],[ion-dtn-support@lists.sourceforge.net])
+AC_PREREQ(2.69)
+AC_INIT(ion, open source 4.1.1, ion-dtn-support@lists.sourceforge.net)
 IS_NASA_B=0
 
 #  Josh Schendel removed the -Werror on 05/15/2012 per issue #355 to deal with
@@ -19,7 +19,7 @@ AM_INIT_AUTOMAKE([subdir-objects -Wall foreign])
 
 # some source file that will ensure that you are in the right directory.
 AC_CONFIG_SRCDIR([ici/include/ion.h])
-AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_HEADER([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
 
@@ -73,7 +73,7 @@ AC_PROG_CC
 AM_PROG_CC_C_O
 #Automake v1.12 wants AM_PROG_AR, but it doesn't exist <v1.12 so do this
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
-LT_INIT
+AC_PROG_LIBTOOL
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 LT_INIT
@@ -90,9 +90,6 @@ AM_CFLAGS=""
 AM_LDFLAGS=""
 AM_LIBTOOLFLAGS=""
 PLATFORM=""
-
-long_bit=`(getconf LONG_BIT)`
-
 case $host_os in
 	darwin*)
 		AC_DEFINE([darwin],[1],[Build Darwin specific platform code.])
@@ -107,33 +104,20 @@ case $host_os in
 		else
 			AM_CFLAGS="$AM_CFLAGS -Dunix -Ddarwin -DSPACE_ORDER=2 -m32 "
 			echo "Build 32-bit Darwin specific platform code."
+
 		fi
 		;;
 	linux*)
-                PLATFORM="linux"
-                if test $host_cpu = "x86_64" ; then
-                        AC_DEFINE([linux],[1],[Build 64-bit Linux x86_64 platform code.])
-                        AM_CFLAGS="$AM_CFLAGS -Dlinux -DSPACE_ORDER=3 -fno-strict-aliasing"
-                        echo "Build 64-bit Linux x86_64 platform code."
-                elif test $host_cpu = "aarch64" ; then
-                        if test $long_bit = "32" ; then
-                                AC_DEFINE([linux],[1],[Build 32-bit Linux aarch64 platform code.])
-                                AM_CFLAGS="$AM_CFLAGS -Dlinux -DSPACE_ORDER=2 -fno-strict-aliasing"
-                                echo "Build 32-bit Linux specific aarch64 code."
-                        elif test $long_bit = "64" ; then
-                                AC_DEFINE([linux],[1],[Build 64-bit Linux specific platform code.])
-                                AM_CFLAGS="$AM_CFLAGS -Dlinux -DSPACE_ORDER=3 -fno-strict-aliasing"
-                                echo "Build 64-bit Linux specific aarch64 code."
-                        else
-                                echo "Unknown LONG_BIT value for linux aarch64 build."
-                                exit 1
-                        fi
-                else
-                        AC_DEFINE([linux],[1],[Build 32-bit Linux generic platform code.])
-                        AM_CFLAGS="$AM_CFLAGS -Dlinux -fno-strict-aliasing"
-                        echo "Build 32-bit Linux generic platform code."
-                fi
-
+		PLATFORM="linux"
+		if test $host_cpu = "x86_64" ; then
+			AC_DEFINE([linux],[1],[Build 64-bit Linux specific platform code.])
+			AM_CFLAGS="$AM_CFLAGS -Dlinux -DSPACE_ORDER=3 -fno-strict-aliasing"
+			echo "Build 64-bit Linux specific platform code."
+		else
+			AC_DEFINE([linux],[1],[Build 32-bit Linux specific platform code.])
+			AM_CFLAGS="$AM_CFLAGS -Dlinux -fno-strict-aliasing"
+			echo "Build 32-bit Linux specific platform code."
+		fi
 		#check for DCCP support
 		CHECK_DCCP()
 		;;
@@ -217,7 +201,7 @@ esac
 #
 AC_ARG_ENABLE(
     acs,
-    [AS_HELP_STRING([--enable-acs],[enable Aggregate Custody Signals])],
+    [AC_HELP_STRING([--enable-acs], [enable Aggregate Custody Signals])],
     [ENABLE_BPACS=yes],
     [ENABLE_BPACS=no])
 AM_CONDITIONAL(ENABLE_BPACS, test "x$ENABLE_BPACS" = "xyes")
@@ -228,7 +212,7 @@ AM_CONDITIONAL(ENABLE_BPACS, test "x$ENABLE_BPACS" = "xyes")
 #
 AC_ARG_ENABLE(
     bpv6,
-    [AS_HELP_STRING([--enable-bpv6],[force build of bpv6])],
+    [AC_HELP_STRING([--enable-bpv6], [force build of bpv6])],
     [VER="4.1.1"
      VER="-DVNAME=ION-OPEN-SOURCE-$VER"
      AM_CFLAGS="$AM_CFLAGS $VER -DBUILD_BPv6"
@@ -258,7 +242,7 @@ AM_CONDITIONAL(BUILD_BPv6, test x$BUILD_BPv6 = xtrue)
 #
 AC_ARG_ENABLE(
     imc,
-    [AS_HELP_STRING([--disable-imc],[disable Interplanetary Multicast])],
+    [AC_HELP_STRING([--disable-imc], [disable Interplanetary Multicast])],
     [],
     [AM_CFLAGS="$AM_CFLAGS -DENABLE_IMC"
      ENABLE_IMC=yes])
@@ -269,7 +253,7 @@ AM_CONDITIONAL(ENABLE_IMC, test "x$ENABLE_IMC" = "xyes")
 #
 AC_ARG_ENABLE(
     high-speed,
-    [AS_HELP_STRING([--enable-high-speed],[Enable high-speed ION, increases memory usage.])],
+    [AC_HELP_STRING([--enable-high-speed], [Enable high-speed ION, increases memory usage.])],
     [AM_CFLAGS="$AM_CFLAGS -DENABLE_HIGH_SPEED"
      ENABLE_HIGH_SPEED=yes],
     [])
@@ -280,7 +264,7 @@ AM_CONDITIONAL(ENABLE_HIGH_SPEED, test x$ENABLE_HIGH_SPEED = xyes)
 #
 AC_ARG_ENABLE(
     dccp,
-    [AS_HELP_STRING([--enable-dccp],[Enable Support for DCCP as a convergence layer])],
+    [AC_HELP_STRING([--enable-dccp], [Enable Support for DCCP as a convergence layer])],
     [AC_DEFINE([build_dccp],[1],[DCCP only supported on Linux >=3.2.0])],
     [])
 
@@ -289,7 +273,7 @@ AC_ARG_ENABLE(
 #
 AC_ARG_ENABLE(
     unibo-cgr,
-    [AS_HELP_STRING([--enable-unibo-cgr],[enable University of Bologna CGR])],
+    [AC_HELP_STRING([--enable-unibo-cgr], [enable University of Bologna CGR])],
     [if test "$BUILD_BPv7" == "true" ; then
 	UNIBO_CGR=yes
 	AC_DEFINE([UNIBO_CGR],[1],[Define to 1 to build Unibo-CGR])
@@ -308,7 +292,7 @@ AM_CONDITIONAL(UNIBO_CGR, test "x$UNIBO_CGR" = "xyes")
 #
 AC_ARG_ENABLE(
     manpages,
-    [AS_HELP_STRING([--disable-manpages],[disable manpage creation])],
+    [AC_HELP_STRING([--disable-manpages], [disable manpage creation])],
     [],
     [AM_CFLAGS="$AM_CFLAGS -DENABLE_MANPAGES"
      ENABLE_MANPAGES=yes])
@@ -319,7 +303,7 @@ AM_CONDITIONAL(ENABLE_MANPAGES, test "x$ENABLE_MANPAGES" = "xyes")
 #
 AC_ARG_ENABLE(
 	contrib,
-	[AS_HELP_STRING([--disable-contrib],[Disable building third-party contributed utilities])],
+	[AC_HELP_STRING([--disable-contrib],[Disable building third-party contributed utilities])],
 	[case "${enableval}" in
 		yes) BUILD_CONTRIB=yes;;
 		no)  BUILD_CONTRIB=no;;
@@ -414,7 +398,7 @@ AM_CONDITIONAL([ENABLE_EXPAT], [test "x$expat" = "xyes"])
 #
 # If valgrind is present, allow special MTAKE/MRELEASE valgrind tutors.
 #
-AC_ARG_ENABLE([valgrind], AS_HELP_STRING([--disable-valgrind],[Do not enable valgrind debugging [default=check]]),
+AC_ARG_ENABLE([valgrind], AC_HELP_STRING([--disable-valgrind],[Do not enable valgrind debugging [default=check]]),
               [ ], [ enable_valgrind=check ])
 
 if test "x$enable_valgrind" != xno; then
@@ -451,7 +435,8 @@ if test "x$enable_valgrind" != xno; then
   fi
 fi
 
-AC_ARG_ENABLE([sysctl-check], AS_HELP_STRING([--disable-sysctl-check],[Disable checking sysctl configuration on OSX and FreeBSD]),
+AC_ARG_ENABLE([sysctl-check], AC_HELP_STRING([--disable-sysctl-check],
+                  [Disable checking sysctl configuration on OSX and FreeBSD]),
               [], [enable_sysctl_check=yes])
 
 if test "x$enable_sysctl_check" = xyes; then
@@ -492,7 +477,7 @@ AM_CONDITIONAL([ENABLE_NCURSES], [test "x$ncurses" = "xyes"])
 
 AC_ARG_ENABLE(
         nmrest,
-        [AS_HELP_STRING([--enable-nmrest],[Enable REST API for NM Mgr])],
+        [AC_HELP_STRING([--enable-nmrest], [Enable REST API for NM Mgr])],
         [BUILD_NM_REST=true],
         [BUILD_NM_REST=false]
         )
@@ -503,7 +488,7 @@ AM_CONDITIONAL([BUILD_NM_REST], [test "x$BUILD_NM_REST" = "xtrue"])
 #
 AC_ARG_ENABLE(
     musl,
-    [AS_HELP_STRING([--enable-musl],[declare that the platform is musl])],
+    [AC_HELP_STRING([--enable-musl], [declare that the platform is musl])],
     [AM_CFLAGS="$AM_CFLAGS -Dmusl"
      musl=yes],
     [])
@@ -511,7 +496,6 @@ if test "x$musl" = "xyes" ; then
 	echo "Building for musl... yes"
 fi
 AM_CONDITIONAL([musl], [test "x$musl" = "xyes"])
-
 
 # Check for libraries.
 ORIGCFLAGS="$CFLAGS"
@@ -612,34 +596,13 @@ CFLAGS="$CFLAGS $CUSTOM_CFLAGS"
 
 # Checks for header files.
 AC_HEADER_DIRENT
-m4_warn([obsolete],
-[The preprocessor macro `STDC_HEADERS' is obsolete.
-  Except in unusual embedded environments, you can safely include all
-  ISO C90 headers unconditionally.])dnl
-# Autoupdate added the next two lines to ensure that your configure
-# script's behavior did not change.  They are probably safe to remove.
-AC_CHECK_INCLUDES_DEFAULT
-AC_PROG_EGREP
-
+AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS([fcntl.h malloc.h netdb.h netinet/in.h stddef.h stdlib.h string.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h unistd.h])
 
 AC_C_CONST
 AC_TYPE_SIZE_T
-m4_warn([obsolete],
-[Update your code to rely only on HAVE_SYS_TIME_H,
-then remove this warning and the obsolete code below it.
-All current systems provide time.h; it need not be checked for.
-Not all systems provide sys/time.h, but those that do, all allow
-you to include it and time.h simultaneously.])dnl
-AC_CHECK_HEADERS_ONCE([sys/time.h])
-# Obsolete code to be removed.
-if test $ac_cv_header_sys_time_h = yes; then
-  AC_DEFINE([TIME_WITH_SYS_TIME],[1],[Define to 1 if you can safely include both <sys/time.h>
-	     and <time.h>.  This macro is obsolete.])
-fi
-# End of obsolete code.
-
+AC_HEADER_TIME
 AC_STRUCT_TM
 AC_TYPE_UID_T
 
@@ -652,19 +615,7 @@ AC_PROG_GCC_TRADITIONAL
 #AC_FUNC_MEMCMP
 #AC_FUNC_MKTIME
 #AC_FUNC_SELECT_ARGTYPES
-m4_warn([obsolete],
-[your code may safely assume C89 semantics that RETSIGTYPE is void.
-Remove this warning and the `AC_CACHE_CHECK' when you adjust the code.])dnl
-AC_CACHE_CHECK([return type of signal handlers],[ac_cv_type_signal],[AC_COMPILE_IFELSE(
-[AC_LANG_PROGRAM([#include <sys/types.h>
-#include <signal.h>
-],
-		 [return *(signal (0, 0)) (0) == 1;])],
-		   [ac_cv_type_signal=int],
-		   [ac_cv_type_signal=void])])
-AC_DEFINE_UNQUOTED([RETSIGTYPE],[$ac_cv_type_signal],[Define as the return type of signal handlers
-		    (`int' or `void').])
-
+AC_TYPE_SIGNAL
 #AC_FUNC_STAT
 #AC_FUNC_STRFTIME
 AC_CHECK_FUNCS([alarm ftruncate getcwd gethostbyaddr gethostbyname gethostname gettimeofday memset mkdir mkfifo rmdir select socket strcasecmp strchr strerror strncasecmp strstr strtoul uname])
