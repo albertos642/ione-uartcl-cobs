@@ -1,0 +1,28 @@
+In this directory are the files necessary to compile IONe under the OpenWRT 
+cross-compile framework.
+
+The following command sequence will configure your OpenWRT environment:
+
+First, navigate to your OpenWRT source directory.  For this example, we 
+will use ~/openwrt.
+
+echo "src-link mypackages ~/mypackages" > ~/openwrt/feeds.conf
+mkdir ~/mypackages
+mkdir ~/mypackages/examples
+mkdir ~/mypackages/examples/IONe
+cp Makefile.OpenWRT ~/mypackages/examples/IONe/Makefile
+scripts/feeds update mypackages
+scripts/feeds install -a -p mypackages
+
+make menuconfig to configure your build environment, and set your target.
+
+make -j1 V=s package/IONe/compile
+
+If all went smoothly, you will have a binary package of IONe suitable 
+for your OpenWRT installation in 
+~/openwrt/bin/packages/$ARCH/mypackages/IONe/IONe-1.0.0-1_$ARCH.ipk scp 
+this file from your OpenWRT device, and issue the final command, on the 
+device, to install:
+
+opkg install *ipk
+

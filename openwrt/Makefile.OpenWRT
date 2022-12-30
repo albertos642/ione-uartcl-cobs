@@ -1,0 +1,57 @@
+include $(TOPDIR)/rules.mk
+
+PKG_NAME:=IONe
+PKG_VERSION:=1.0.0
+PKG_RELEASE:=1
+
+PKG_BUILD_DIR:=$(BUILD_DIR)/IONe-1.0.0
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL:=git://git.code.sf.net/u/solarnetone/ion-experimental
+PKG_SRC_DATE:=2022-12-01
+PKG_SOURCE_VERSION:=39b6a48d10575cd06e34cca8c54c843acce8e1db
+PKG_MIRROR_HASH:=a4b7c909b7ea9b8cea958c3003a0e15fadbb150c0bc7abf59c48a7ef9f15baf5
+PKG_FIXUP:=autoreconf
+DEPENDS:=+ncurses
+#PKG_INSTALL_DIR:=$(BUILD_DIR)/IONe-1.0.0/ipkg-install
+#PKG_INSTALL:=1
+include $(INCLUDE_DIR)/package.mk
+
+define Package/IONe
+ SECTION:=network
+ CATEGORY:=Network
+ TITLE:=IONe DTN Suite
+endef
+
+define Package/IONe/description
+ Experimental Branch of NASA JPL's ION delay tolerant networking suite.
+endef
+
+define Build/Configure
+ $(call Build/Configure/Default, --enable-musl)
+endef
+
+define Build/Install
+ $(call Build/Install/Default)
+endef
+
+define Package/IONe/preinst
+ #!/bin/bash
+ ldconfig
+ echo "ran ldconfig"
+endef
+
+define Package/IONe/install
+	$(INSTALL_DIR) $(1)/usr/lib
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/* $(1)/usr/lib/
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(CP) $(PKG_INSTALL_DIR)/usr/bin/* $(1)/usr/bin/
+	$(INSTALL_DIR) $(1)/usr/include
+	$(CP) $(PKG_INSTALL_DIR)/usr/include/* $(1)/usr/include/
+	$(INSTALL_DIR) $(1)/usr/man
+	$(CP) $(PKG_INSTALL_DIR)/usr/man/* $(1)/usr/man/
+	$(INSTALL_DIR) $(1)/usr/share
+	$(CP) $(PKG_INSTALL_DIR)/usr/share/* $(1)/usr/share/
+
+endef
+
+$(eval $(call BuildPackage,IONe,+ncurses))
