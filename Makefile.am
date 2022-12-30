@@ -2379,11 +2379,11 @@ udpclo6_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 # --- UART Executables --- #
 
 uartcli_SOURCES = bpv7/uart/uartcli.c
-uartcli_LDADD = libici.la $(bplib) $(PTHREAD_LIBS)
+uartcli_LDADD = libuartcla.la libici.la $(bplib) $(PTHREAD_LIBS)
 uartcli_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 
 uartclo_SOURCES = bpv7/uart/uartclo.c
-uartclo_LDADD = libici.la $(bplib)
+uartclo_LDADD = libuartcla.la libici.la $(bplib)
 uartclo_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 
 # --- BIBE Executables --- #
@@ -2571,7 +2571,7 @@ tcmans = \
 	$(top_builddir)/tc/doc/tc.3 \
 	$(top_builddir)/tc/doc/dtkarc.5 \
 	$(top_builddir)/tc/doc/tcarc.5 \
-	$(top_builddir)/tc/doc/tccrc.5 \
+	$(top_builddir)/tc/doc/tccrc.5 
 
 tcclean-local:
 	rm -f $(top_builddir)/tc/doc/*.1

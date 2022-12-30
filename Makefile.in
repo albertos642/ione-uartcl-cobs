@@ -2733,7 +2733,8 @@ am__uartcli_SOURCES_DIST = bpv7/uart/uartcli.c
 @BUILD_BPv6_FALSE@am_uartcli_OBJECTS =  \
 @BUILD_BPv6_FALSE@	bpv7/uart/uartcli-uartcli.$(OBJEXT)
 uartcli_OBJECTS = $(am_uartcli_OBJECTS)
-@BUILD_BPv6_FALSE@uartcli_DEPENDENCIES = libici.la $(bplib)
+@BUILD_BPv6_FALSE@uartcli_DEPENDENCIES = libuartcla.la libici.la \
+@BUILD_BPv6_FALSE@	$(bplib)
 uartcli_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(uartcli_CFLAGS) \
 	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
@@ -2741,7 +2742,8 @@ am__uartclo_SOURCES_DIST = bpv7/uart/uartclo.c
 @BUILD_BPv6_FALSE@am_uartclo_OBJECTS =  \
 @BUILD_BPv6_FALSE@	bpv7/uart/uartclo-uartclo.$(OBJEXT)
 uartclo_OBJECTS = $(am_uartclo_OBJECTS)
-@BUILD_BPv6_FALSE@uartclo_DEPENDENCIES = libici.la $(bplib)
+@BUILD_BPv6_FALSE@uartclo_DEPENDENCIES = libuartcla.la libici.la \
+@BUILD_BPv6_FALSE@	$(bplib)
 uartclo_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(uartclo_CFLAGS) \
 	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
@@ -3799,6 +3801,7 @@ ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
 EXPAT_LIBS = @EXPAT_LIBS@
 FGREP = @FGREP@
+FILECMD = @FILECMD@
 GREP = @GREP@
 GROFF = @GROFF@
 GROFFMS = @GROFFMS@
@@ -5931,10 +5934,10 @@ udp2file_CFLAGS = $(dgrcflags) $(AM_CFLAGS)
 
 # --- UART Executables --- #
 @BUILD_BPv6_FALSE@uartcli_SOURCES = bpv7/uart/uartcli.c
-@BUILD_BPv6_FALSE@uartcli_LDADD = libici.la $(bplib) $(PTHREAD_LIBS)
+@BUILD_BPv6_FALSE@uartcli_LDADD = libuartcla.la libici.la $(bplib) $(PTHREAD_LIBS)
 @BUILD_BPv6_FALSE@uartcli_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 @BUILD_BPv6_FALSE@uartclo_SOURCES = bpv7/uart/uartclo.c
-@BUILD_BPv6_FALSE@uartclo_LDADD = libici.la $(bplib)
+@BUILD_BPv6_FALSE@uartclo_LDADD = libuartcla.la libici.la $(bplib)
 @BUILD_BPv6_FALSE@uartclo_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 @BUILD_BPv6_FALSE@cpsd_SOURCES = bpv7/daemon/cpsd.c
 @BUILD_BPv6_FALSE@cpsd_LDADD = libici.la $(bplib)
@@ -6011,9 +6014,7 @@ udp2file_CFLAGS = $(dgrcflags) $(AM_CFLAGS)
 @BUILD_BPv6_FALSE@	$(top_builddir)/tc/doc/tc.3 \
 @BUILD_BPv6_FALSE@	$(top_builddir)/tc/doc/dtkarc.5 \
 @BUILD_BPv6_FALSE@	$(top_builddir)/tc/doc/tcarc.5 \
-@BUILD_BPv6_FALSE@	$(top_builddir)/tc/doc/tccrc.5 \
-@BUILD_BPv6_FALSE@	$(top_builddir)/dnac-core/doc/dnac.5 \
-@BUILD_BPv6_FALSE@	$(top_builddir)/dnac-core/doc/dnacc.5 
+@BUILD_BPv6_FALSE@	$(top_builddir)/tc/doc/tccrc.5 
 
 
 # -- Libraries --- #
