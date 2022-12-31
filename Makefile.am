@@ -2525,7 +2525,7 @@ tcbin = \
 	tcarecv \
 	tcc \
 	tccadmin \
-	dnac \
+	dnacp \
 	dnacc
 tclib = \
 	libdtka.la \
@@ -2555,8 +2555,8 @@ tcextra = \
 	tc/doc/pod5/dtkarc.pod \
 	tc/doc/pod5/tcarc.pod \
 	tc/doc/pod5/tccrc.pod \
-	dnac-core/doc/pod1/dnacc.pod \
-	dnac-core/doc/pod1/dnac.pod
+	dnac/doc/pod1/dnacc.pod \
+	dnac/doc/pod1/dnacp.pod
 
 tcmans = \
 	$(top_builddir)/tc/doc/dtka.1 \
@@ -2653,11 +2653,11 @@ tccadmin_CFLAGS = $(tccflags) $(AM_CFLAGS)
 
 # --- DNAC executables --- #
 
-dnac_SOURCES = dnac-core/dnac/dnac.c
-dnac_LDADD = libici.la $(tclib) $(bplib) $(PTHREAD_LIBS) -lm
-dnac_CFLAGS = $(tccflags) $(AM_CFLAGS)
+dnacp_SOURCES = dnac/dnac/dnacp.c
+dnacp_LDADD = libici.la $(tclib) $(bplib) $(PTHREAD_LIBS) -lm
+dnacp_CFLAGS = $(tccflags) $(AM_CFLAGS)
 
-dnacc_SOURCES = dnac-core/dnac/dnacc.c
+dnacc_SOURCES = dnac/dnac/dnacc.c
 dnacc_LDADD = libici.la $(tclib) $(bplib) $(PTHREAD_LIBS) -lm
 dnacc_CFLAGS = $(tccflags) $(AM_CFLAGS)
 

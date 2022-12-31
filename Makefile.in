@@ -341,7 +341,7 @@ am__EXEEXT_5 = dgr2file$(EXEEXT) file2dgr$(EXEEXT) file2tcp$(EXEEXT) \
 @BUILD_BPv6_FALSE@	tcaadmin$(EXEEXT) tcaboot$(EXEEXT) \
 @BUILD_BPv6_FALSE@	tcacompile$(EXEEXT) tcapublish$(EXEEXT) \
 @BUILD_BPv6_FALSE@	tcarecv$(EXEEXT) tcc$(EXEEXT) \
-@BUILD_BPv6_FALSE@	tccadmin$(EXEEXT) dnac$(EXEEXT) \
+@BUILD_BPv6_FALSE@	tccadmin$(EXEEXT) dnacp$(EXEEXT) \
 @BUILD_BPv6_FALSE@	dnacc$(EXEEXT)
 am__EXEEXT_13 = bsscounter$(EXEEXT) bssdriver$(EXEEXT) \
 	bssrecv$(EXEEXT) bssStreamingApp$(EXEEXT)
@@ -1646,17 +1646,17 @@ dgrclo_OBJECTS = $(am_dgrclo_OBJECTS)
 dgrclo_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(dgrclo_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
-am__dnac_SOURCES_DIST = dnac-core/dnac/dnac.c
-@BUILD_BPv6_FALSE@am_dnac_OBJECTS =  \
-@BUILD_BPv6_FALSE@	dnac-core/dnac/dnac-dnac.$(OBJEXT)
-dnac_OBJECTS = $(am_dnac_OBJECTS)
-@BUILD_BPv6_FALSE@dnac_DEPENDENCIES = libici.la $(tclib) $(bplib)
-dnac_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(dnac_CFLAGS) $(CFLAGS) \
+am__dnacp_SOURCES_DIST = dnac/dnac/dnacp.c
+@BUILD_BPv6_FALSE@am_dnacp_OBJECTS =  \
+@BUILD_BPv6_FALSE@	dnac/dnac/dnacp-dnacp.$(OBJEXT)
+dnacp_OBJECTS = $(am_dnacp_OBJECTS)
+@BUILD_BPv6_FALSE@dnacp_DEPENDENCIES = libici.la $(tclib) $(bplib)
+dnacp_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(dnacp_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
-am__dnacc_SOURCES_DIST = dnac-core/dnac/dnacc.c
+am__dnacc_SOURCES_DIST = dnac/dnac/dnacc.c
 @BUILD_BPv6_FALSE@am_dnacc_OBJECTS =  \
-@BUILD_BPv6_FALSE@	dnac-core/dnac/dnacc-dnacc.$(OBJEXT)
+@BUILD_BPv6_FALSE@	dnac/dnac/dnacc-dnacc.$(OBJEXT)
 dnacc_OBJECTS = $(am_dnacc_OBJECTS)
 @BUILD_BPv6_FALSE@dnacc_DEPENDENCIES = libici.la $(tclib) $(bplib)
 dnacc_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
@@ -3175,8 +3175,8 @@ am__depfiles_remade = ams/library/$(DEPDIR)/amsd-amscommon.Po \
 	dgr/test/$(DEPDIR)/file2udp-file2udp.Po \
 	dgr/test/$(DEPDIR)/tcp2file-tcp2file.Po \
 	dgr/test/$(DEPDIR)/udp2file-udp2file.Po \
-	dnac-core/dnac/$(DEPDIR)/dnac-dnac.Po \
-	dnac-core/dnac/$(DEPDIR)/dnacc-dnacc.Po \
+	dnac/dnac/$(DEPDIR)/dnacp-dnacp.Po \
+	dnac/dnac/$(DEPDIR)/dnacc-dnacc.Po \
 	dtpc/daemon/$(DEPDIR)/dtpcclock-dtpcclock.Po \
 	dtpc/daemon/$(DEPDIR)/dtpcd-dtpcd.Po \
 	dtpc/library/$(DEPDIR)/libdtpc_la-libdtpc.Plo \
@@ -3490,7 +3490,7 @@ SOURCES = $(libamp_la_SOURCES) $(libampAgentADM_la_SOURCES) \
 	$(cgrfetch_SOURCES) $(cpsd_SOURCES) $(dccpcli_SOURCES) \
 	$(dccpclo_SOURCES) $(dccplsi_SOURCES) $(dccplso_SOURCES) \
 	$(dgr2file_SOURCES) $(dgrcli_SOURCES) $(dgrclo_SOURCES) \
-	$(dnac_SOURCES) $(dnacc_SOURCES) $(dtka_SOURCES) \
+	$(dnacp_SOURCES) $(dnacc_SOURCES) $(dtka_SOURCES) \
 	$(dtkaadmin_SOURCES) $(dtn2admin_SOURCES) \
 	$(dtn2adminep_SOURCES) $(dtn2fw_SOURCES) $(dtpcadmin_SOURCES) \
 	$(dtpcclock_SOURCES) $(dtpcd_SOURCES) $(dtpcreceive_SOURCES) \
@@ -3576,7 +3576,7 @@ DIST_SOURCES = $(am__libamp_la_SOURCES_DIST) \
 	$(am__dccpcli_SOURCES_DIST) $(am__dccpclo_SOURCES_DIST) \
 	$(dccplsi_SOURCES) $(dccplso_SOURCES) $(dgr2file_SOURCES) \
 	$(am__dgrcli_SOURCES_DIST) $(am__dgrclo_SOURCES_DIST) \
-	$(am__dnac_SOURCES_DIST) $(am__dnacc_SOURCES_DIST) \
+	$(am__dnacp_SOURCES_DIST) $(am__dnacc_SOURCES_DIST) \
 	$(am__dtka_SOURCES_DIST) $(am__dtkaadmin_SOURCES_DIST) \
 	$(am__dtn2admin_SOURCES_DIST) $(am__dtn2adminep_SOURCES_DIST) \
 	$(am__dtn2fw_SOURCES_DIST) $(dtpcadmin_SOURCES) \
@@ -5966,7 +5966,7 @@ udp2file_CFLAGS = $(dgrcflags) $(AM_CFLAGS)
 @BUILD_BPv6_FALSE@	tcarecv \
 @BUILD_BPv6_FALSE@	tcc \
 @BUILD_BPv6_FALSE@	tccadmin \
-@BUILD_BPv6_FALSE@	dnac \
+@BUILD_BPv6_FALSE@	dnacp \
 @BUILD_BPv6_FALSE@	dnacc
 
 @BUILD_BPv6_FALSE@tclib = \
@@ -5997,8 +5997,8 @@ udp2file_CFLAGS = $(dgrcflags) $(AM_CFLAGS)
 @BUILD_BPv6_FALSE@	tc/doc/pod5/dtkarc.pod \
 @BUILD_BPv6_FALSE@	tc/doc/pod5/tcarc.pod \
 @BUILD_BPv6_FALSE@	tc/doc/pod5/tccrc.pod \
-@BUILD_BPv6_FALSE@	dnac-core/doc/pod1/dnacc.pod \
-@BUILD_BPv6_FALSE@	dnac-core/doc/pod1/dnac.pod
+@BUILD_BPv6_FALSE@	dnac/doc/pod1/dnacc.pod \
+@BUILD_BPv6_FALSE@	dnac/doc/pod1/dnacp.pod
 
 @BUILD_BPv6_FALSE@tcmans = \
 @BUILD_BPv6_FALSE@	$(top_builddir)/tc/doc/dtka.1 \
@@ -6066,10 +6066,10 @@ udp2file_CFLAGS = $(dgrcflags) $(AM_CFLAGS)
 @BUILD_BPv6_FALSE@tccadmin_CFLAGS = $(tccflags) $(AM_CFLAGS)
 
 # --- DNAC executables --- #
-@BUILD_BPv6_FALSE@dnac_SOURCES = dnac-core/dnac/dnac.c
-@BUILD_BPv6_FALSE@dnac_LDADD = libici.la $(tclib) $(bplib) $(PTHREAD_LIBS) -lm
-@BUILD_BPv6_FALSE@dnac_CFLAGS = $(tccflags) $(AM_CFLAGS)
-@BUILD_BPv6_FALSE@dnacc_SOURCES = dnac-core/dnac/dnacc.c
+@BUILD_BPv6_FALSE@dnacp_SOURCES = dnac/dnac/dnacp.c
+@BUILD_BPv6_FALSE@dnacp_LDADD = libici.la $(tclib) $(bplib) $(PTHREAD_LIBS) -lm
+@BUILD_BPv6_FALSE@dnacp_CFLAGS = $(tccflags) $(AM_CFLAGS)
+@BUILD_BPv6_FALSE@dnacc_SOURCES = dnac/dnac/dnacc.c
 @BUILD_BPv6_FALSE@dnacc_LDADD = libici.la $(tclib) $(bplib) $(PTHREAD_LIBS) -lm
 @BUILD_BPv6_FALSE@dnacc_CFLAGS = $(tccflags) $(AM_CFLAGS)
 
@@ -8647,24 +8647,26 @@ bpv6/dgr/dgrclo-dgrclo.$(OBJEXT): bpv6/dgr/$(am__dirstamp) \
 dgrclo$(EXEEXT): $(dgrclo_OBJECTS) $(dgrclo_DEPENDENCIES) $(EXTRA_dgrclo_DEPENDENCIES) 
 	@rm -f dgrclo$(EXEEXT)
 	$(AM_V_CCLD)$(dgrclo_LINK) $(dgrclo_OBJECTS) $(dgrclo_LDADD) $(LIBS)
-dnac-core/dnac/$(am__dirstamp):
-	@$(MKDIR_P) dnac-core/dnac
-	@: > dnac-core/dnac/$(am__dirstamp)
-dnac-core/dnac/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) dnac-core/dnac/$(DEPDIR)
-	@: > dnac-core/dnac/$(DEPDIR)/$(am__dirstamp)
-dnac-core/dnac/dnac-dnac.$(OBJEXT): dnac-core/dnac/$(am__dirstamp) \
-	dnac-core/dnac/$(DEPDIR)/$(am__dirstamp)
 
-dnac$(EXEEXT): $(dnac_OBJECTS) $(dnac_DEPENDENCIES) $(EXTRA_dnac_DEPENDENCIES) 
-	@rm -f dnac$(EXEEXT)
-	$(AM_V_CCLD)$(dnac_LINK) $(dnac_OBJECTS) $(dnac_LDADD) $(LIBS)
-dnac-core/dnac/dnacc-dnacc.$(OBJEXT): dnac-core/dnac/$(am__dirstamp) \
-	dnac-core/dnac/$(DEPDIR)/$(am__dirstamp)
+dnac/dnac/$(am__dirstamp):
+	@$(MKDIR_P) dnac/dnac
+	@: > dnac/dnac/$(am__dirstamp)
+dnac/dnac/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) dnac/dnac/$(DEPDIR)
+	@: > dnac/dnac/$(DEPDIR)/$(am__dirstamp)
 
+dnac/dnac/dnacp-dnacp.$(OBJEXT): dnac/dnac/$(am__dirstamp) \
+	dnac/dnac/$(DEPDIR)/$(am__dirstamp)
+dnacp$(EXEEXT): $(dnacp_OBJECTS) $(dnacp_DEPENDENCIES) $(EXTRA_dnacp_DEPENDENCIES) 
+	@rm -f dnacp$(EXEEXT)
+	$(AM_V_CCLD)$(dnacp_LINK) $(dnacp_OBJECTS) $(dnacp_LDADD) $(LIBS)
+
+dnac/dnac/dnacc-dnacc.$(OBJEXT): dnac/dnac/$(am__dirstamp) \
+	dnac/dnac/$(DEPDIR)/$(am__dirstamp)
 dnacc$(EXEEXT): $(dnacc_OBJECTS) $(dnacc_DEPENDENCIES) $(EXTRA_dnacc_DEPENDENCIES) 
 	@rm -f dnacc$(EXEEXT)
 	$(AM_V_CCLD)$(dnacc_LINK) $(dnacc_OBJECTS) $(dnacc_LDADD) $(LIBS)
+
 tc/dtka/dtka-dtka.$(OBJEXT): tc/dtka/$(am__dirstamp) \
 	tc/dtka/$(DEPDIR)/$(am__dirstamp)
 
@@ -10122,7 +10124,7 @@ mostlyclean-compile:
 	-rm -f dgr/library/*.$(OBJEXT)
 	-rm -f dgr/library/*.lo
 	-rm -f dgr/test/*.$(OBJEXT)
-	-rm -f dnac-core/dnac/*.$(OBJEXT)
+	-rm -f dnac/dnac/*.$(OBJEXT)
 	-rm -f dtpc/daemon/*.$(OBJEXT)
 	-rm -f dtpc/library/*.$(OBJEXT)
 	-rm -f dtpc/library/*.lo
@@ -10527,8 +10529,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@dgr/test/$(DEPDIR)/file2udp-file2udp.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@dgr/test/$(DEPDIR)/tcp2file-tcp2file.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@dgr/test/$(DEPDIR)/udp2file-udp2file.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@dnac-core/dnac/$(DEPDIR)/dnac-dnac.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@dnac-core/dnac/$(DEPDIR)/dnacc-dnacc.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@dnac/dnac/$(DEPDIR)/dnacp-dnacp.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@dnac/dnac/$(DEPDIR)/dnacc-dnacc.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@dtpc/daemon/$(DEPDIR)/dtpcclock-dtpcclock.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@dtpc/daemon/$(DEPDIR)/dtpcd-dtpcd.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@dtpc/library/$(DEPDIR)/libdtpc_la-libdtpc.Plo@am__quote@ # am--include-marker
@@ -13831,33 +13833,33 @@ bpv6/dgr/dgrclo-dgrclo.obj: bpv6/dgr/dgrclo.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dgrclo_CFLAGS) $(CFLAGS) -c -o bpv6/dgr/dgrclo-dgrclo.obj `if test -f 'bpv6/dgr/dgrclo.c'; then $(CYGPATH_W) 'bpv6/dgr/dgrclo.c'; else $(CYGPATH_W) '$(srcdir)/bpv6/dgr/dgrclo.c'; fi`
 
-dnac-core/dnac/dnac-dnac.o: dnac-core/dnac/dnac.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dnac_CFLAGS) $(CFLAGS) -MT dnac-core/dnac/dnac-dnac.o -MD -MP -MF dnac-core/dnac/$(DEPDIR)/dnac-dnac.Tpo -c -o dnac-core/dnac/dnac-dnac.o `test -f 'dnac-core/dnac/dnac.c' || echo '$(srcdir)/'`dnac-core/dnac/dnac.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) dnac-core/dnac/$(DEPDIR)/dnac-dnac.Tpo dnac-core/dnac/$(DEPDIR)/dnac-dnac.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='dnac-core/dnac/dnac.c' object='dnac-core/dnac/dnac-dnac.o' libtool=no @AMDEPBACKSLASH@
+dnac/dnac/dnacp-dnacp.o: dnac/dnac/dnacp.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dnacp_CFLAGS) $(CFLAGS) -MT dnac/dnac/dnacp-dnacp.o -MD -MP -MF dnac/dnac/$(DEPDIR)/dnacp-dnacp.Tpo -c -o dnac/dnac/dnacp-dnacp.o `test -f 'dnac/dnac/dnacp.c' || echo '$(srcdir)/'`dnac/dnac/dnacp.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) dnac/dnac/$(DEPDIR)/dnacp-dnacp.Tpo dnac/dnac/$(DEPDIR)/dnacp-dnacp.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='dnac/dnac/dnacp.c' object='dnac/dnac/dnacp-dnacp.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dnac_CFLAGS) $(CFLAGS) -c -o dnac-core/dnac/dnac-dnac.o `test -f 'dnac-core/dnac/dnac.c' || echo '$(srcdir)/'`dnac-core/dnac/dnac.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dnacp_CFLAGS) $(CFLAGS) -c -o dnac/dnac/dnacp-dnacp.o `test -f 'dnac/dnac/dnacp.c' || echo '$(srcdir)/'`dnac/dnac/dnacp.c
 
-dnac-core/dnac/dnac-dnac.obj: dnac-core/dnac/dnac.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dnac_CFLAGS) $(CFLAGS) -MT dnac-core/dnac/dnac-dnac.obj -MD -MP -MF dnac-core/dnac/$(DEPDIR)/dnac-dnac.Tpo -c -o dnac-core/dnac/dnac-dnac.obj `if test -f 'dnac-core/dnac/dnac.c'; then $(CYGPATH_W) 'dnac-core/dnac/dnac.c'; else $(CYGPATH_W) '$(srcdir)/dnac-core/dnac/dnac.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) dnac-core/dnac/$(DEPDIR)/dnac-dnac.Tpo dnac-core/dnac/$(DEPDIR)/dnac-dnac.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='dnac-core/dnac/dnac.c' object='dnac-core/dnac/dnac-dnac.obj' libtool=no @AMDEPBACKSLASH@
+dnac/dnac/dnacp-dnacp.obj: dnac/dnac/dnacp.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dnacp_CFLAGS) $(CFLAGS) -MT dnac/dnac/dnacp-dnacp.obj -MD -MP -MF dnac/dnac/$(DEPDIR)/dnacp-dnacp.Tpo -c -o dnac/dnac/dnacp-dnacp.obj `if test -f 'dnac/dnac/dnacp.c'; then $(CYGPATH_W) 'dnac/dnac/dnacp.c'; else $(CYGPATH_W) '$(srcdir)/dnac/dnac/dnacp.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) dnac/dnac/$(DEPDIR)/dnacp-dnacp.Tpo dnac/dnac/$(DEPDIR)/dnacp-dnacp.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='dnac/dnac/dnacp.c' object='dnac/dnac/dnacp-dnacp.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dnac_CFLAGS) $(CFLAGS) -c -o dnac-core/dnac/dnac-dnac.obj `if test -f 'dnac-core/dnac/dnac.c'; then $(CYGPATH_W) 'dnac-core/dnac/dnac.c'; else $(CYGPATH_W) '$(srcdir)/dnac-core/dnac/dnac.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dnacp_CFLAGS) $(CFLAGS) -c -o dnac/dnac/dnacp-dnacp.obj `if test -f 'dnac/dnac/dnacp.c'; then $(CYGPATH_W) 'dnac/dnac/dnacp.c'; else $(CYGPATH_W) '$(srcdir)/dnac/dnac/dnacp.c'; fi`
 
-dnac-core/dnac/dnacc-dnacc.o: dnac-core/dnac/dnacc.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dnacc_CFLAGS) $(CFLAGS) -MT dnac-core/dnac/dnacc-dnacc.o -MD -MP -MF dnac-core/dnac/$(DEPDIR)/dnacc-dnacc.Tpo -c -o dnac-core/dnac/dnacc-dnacc.o `test -f 'dnac-core/dnac/dnacc.c' || echo '$(srcdir)/'`dnac-core/dnac/dnacc.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) dnac-core/dnac/$(DEPDIR)/dnacc-dnacc.Tpo dnac-core/dnac/$(DEPDIR)/dnacc-dnacc.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='dnac-core/dnac/dnacc.c' object='dnac-core/dnac/dnacc-dnacc.o' libtool=no @AMDEPBACKSLASH@
+dnac/dnac/dnacc-dnacc.o: dnac/dnac/dnacc.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dnacc_CFLAGS) $(CFLAGS) -MT dnac/dnac/dnacc-dnacc.o -MD -MP -MF dnac/dnac/$(DEPDIR)/dnacc-dnacc.Tpo -c -o dnac/dnac/dnacc-dnacc.o `test -f 'dnac/dnac/dnacc.c' || echo '$(srcdir)/'`dnac/dnac/dnacc.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) dnac/dnac/$(DEPDIR)/dnacc-dnacc.Tpo dnac/dnac/$(DEPDIR)/dnacc-dnacc.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='dnac/dnac/dnacc.c' object='dnac/dnac/dnacc-dnacc.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dnacc_CFLAGS) $(CFLAGS) -c -o dnac-core/dnac/dnacc-dnacc.o `test -f 'dnac-core/dnac/dnacc.c' || echo '$(srcdir)/'`dnac-core/dnac/dnacc.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dnacc_CFLAGS) $(CFLAGS) -c -o dnac/dnac/dnacc-dnacc.o `test -f 'dnac/dnac/dnacc.c' || echo '$(srcdir)/'`dnac/dnac/dnacc.c
 
-dnac-core/dnac/dnacc-dnacc.obj: dnac-core/dnac/dnacc.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dnacc_CFLAGS) $(CFLAGS) -MT dnac-core/dnac/dnacc-dnacc.obj -MD -MP -MF dnac-core/dnac/$(DEPDIR)/dnacc-dnacc.Tpo -c -o dnac-core/dnac/dnacc-dnacc.obj `if test -f 'dnac-core/dnac/dnacc.c'; then $(CYGPATH_W) 'dnac-core/dnac/dnacc.c'; else $(CYGPATH_W) '$(srcdir)/dnac-core/dnac/dnacc.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) dnac-core/dnac/$(DEPDIR)/dnacc-dnacc.Tpo dnac-core/dnac/$(DEPDIR)/dnacc-dnacc.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='dnac-core/dnac/dnacc.c' object='dnac-core/dnac/dnacc-dnacc.obj' libtool=no @AMDEPBACKSLASH@
+dnac/dnac/dnacc-dnacc.obj: dnac/dnac/dnacc.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dnacc_CFLAGS) $(CFLAGS) -MT dnac/dnac/dnacc-dnacc.obj -MD -MP -MF dnac/dnac/$(DEPDIR)/dnacc-dnacc.Tpo -c -o dnac/dnac/dnacc-dnacc.obj `if test -f 'dnac/dnac/dnacc.c'; then $(CYGPATH_W) 'dnac/dnac/dnacc.c'; else $(CYGPATH_W) '$(srcdir)/dnac/dnac/dnacc.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) dnac/dnac/$(DEPDIR)/dnacc-dnacc.Tpo dnac/dnac/$(DEPDIR)/dnacc-dnacc.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='dnac/dnac/dnacc.c' object='dnac/dnac/dnacc-dnacc.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dnacc_CFLAGS) $(CFLAGS) -c -o dnac-core/dnac/dnacc-dnacc.obj `if test -f 'dnac-core/dnac/dnacc.c'; then $(CYGPATH_W) 'dnac-core/dnac/dnacc.c'; else $(CYGPATH_W) '$(srcdir)/dnac-core/dnac/dnacc.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dnacc_CFLAGS) $(CFLAGS) -c -o dnac/dnac/dnacc-dnacc.obj `if test -f 'dnac/dnac/dnacc.c'; then $(CYGPATH_W) 'dnac/dnac/dnacc.c'; else $(CYGPATH_W) '$(srcdir)/dnac/dnac/dnacc.c'; fi`
 
 tc/dtka/dtka-dtka.o: tc/dtka/dtka.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dtka_CFLAGS) $(CFLAGS) -MT tc/dtka/dtka-dtka.o -MD -MP -MF tc/dtka/$(DEPDIR)/dtka-dtka.Tpo -c -o tc/dtka/dtka-dtka.o `test -f 'tc/dtka/dtka.c' || echo '$(srcdir)/'`tc/dtka/dtka.c
@@ -18543,8 +18545,8 @@ distclean-generic:
 	-rm -f dgr/library/$(am__dirstamp)
 	-rm -f dgr/test/$(DEPDIR)/$(am__dirstamp)
 	-rm -f dgr/test/$(am__dirstamp)
-	-rm -f dnac-core/dnac/$(DEPDIR)/$(am__dirstamp)
-	-rm -f dnac-core/dnac/$(am__dirstamp)
+	-rm -f dnac/dnac/$(DEPDIR)/$(am__dirstamp)
+	-rm -f dnac/dnac/$(am__dirstamp)
 	-rm -f dtpc/daemon/$(DEPDIR)/$(am__dirstamp)
 	-rm -f dtpc/daemon/$(am__dirstamp)
 	-rm -f dtpc/library/$(DEPDIR)/$(am__dirstamp)
@@ -18985,8 +18987,8 @@ distclean: distclean-recursive
 	-rm -f dgr/test/$(DEPDIR)/file2udp-file2udp.Po
 	-rm -f dgr/test/$(DEPDIR)/tcp2file-tcp2file.Po
 	-rm -f dgr/test/$(DEPDIR)/udp2file-udp2file.Po
-	-rm -f dnac-core/dnac/$(DEPDIR)/dnac-dnac.Po
-	-rm -f dnac-core/dnac/$(DEPDIR)/dnacc-dnacc.Po
+	-rm -f dnac/dnac/$(DEPDIR)/dnacp-dnacp.Po
+	-rm -f dnac/dnac/$(DEPDIR)/dnacc-dnacc.Po
 	-rm -f dtpc/daemon/$(DEPDIR)/dtpcclock-dtpcclock.Po
 	-rm -f dtpc/daemon/$(DEPDIR)/dtpcd-dtpcd.Po
 	-rm -f dtpc/library/$(DEPDIR)/libdtpc_la-libdtpc.Plo
@@ -19633,8 +19635,8 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f dgr/test/$(DEPDIR)/file2udp-file2udp.Po
 	-rm -f dgr/test/$(DEPDIR)/tcp2file-tcp2file.Po
 	-rm -f dgr/test/$(DEPDIR)/udp2file-udp2file.Po
-	-rm -f dnac-core/dnac/$(DEPDIR)/dnac-dnac.Po
-	-rm -f dnac-core/dnac/$(DEPDIR)/dnacc-dnacc.Po
+	-rm -f dnac/dnac/$(DEPDIR)/dnacp-dnacp.Po
+	-rm -f dnac/dnac/$(DEPDIR)/dnacc-dnacc.Po
 	-rm -f dtpc/daemon/$(DEPDIR)/dtpcclock-dtpcclock.Po
 	-rm -f dtpc/daemon/$(DEPDIR)/dtpcd-dtpcd.Po
 	-rm -f dtpc/library/$(DEPDIR)/libdtpc_la-libdtpc.Plo

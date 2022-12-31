@@ -1,0 +1,105 @@
+#!/bin/bash
+# shell script to rename all ".dev" Makefiles for dev environment
+
+cp Makefile.dev Makefile
+
+cd ams
+mv Makefile.dev Makefile
+cd doc
+mv Makefile.dev Makefile
+cd ../i86_64-fedora
+mv Makefile.dev Makefile
+cd ..
+
+cd ../bpv7
+mv Makefile.dev Makefile
+cd doc
+mv Makefile.dev Makefile
+cd ../i86_64-fedora
+mv Makefile.dev Makefile
+cd ..
+
+cd ../bss
+mv Makefile.dev Makefile
+cd doc
+mv Makefile.dev Makefile
+cd ../i86_64-fedora
+mv Makefile.dev Makefile
+cd ..
+
+cd ../bssp
+mv Makefile.dev Makefile
+cd doc
+mv Makefile.dev Makefile
+cd ../i86_64-fedora
+mv Makefile.dev Makefile
+cd ..
+
+cd ../cfdp
+mv Makefile.dev Makefile
+cd doc
+mv Makefile.dev Makefile
+cd ../i86_64-fedora
+mv Makefile.dev Makefile
+cd ..
+
+cd ../dgr
+mv Makefile.dev Makefile
+cd doc
+mv Makefile.dev Makefile
+cd ../i86_64-fedora
+mv Makefile.dev Makefile
+cd ..
+
+cd ../dnac
+mv Makefile.dev Makefile
+cd doc
+mv Makefile.dev Makefile
+cd ../i86_64-fedora
+mv Makefile.dev Makefile
+cd ..
+
+cd ../dtpc
+mv Makefile.dev Makefile
+cd doc
+mv Makefile.dev Makefile
+cd ../i86_64-fedora
+mv Makefile.dev Makefile
+cd ..
+
+cd ../ici
+mv Makefile.dev Makefile
+cd doc
+mv Makefile.dev Makefile
+cd ../i86_64-fedora
+mv Makefile.dev Makefile
+cd ..
+
+cd ../ltp
+mv Makefile.dev Makefile
+cd doc
+mv Makefile.dev Makefile
+cd ../i86_64-fedora
+mv Makefile.dev Makefile
+cd ..
+
+cd ../nm
+mv Makefile.dev Makefile
+cd doc
+mv Makefile.dev Makefile
+cd ..
+
+cd ../restart
+mv Makefile.dev Makefile
+cd doc
+mv Makefile.dev Makefile
+cd ../i86_64-fedora
+mv Makefile.dev Makefile
+cd ..
+
+cd ../tc
+mv Makefile.dev Makefile
+cd doc
+mv Makefile.dev Makefile
+cd ../i86_64-fedora
+mv Makefile.dev Makefile
