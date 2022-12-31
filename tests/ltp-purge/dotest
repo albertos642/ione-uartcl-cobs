@@ -93,7 +93,7 @@ ionadmin amroc.ionrc
 cd ../5.ipn.ltp
 ionadmin amroc.ionrc
 
-if [ $ACS == "found" ] ; then
+if [ "$ACS" == "found" ] ; then
 	cd ../2.ipn.ltp
 	acsadmin amroc.acsrc
 	cd ../3.ipn.ltp

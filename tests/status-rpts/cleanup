@@ -4,6 +4,7 @@
 # April 12, 2010
 
 echo "Cleaning up old ION..."
+rm -f ion_nodes
 rm -f 2.ipn.ltp/ion.log 3.ipn.ltp/ion.log 5.ipn.ltp/ion.log
 rm -f 5.ipn.ltp/testfile1
 rm -f 5.ipn.ltp/testfile2
