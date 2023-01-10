@@ -1,5 +1,5 @@
 #!/bin/bash
-# shell script to rename all ".dev" Makefiles for dev environment
+# shell script to rename all ".dev" Makefiles for 64-bit dev environment
 
 cp Makefile.dev Makefile
 
@@ -70,6 +70,8 @@ cd ..
 cd ../ici
 mv Makefile.dev Makefile
 cd doc
+mv Makefile.dev Makefile
+cd ../libbloom-master
 mv Makefile.dev Makefile
 cd ../i86_64-fedora
 mv Makefile.dev Makefile

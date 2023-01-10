@@ -542,7 +542,7 @@ static void	executeInfo(int tokenCount, char **tokens)
 	}
 	else if (strcmp(tokens[2], "-1") == 0)	/*	Registration.	*/
 	{
-		fromTime = (time_t) -1;
+		fromTime = MAX_POSIX_TIME;
 	}
 	else				/*	Predicted or Scheduled.	*/
 	{

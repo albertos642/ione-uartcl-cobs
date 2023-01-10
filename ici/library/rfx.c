@@ -1591,7 +1591,7 @@ writeMemo("Duplicate contact ignored");
 		writeMemoNote("[?] Contact is already included in two contact \
 plans", itoa(regionNbr));
 		sdr_exit_xn(sdr);
-		return 13;
+		return 12;
 	}
 
 	/*	Incorporating existing contact into a new contact
@@ -3020,8 +3020,11 @@ void	rfx_brief_passageways(uint32_t regionNbr)
 			return;
 		}
 
-		isprintf(buffer, sizeof buffer, "a contact 2038/01/19-03:14:07 \
+/*		isprintf(buffer, sizeof buffer, "a contact 2038/01/19-03:14:07 \
 2038/01/19-03:14:07 " UVAST_FIELDSPEC " " UVAST_FIELDSPEC " 0 1.0\n",
+				member.nodeNbr, member.nodeNbr);	*/
+		isprintf(buffer, sizeof buffer, "a contact 2038/01/18-03:14:07 \
+2038/01/18-03:14:07 " UVAST_FIELDSPEC " " UVAST_FIELDSPEC " 0 1.0\n",
 				member.nodeNbr, member.nodeNbr);
        		textLen = strlen(buffer);
 		if (write(briefingFile, buffer, textLen) < 0)
