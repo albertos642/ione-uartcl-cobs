@@ -675,6 +675,8 @@ ltpextra = \
 	ltp/doc/pod1/ltpsecadmin.pod \
 	ltp/doc/pod1/udplsi.pod \
 	ltp/doc/pod1/udplso.pod \
+	ltp/doc/pod1/udplsi6.pod \
+	ltp/doc/pod1/udplso6.pod \
 	ltp/doc/pod3/ltp.pod \
 	ltp/doc/pod5/ltprc.pod
 
@@ -689,6 +691,8 @@ ltpmans = \
 	$(top_builddir)/ltp/doc/ltpsecadmin.1 \
 	$(top_builddir)/ltp/doc/udplsi.1 \
 	$(top_builddir)/ltp/doc/udplso.1 \
+	$(top_builddir)/ltp/doc/udplsi6.1 \
+	$(top_builddir)/ltp/doc/udplso6.1 \
 	$(top_builddir)/ltp/doc/ltp.3 \
 	$(top_builddir)/ltp/doc/ltprc.5
 
@@ -1911,6 +1915,7 @@ bpextra = \
 	bpv7/doc/pod1/brsccla.pod \
 	bpv7/doc/pod1/brsscla.pod \
 	bpv7/doc/pod1/cgrfetch.pod \
+	bpv7/doc/pod1/cpsd.pod \
 	bpv7/doc/pod1/dccpcli.pod \
 	bpv7/doc/pod1/dccpclo.pod \
 	bpv7/doc/pod1/dgrcli.pod \
@@ -1933,8 +1938,12 @@ bpextra = \
 	bpv7/doc/pod1/stcpclo.pod \
 	bpv7/doc/pod1/tcpcli.pod \
 	bpv7/doc/pod1/tcpclo.pod \
+	bpv7/doc/pod1/tcpcli6.pod \
+	bpv7/doc/pod1/tcpclo6.pod \
 	bpv7/doc/pod1/udpcli.pod \
 	bpv7/doc/pod1/udpclo.pod \
+	bpv7/doc/pod1/udpcli6.pod \
+	bpv7/doc/pod1/udpclo6.pod \
 	bpv7/doc/pod3/bp.pod \
 	bpv7/doc/pod3/bpextensions.pod \
 	bpv7/doc/pod5/biberc.pod \
@@ -1944,6 +1953,7 @@ bpextra = \
 	bpv7/doc/pod5/ipnrc.pod \
 	bpv7/doc/pod5/irfrc.pod \
 	bpv7/doc/pod5/lgfile.pod \
+	restart/doc/pod1/ionrestart.pod \
 	bpv7/include/bpsec.h \
 	bpv7/library/bei.c \
 	bpv7/library/bpsec.c \
@@ -2005,6 +2015,7 @@ bpmans = \
 	$(top_builddir)/bpv7/doc/brsccla.1 \
 	$(top_builddir)/bpv7/doc/brsscla.1 \
 	$(top_builddir)/bpv7/doc/cgrfetch.1 \
+	$(top_builddir)/bpv7/doc/cpsd.1 \
 	$(top_builddir)/bpv7/doc/dccpcli.1 \
 	$(top_builddir)/bpv7/doc/dccpclo.1 \
 	$(top_builddir)/bpv7/doc/dgrcli.1 \
@@ -2017,6 +2028,8 @@ bpmans = \
 	$(top_builddir)/bpv7/doc/ipnadminep.1 \
 	$(top_builddir)/bpv7/doc/ipnd.1 \
 	$(top_builddir)/bpv7/doc/ipnfw.1 \
+	$(top_builddir)/bpv7/doc/irfadmin.1 \
+	$(top_builddir)/bpv7/doc/irfd.1 \
 	$(top_builddir)/bpv7/doc/lgagent.1 \
 	$(top_builddir)/bpv7/doc/lgsend.1 \
 	$(top_builddir)/bpv7/doc/ltpcli.1 \
@@ -2024,17 +2037,23 @@ bpmans = \
 	$(top_builddir)/bpv7/doc/stcpcli.1 \
 	$(top_builddir)/bpv7/doc/stcpclo.1 \
 	$(top_builddir)/bpv7/doc/tcpcli.1 \
+	$(top_builddir)/bpv7/doc/tcpclo6.1 \
+	$(top_builddir)/bpv7/doc/tcpcli6.1 \
 	$(top_builddir)/bpv7/doc/tcpclo.1 \
 	$(top_builddir)/bpv7/doc/udpcli.1 \
 	$(top_builddir)/bpv7/doc/udpclo.1 \
-	$(top_builddir)/bpv7/doc/bp.3 \
+	$(top_builddir)/bpv7/doc/udpcli6.1 \
+	$(top_builddir)/bpv7/doc/udpclo6.1 \
+	$(top_builddir)/restart/doc/ionrestart.1 \
+	$(top_builddir)/bpv7/doc/bp.3 \	
 	$(top_builddir)/bpv7/doc/bpextensions.3 \
 	$(top_builddir)/bpv7/doc/biberc.5 \
 	$(top_builddir)/bpv7/doc/bprc.5 \
 	$(top_builddir)/bpv7/doc/bpsecrc.5 \
 	$(top_builddir)/bpv7/doc/dtn2rc.5 \
 	$(top_builddir)/bpv7/doc/ipnrc.5 \
-	$(top_builddir)/bpv7/doc/lgfile.5
+	$(top_builddir)/bpv7/doc/irfrc.5 \
+	$(top_builddir)/bpv7/doc/lgfile.5 
 
 if ENABLE_IMC
 bpmans += \
@@ -2048,6 +2067,9 @@ bpclean-local:
 	rm -f $(top_builddir)/bpv7/doc/*.5
 
 $(top_builddir)/bpv7/doc/%.1: bpv7/doc/pod1/%.pod
+	$(bpPODM1) $< $@
+
+$(top_builddir)/restart/doc/%.1: restart/doc/pod1/%.pod
 	$(bpPODM1) $< $@
 
 $(top_builddir)/bpv7/doc/%.3: bpv7/doc/pod3/%.pod
@@ -2559,6 +2581,10 @@ tcextra = \
 	dnac/doc/pod1/dnacp.pod
 
 tcmans = \
+	$(top_builddir)/dnac/doc/dnacc.1 \
+	$(top_builddir)/dnac/doc/dnacp.1 \
+	$(top_builddir)/tc/doc/dtka.1 \
+	$(top_builddir)/tc/doc/dtkaadmin.1 \
 	$(top_builddir)/tc/doc/dtka.1 \
 	$(top_builddir)/tc/doc/dtkaadmin.1 \
 	$(top_builddir)/tc/doc/tcaadmin.1 \
@@ -2577,6 +2603,9 @@ tcclean-local:
 	rm -f $(top_builddir)/tc/doc/*.1
 	rm -f $(top_builddir)/tc/doc/*.3
 	rm -f $(top_builddir)/tc/doc/*.5
+
+$(top_builddir)/dnac/doc/%.1: dnac/doc/pod1/%.pod
+	$(tcPODM1) $< $@
 
 $(top_builddir)/tc/doc/%.1: tc/doc/pod1/%.pod
 	$(tcPODM1) $< $@
