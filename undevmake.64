@@ -4,7 +4,7 @@
 rm Makefile
 
 cd ams
-mv Makefile Makefile.dev
+mv Makefile Makefile.dev.64
 cd doc
 mv Makefile Makefile.dev
 cd ../i86_64-fedora
@@ -12,7 +12,7 @@ mv Makefile Makefile.dev
 cd ..
 
 cd ../bpv7
-mv Makefile Makefile.dev
+mv Makefile Makefile.dev.64
 cd doc
 mv Makefile Makefile.dev
 cd ../i86_64-fedora
@@ -20,7 +20,7 @@ mv Makefile Makefile.dev
 cd ..
 
 cd ../bss
-mv Makefile Makefile.dev
+mv Makefile Makefile.dev.64
 cd doc
 mv Makefile Makefile.dev
 cd ../i86_64-fedora
@@ -28,7 +28,7 @@ mv Makefile Makefile.dev
 cd ..
 
 cd ../bssp
-mv Makefile Makefile.dev
+mv Makefile Makefile.dev.64
 cd doc
 mv Makefile Makefile.dev
 cd ../i86_64-fedora
@@ -36,7 +36,7 @@ mv Makefile Makefile.dev
 cd ..
 
 cd ../cfdp
-mv Makefile Makefile.dev
+mv Makefile Makefile.dev.64
 cd doc
 mv Makefile Makefile.dev
 cd ../i86_64-fedora
@@ -44,7 +44,7 @@ mv Makefile Makefile.dev
 cd ..
 
 cd ../dgr
-mv Makefile Makefile.dev
+mv Makefile Makefile.dev.64
 cd doc
 mv Makefile Makefile.dev
 cd ../i86_64-fedora
@@ -52,7 +52,7 @@ mv Makefile Makefile.dev
 cd ..
 
 cd ../dnac
-mv Makefile Makefile.dev
+mv Makefile Makefile.dev.64
 cd doc
 mv Makefile Makefile.dev
 cd ../i86_64-fedora
@@ -60,7 +60,7 @@ mv Makefile Makefile.dev
 cd ..
 
 cd ../dtpc
-mv Makefile Makefile.dev
+mv Makefile Makefile.dev.64
 cd doc
 mv Makefile Makefile.dev
 cd ../i86_64-fedora
@@ -68,7 +68,7 @@ mv Makefile Makefile.dev
 cd ..
 
 cd ../ici
-mv Makefile Makefile.dev
+mv Makefile Makefile.dev.64
 cd doc
 mv Makefile Makefile.dev
 cd ../libbloom-master
@@ -78,7 +78,7 @@ mv Makefile Makefile.dev
 cd ..
 
 cd ../ltp
-mv Makefile Makefile.dev
+mv Makefile Makefile.dev.64
 cd doc
 mv Makefile Makefile.dev
 cd ../i86_64-fedora
@@ -92,7 +92,7 @@ mv Makefile Makefile.dev
 cd ..
 
 cd ../restart
-mv Makefile Makefile.dev
+mv Makefile Makefile.dev.64
 cd doc
 mv Makefile Makefile.dev
 cd ../i86_64-fedora
@@ -100,7 +100,7 @@ mv Makefile Makefile.dev
 cd ..
 
 cd ../tc
-mv Makefile Makefile.dev
+mv Makefile Makefile.dev.64
 cd doc
 mv Makefile Makefile.dev
 cd ../i86_64-fedora
