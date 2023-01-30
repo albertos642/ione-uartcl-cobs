@@ -6,12 +6,12 @@ PKG_RELEASE:=1
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/IONe-1.0.0
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=git://git.code.sf.net/u/solarnetone/ion-experimental
-PKG_SRC_DATE:=2022-12-01
-PKG_SOURCE_VERSION:=39b6a48d10575cd06e34cca8c54c843acce8e1db
-PKG_MIRROR_HASH:=a4b7c909b7ea9b8cea958c3003a0e15fadbb150c0bc7abf59c48a7ef9f15baf5
-PKG_FIXUP:=autoreconf
-DEPENDS:=+ncurses
+PKG_SOURCE_URL:=git://git.code.sf.net/p/ione/code
+PKG_SRC_DATE:=2023-1-30
+PKG_SOURCE_VERSION:=ba057e447a96c8a5a4833a4f8afe94981a5c55e7
+PKG_MIRROR_HASH:=049fc5690535265f8d319e40e6b256579e6ad154d554452502b9390fe8c303cc
+PKG_FIXUP:=patch-libtool
+DEPENDS:=+bash
 #PKG_INSTALL_DIR:=$(BUILD_DIR)/IONe-1.0.0/ipkg-install
 #PKG_INSTALL:=1
 include $(INCLUDE_DIR)/package.mk
@@ -54,4 +54,4 @@ define Package/IONe/install
 
 endef
 
-$(eval $(call BuildPackage,IONe,+ncurses))
+$(eval $(call BuildPackage,IONe))
