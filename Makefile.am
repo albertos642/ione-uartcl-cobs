@@ -844,9 +844,13 @@ dgrnoinst = \
 
 dgrextra = \
 	dgr/README.txt \
+	dgr/doc/pod1/dgr2file.pod \
+	dgr/doc/pod1/file2dgr.pod \
 	dgr/doc/pod3/dgr.pod
 
 dgrmans = \
+	$(top_builddir)/dgr/doc/dgr2file.1 \
+	$(top_builddir)/dgr/doc/file2dgr.1 \
 	$(top_builddir)/dgr/doc/dgr.3
 
 dgrclean-local:
@@ -854,7 +858,7 @@ dgrclean-local:
 	rm -f $(top_builddir)/dgr/doc/*.3
 
 $(top_builddir)/dgr/doc/%.1: dgr/doc/pod1/%.pod
-	$(dgrPODM1) $< $@f
+	$(dgrPODM1) $< $@
 
 $(top_builddir)/dgr/doc/%.3: dgr/doc/pod3/%.pod
 	$(dgrPODM3) $< $@
@@ -2583,8 +2587,6 @@ tcextra = \
 tcmans = \
 	$(top_builddir)/dnac/doc/dnacc.1 \
 	$(top_builddir)/dnac/doc/dnacp.1 \
-	$(top_builddir)/tc/doc/dtka.1 \
-	$(top_builddir)/tc/doc/dtkaadmin.1 \
 	$(top_builddir)/tc/doc/dtka.1 \
 	$(top_builddir)/tc/doc/dtkaadmin.1 \
 	$(top_builddir)/tc/doc/tcaadmin.1 \
