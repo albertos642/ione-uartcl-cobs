@@ -8,8 +8,8 @@ PKG_BUILD_DIR:=$(BUILD_DIR)/IONe-1.0.0
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=git://git.code.sf.net/p/ione/code
 PKG_SRC_DATE:=2023-1-30
-PKG_SOURCE_VERSION:=ba057e447a96c8a5a4833a4f8afe94981a5c55e7
-PKG_MIRROR_HASH:=049fc5690535265f8d319e40e6b256579e6ad154d554452502b9390fe8c303cc
+PKG_SOURCE_VERSION:=83aa6b09db6be1273443c32d1b63fc7ddeddfec1
+PKG_MIRROR_HASH:=a80c12e5f15d7655c9666f0d454be90890c9b2de5ddb38e9dee56a90fbfced83
 PKG_FIXUP:=patch-libtool
 DEPENDS:=+bash
 #PKG_INSTALL_DIR:=$(BUILD_DIR)/IONe-1.0.0/ipkg-install
@@ -34,7 +34,7 @@ define Build/Install
  $(call Build/Install/Default)
 endef
 
-define Package/IONe/preinst
+define Package/IONe/postinst
  #!/bin/bash
  ldconfig
  echo "ran ldconfig"
