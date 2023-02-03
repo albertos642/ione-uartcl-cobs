@@ -1,0 +1,107 @@
+#!/bin/bash
+# shell script to rename Makefiles back to ".dev" for normal build environment
+
+rm Makefile
+
+cd ams
+mv Makefile Makefile.dev.32
+cd doc
+mv Makefile Makefile.dev
+cd ../i86-redhat
+mv Makefile Makefile.dev
+cd ..
+
+cd ../bpv7
+mv Makefile Makefile.dev.32
+cd doc
+mv Makefile Makefile.dev
+cd ../i86-redhat
+mv Makefile Makefile.dev
+cd ..
+
+cd ../bss
+mv Makefile Makefile.dev.32
+cd doc
+mv Makefile Makefile.dev
+cd ../i86-redhat
+mv Makefile Makefile.dev
+cd ..
+
+cd ../bssp
+mv Makefile Makefile.dev.32
+cd doc
+mv Makefile Makefile.dev
+cd ../i86-redhat
+mv Makefile Makefile.dev
+cd ..
+
+cd ../cfdp
+mv Makefile Makefile.dev.32
+cd doc
+mv Makefile Makefile.dev
+cd ../i86-redhat
+mv Makefile Makefile.dev
+cd ..
+
+cd ../dgr
+mv Makefile Makefile.dev.32
+cd doc
+mv Makefile Makefile.dev
+cd ../i86-redhat
+mv Makefile Makefile.dev
+cd ..
+
+cd ../dnac
+mv Makefile Makefile.dev.32
+cd doc
+mv Makefile Makefile.dev
+cd ../i86-redhat
+mv Makefile Makefile.dev
+cd ..
+
+cd ../dtpc
+mv Makefile Makefile.dev.32
+cd doc
+mv Makefile Makefile.dev
+cd ../i86-redhat
+mv Makefile Makefile.dev
+cd ..
+
+cd ../ici
+mv Makefile Makefile.dev.32
+cd doc
+mv Makefile Makefile.dev
+cd ../libbloom-master
+mv Makefile Makefile.dev
+cd ../i86-redhat
+mv Makefile Makefile.dev
+cd ..
+
+cd ../ltp
+mv Makefile Makefile.dev.32
+cd doc
+mv Makefile Makefile.dev
+cd ../i86-redhat
+mv Makefile Makefile.dev
+cd ..
+
+cd ../nm
+mv Makefile Makefile.dev
+cd doc
+mv Makefile Makefile.dev
+cd ..
+
+cd ../restart
+mv Makefile Makefile.dev.32
+cd doc
+mv Makefile Makefile.dev
+cd ../i86-redhat
+mv Makefile Makefile.dev
+cd ..
+
+cd ../tc
+mv Makefile Makefile.dev.32
+cd doc
+mv Makefile Makefile.dev
+cd ../i86-redhat
+mv Makefile Makefile.dev

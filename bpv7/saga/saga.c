@@ -12,6 +12,7 @@
 
 									*/
 #include "bpP.h"
+#include "saga.h"
 #include "lyst.h"
 
 #define CONFIDENCE_BASIS	(MAX_CONTACT_LOG_LENGTH * 2.0)
@@ -47,13 +48,12 @@ static int	removePredictedContacts(int regionIdx)
 	sdr_read(sdr, (char *) &iondb, getIonDbObject(), sizeof(IonDB));
 	regionNbr = iondb.regions[regionIdx].regionNbr;
 	CHKERR(sdr_begin_xn(sdr));
-	for (elt = sdr_list_first(sdr, iondb.regions[regionIdx].contacts); elt;
+	for (elt = sdr_list_first(sdr, iondb.contacts); elt;
 		       	elt = nextElt)
 	{
 		nextElt = sdr_list_next(sdr, elt);
 		obj = sdr_list_data(sdr, elt);
-		sdr_read(sdr, (char *) &contact, obj,
-				sizeof(IonContact));
+		sdr_read(sdr, (char *) &contact, obj, sizeof(IonContact));
 		if (contact.type != CtPredicted)
 		{
 			continue;	/*	Not predicted.	*/

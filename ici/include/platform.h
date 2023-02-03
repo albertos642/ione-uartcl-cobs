@@ -10,6 +10,7 @@
 /*      R. Carper: modified for Mac OS X platform (darwin)		*/
 /*      J. Veregge: modified for all platforms to consolidate		*/
 /*      S. Clancy: added STRSOE flag for building with JPL STRS OE	*/
+/*	Scott Johnson: add IPv6 specific variable/function declaration  */
 /*									*/
 #ifndef _PLATFORM_H_
 #define _PLATFORM_H_
@@ -48,6 +49,11 @@ extern "C" {
 #define	SPACE_ORDER	2
 #endif
 
+#ifdef musl			/*	OpenWrt musl library		*/
+#define uClibc			/*	Pick up uClibc tweaks.		*/
+#define	LONG_LONG_OKAY	1	/*	Default value.			*/
+#endif				/*	end of #ifndef musl		*/
+
 #ifdef uClibc
 #ifndef linux
 #define linux
@@ -57,7 +63,8 @@ extern "C" {
 #endif
 #endif
 
-#define	MAX_POSIX_TIME	2147483647
+//#define	MAX_POSIX_TIME	2147483647
+#define	MAX_POSIX_TIME	2147397247
 
 /*	SPACE_ORDER is log2 of the number of bytes in an address, i.e.:
 
@@ -169,8 +176,8 @@ typedef unsigned long long	uaddr;	/*	Pointer-sized integer.	*/
 #define	strtoaddr(x)		strtoull(x, NULL, 0)
 #define LARGE1			1ULL
 #else				/*	Not Windows.			*/
-typedef long			vast;
-typedef unsigned long		uvast;
+typedef long 			vast;
+typedef unsigned long 		uvast;
 typedef long			saddr;	/*	Pointer-sized integer.	*/
 typedef unsigned long		uaddr;	/*	Pointer-sized integer.	*/
 #define	VAST_FIELDSPEC		"%ld"
@@ -242,6 +249,10 @@ extern int			rtems_shell_main_cp(int argc, char *argv[]);
 #include <dirent.h>
 #include <sys/stat.h>
 #endif				/*	end of #ifndef ION4WIN		*/
+
+#ifdef musl			/*	OpenWrt musl library		*/
+#include <sys/types.h>
+#endif				/*	end of #ifdef musl		*/
 
 #ifdef ION4WIN			/*	Visual Studio provides most.	*/
 
@@ -779,8 +790,10 @@ extern void			getCurrentTime(struct timeval *);
 extern unsigned long		getClockResolution();	/*	usec	*/
 #if (defined(FSWLAN) || !(defined(ION_NO_DNS)))
 extern unsigned int		getInternetAddress(char *);
+extern int	 		getInternet6Address(char *, char *);
 extern char			*getInternetHostName(unsigned int, char *);
 extern int			getNameOfHost(char *, int);
+extern char			getNameOf6Host(char *, int);
 extern char			*getNameOfUser(char *);
 extern int			reUseAddress(int);
 extern int			watchSocket(int);
@@ -791,7 +804,6 @@ extern int			initResourceLock(ResourceLock *);
 extern void			killResourceLock(ResourceLock *);
 extern void			lockResource(ResourceLock *);
 extern void			unlockResource(ResourceLock *);
-
 extern char			*itoa(int);
 extern char			*utoa(unsigned int);
 #define postErrmsg(txt, arg)	_postErrmsg(__FILE__, __LINE__, txt, arg)
@@ -880,10 +892,24 @@ extern char			*addressToString(struct in_addr, char *buf);
 extern int			parseSocketSpec(char *socketSpec,
 					unsigned short *portNbr,
 					unsigned int *ipAddress);
+extern int			parseSocketSpecSix(char *socketSpec,
+					struct sockaddr_in6 *ipv6Address);
+
+struct uartdescriptor
+{
+	char		uart_file_descriptor[50];
+	uint32_t	baud_rate;
+	int		isOpen;
+};
+
+extern int			parseUartSpec(char *socketSpec,
+					struct uartdescriptor *uart);
 extern void			printDottedString(unsigned int hostNbr,
 					char *buffer);
 
 extern int			itcp_connect(char *socketSpec,
+					unsigned short defaultPort, int *sock);
+extern int			itcp_connect6(char *socketSpec,
 					unsigned short defaultPort, int *sock);
 extern int			itcp_send(int *sock, char *from, int length);
 extern int			itcp_recv(int *sock, char *into, int length);

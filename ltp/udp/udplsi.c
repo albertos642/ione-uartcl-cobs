@@ -59,13 +59,13 @@ int	main(int argc, char *argv[])
 	sdr_exit_xn(sdr);
 	if (vseatElt == 0)
 	{
-		putErrmsg("Undefined LSI", lsiCmd);
+		writeMemoNote("[?] Undefined LSI", lsiCmd);
 		return 1;
 	}
 
 	if (vseat->lsiPid != ERROR && vseat->lsiPid != sm_TaskIdSelf())
 	{
-		putErrmsg("LSI task is already started.", itoa(vseat->lsiPid));
+		writeMemoNote("[?] LSI task is already started", lsiCmd);
 		return 1;
 	}
 
@@ -73,9 +73,9 @@ int	main(int argc, char *argv[])
 
 	if (endpointSpec)
 	{
-		if(parseSocketSpec(endpointSpec, &portNbr, &ipAddress) != 0)
+		if (parseSocketSpec(endpointSpec, &portNbr, &ipAddress) != 0)
 		{
-			putErrmsg("Can't get IP/port for endpointSpec.",
+			writeMemoNote("LSI can't get own IP/port",
 					endpointSpec);
 			return -1;
 		}
@@ -151,15 +151,24 @@ int	main(int argc, char *argv[])
 	fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (fd >= 0)
 	{
+#if 0
 		if (isendto(fd, &quit, 1, 0, &ownSockName,
 				sizeof(struct sockaddr)) == 1)
 		{
 			pthread_join(receiverThread, NULL);
 		}
+#endif
+		/*	Still don't know why the original code
+		 *	sometimes fails to stop the thread, but this
+		 *	workaround prevents hanging on shutdown.	*/
 
+		oK(isendto(fd, &quit, 1, 0, &ownSockName,
+				sizeof(struct sockaddr)));
+		microsnooze(10000);
 		closesocket(fd);
 	}
 
+	pthread_detach(receiverThread);	/*	Part of workaround.	*/
 	closesocket(rtp.linkSocket);
 	writeErrmsgMemos();
 	writeMemo("[i] udplsi has ended.");

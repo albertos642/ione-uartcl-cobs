@@ -79,13 +79,14 @@ static void	printUsage()
 	PUTS("\t   1");
 	PUTS("\ta\tAdd");
 	PUTS("\t   a key <key name> <name of file containing key value>");
-	PUTS("\t   a pubkey <node nbr> <eff. time sec> <key len> <key>");
+	PUTS("\t   a pubkey <node nbr> <effective time sec> <assertion time \
+sec> <key len> <key>");
 	PUTS("\tc\tChange");
 	PUTS("\t   c key <key name> <name of file containing key value>");
 	PUTS("\td\tDelete");
 	PUTS("\ti\tInfo");
 	PUTS("\t   {d|i} key <key name>");
-	PUTS("\t   {d|i} pubkey <node nbr> <eff. time sec>");
+	PUTS("\t   {d|i} pubkey <node nbr> <effective time sec>");
 	PUTS("\tl\tList");
 	PUTS("\t   l key");
 	PUTS("\t   l pubkey");

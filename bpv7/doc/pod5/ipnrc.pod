@@ -21,7 +21,7 @@ queued for transmission via the indicated convergence layer protocol outduct.
 Note that egress plans B<must> be established for all neighboring nodes,
 regardless of whether or not contact graph routing is used for computing
 dynamic routes to distant nodes.  This is by definition: if there isn't
-an egress plan to a node, it can't be considered a neighbor.
+an egress plan to a node, it isn't considered a neighbor.
 
 Static default routes are declared as B<exits> in the ipn-scheme routing
 database.  An exit is a range of node numbers identifying a set of nodes

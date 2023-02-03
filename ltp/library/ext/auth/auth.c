@@ -68,13 +68,15 @@ static void	getPublicKeyForNode(uvast nodeNbr, int *keyLength,
 			(unsigned char *) *keyValue);
 }
 
-static void	getPrivateKey(int *keyLength, char **keyValue)
+static void	getPrivateKey(int *keyLength, char **keyValue,
+			char *passwdPathName)
 {
 	time_t	epoch = 0;
 
 	*keyLength = 0;
 	*keyValue = MTAKE(1);
-	sec_get_private_key(epoch, keyLength, (unsigned char *) *keyValue);
+	sec_get_private_key(epoch, keyLength, (unsigned char *) *keyValue,
+			passwdPathName);
 	MRELEASE(keyValue);
 	if (*keyLength <= 0)
 	{
@@ -86,7 +88,8 @@ static void	getPrivateKey(int *keyLength, char **keyValue)
 	}
 
 	*keyValue = MTAKE(*keyLength);
-	sec_get_private_key(epoch, keyLength, (unsigned char *) *keyValue);
+	sec_get_private_key(epoch, keyLength, (unsigned char *) *keyValue,
+			passwdPathName);
 }
 
 static int	verify_sha1(LtpExtensionInbound *trailerExt,
@@ -556,6 +559,7 @@ int	serializeAuthTrailerExtensionField(Object fieldObj, LtpXmitSeg *segment,
 	Object		elt;
 	Object		ruleAddr;
 			OBJ_POINTER(LtpXmitAuthRule, rule);
+	char		*passwdPathName = "/dev/null";
 	char		*keyValue;
 	int		keyLength;      
 	unsigned char	authVal[512];      
@@ -647,9 +651,13 @@ int	serializeAuthTrailerExtensionField(Object fieldObj, LtpXmitSeg *segment,
 			break;			/*	Out of loop.	*/
 		}
 
+		/*	Note: password-protected local encryption of
+		 *	private keys is not supported by this version
+		 *	of LTP.						*/
+
 		if (rule->ciphersuiteNbr == 1)
 		{
-			getPrivateKey(&keyLength, &keyValue);
+			getPrivateKey(&keyLength, &keyValue, passwdPathName);
 			if (keyLength > 0)
 			{
 				sign_using_sha256(keyValue, keyLength, buf,

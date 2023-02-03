@@ -135,6 +135,32 @@ to establish bidirectional communication.
 Shuts down the entire ION node, terminating all daemons.  The state of 
 the node is retained in the node's SDR heap.
 
+=item int ionPickRegion(uint32_t regionNbr)
+
+Determines whether the indicated region is the node's home region, its
+outer region (if any), or neither.  (For a brief discussion of the
+"region" concept, see the irrrc(5) man page.)  Returns 0 if the
+indicated region is the node's home region, 1 if it's the region's
+outer region, -1 otherwise.
+
+=item int ionRegionOf(uvast nodeNbrA, uvast nodeNbrB, uint32_t *regionNbr)
+
+Determines which of the node's regions (home or, possibly, outer) is the
+region in which nodes A and B both reside; if both nodes reside in both
+regions, the local node's home region is determined to be the common
+region; if I<nodeNbrB> is zero, the region in which node A resides is
+determined to be the "common" region.  Places the region number of the
+common region, if any, in I<*regionNbr> and returns 0 if the indicated
+region is the node's home region, 1 if it's the region's outer region,
+-1 otherwise.
+
+=item int ionRemoteRegionOf(uvast nodeNbr, uint32_t *regionNbr)
+
+Determines region in which the node identified by I<nodeNbr> resides
+but the local node does not.  If there is such a region, it places
+the number of that region in I<*regionNbr>; otherwise it places zero
+in I<*regionNbr>. 
+
 =item int ionStartAttendant(ReqAttendant *attendant)
 
 Initializes the semaphore in I<attendant> so that it can be used for blocking
@@ -214,6 +240,12 @@ an additional extent to an existing ZCO.  Returns -1 on failure, 0 on
 interruption by ionPauseAttendant() or if I<attendant> was NULL and sufficient
 space for the extent was not immediately available, I<length> on success.
 
+=item int ionSendZcoByTcp(int *sock, Object zco, char *buffer, int buflen)
+
+Transmits the content of zero-copy object I<zco> to the TCP socket
+identified by I<*sock>.  Transmits in chunks of size I<buflen> or less,
+loading chunks of ZCO content into I<buffer> for this purpose.
+
 =item char *getIonVersionNbr()
 
 Returns the name of the ION version installed on the local machine.
@@ -222,6 +254,10 @@ Returns the name of the ION version installed on the local machine.
 
 Returns a pointer to the SDR management object, previously acquired by calling
 ionAttach(), or zero on any error.
+
+=item Object getIonDbObject()
+
+Returns the SDR heap address of the node's non-volatile ION database.
 
 =item PsmPartition getIonwm()
 
@@ -233,6 +269,14 @@ by calling ionAttach(), or zero on any error.
 Returns the memory manager ID for operations on ION's working memory partition,
 previously acquired by calling ionAttach(), or -1 on any error.
 
+=item IonVdb *getIonVdb()
+
+Returns the address in memory of the node's volatile ION database.
+
+=item char *getIonWorkingDirectory()
+
+Returns the name of the directory in which the node resides.
+
 =item int ionLocked();
 
 Returns 1 if the calling task is the owner of the current SDR transaction.
@@ -243,6 +287,11 @@ is essential to the avoidance of race conditions.
 
 Returns the Bundle Protocol node number identifying this node, as
 declared when ION was initialized by I<ionadmin>.
+
+=item int setDeltaFromUTC(int newDelta)
+
+Sets the value of the UTC "delta" adjustment that ION will apply to
+the system clock time order to obtain the correct UTC time.
 
 =item time_t getCtime()
 
@@ -458,4 +507,4 @@ just as for the documented status message types.
 
 =head1 SEE ALSO
 
-ionadmin(1), rfxclock(1), bpstats(1), llcv(3), lyst(3), memmgr(3), platform(3), psm(3), sdr(3), zco(3), ltp(3), bp(3), cfdp(3), ams(3), bss(3)
+ionadmin(1), rfxclock(1), bpstats(1), llcv(3), lyst(3), memmgr(3), platform(3), psm(3), sdr(3), zco(3), ltp(3), bp(3), cfdp(3), ams(3), bss(3), irrrc(5)

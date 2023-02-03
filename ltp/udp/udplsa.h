@@ -28,6 +28,7 @@ typedef struct
 } ReceiverThreadParms;
 
 extern void			*udplsa_handle_datagrams(void *parm);
+extern void			*udplsa6_handle_datagrams(void *parm);
 
 #ifdef __cplusplus
 }

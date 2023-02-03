@@ -21,6 +21,7 @@ extern "C" {
 
 typedef struct
 {
+	uvast		srcNodeNbr;		/*	E.g., sponsor.	*/
 	uvast		nodeNbr;
 	time_t		effectiveTime;
 	Object		acknowledged;		/*	array of char	*/
@@ -87,6 +88,7 @@ typedef struct
 	Object		validClients;	/*	SDR list: node numbers	*/
 	Object		currentRecords;	/*	SDR list: TcaRecord	*/
 	Object		pendingRecords;	/*	SDR list: TcaRecord	*/
+	Object		archive;	/*	SDR list: TcaRecord	*/
 } TcaDB;
 
 typedef struct
@@ -104,6 +106,10 @@ extern void		tcaStop(int blocksGroupNbr);
 extern int		tcaAttach(int blocksGroupNbr);
 extern Object		getTcaDBObject(int blocksGroupNbr);
 extern TcaVdb		*getTcaVdb(int blocksGroupNbr);
+
+extern unsigned short	tcaFetchRecord(Object recordsList, uvast nodeNbr,
+				time_t effectiveTime, Object *recordElt,
+				Object *nextRecordElt);
 
 #ifdef __cplusplus
 }

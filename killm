@@ -60,6 +60,8 @@ KILLPROCESSLIST="acsadmin lt-acsadmin \
 	dgr2file lt-dgr2file \
 	dgrcli lt-dgrcli \
 	dgrclo lt-dgrclo \
+	dnacc lt-dnacc \
+	dnacp lt-dnacp \
 	dtka lt-dtka \
 	dtkaadmin lt-dtkaadmin \
 	dtn2admin lt-dtn2admin \
@@ -89,6 +91,8 @@ KILLPROCESSLIST="acsadmin lt-acsadmin \
 	ipnadminep lt-ipnadminep \
 	ipnd lt-ipnd \
 	ipnfw lt-ipnfw \
+	irfadmin lt-irfadmin \
+	irfd lt-irfd \
 	lgagent lt-lgagent \
 	lgsend lt-lgsend \
 	ltpadmin lt-ltpadmin \
@@ -129,13 +133,21 @@ KILLPROCESSLIST="acsadmin lt-acsadmin \
 	tcpbso lt-tcpbso \
 	tcpcli lt-tcpcli \
 	tcpclo lt-tcpclo \
+	tcpcli6 lt-tcpcli6 \
+	tcpclo6 lt-tcpclo6 \
 	udp2file lt-udp2file \
 	udpbsi lt-udpbsi \
 	udpbso lt-udpbso \
 	udpcli lt-udpcli \
 	udpclo lt-udpclo \
+	udpcli6 lt-udpcli6 \
+	udpclo6 lt-udpclo6 \
 	udplsi lt-udplsi \
 	udplso lt-udplso \
+	udplsi6 lt-udplsi6 \
+	udplso6 lt-udplso6 \
+	uartcli lt-uartcli \
+	uartclo lt-uartclo \
 	"
 
 if [ "$ION_OPEN_SOURCE" == "1" ];then

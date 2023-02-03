@@ -21,8 +21,8 @@
 #define _HAVE_AMP_AGENT_ADM_
 #ifdef _HAVE_AMP_AGENT_ADM_
 
-#include "shared/utils/nm_types.h"
-#include "shared/adm/adm.h"
+#include "nm_types.h"
+#include "adm.h"
 
 extern vec_idx_t g_amp_agent_idx[11];
 

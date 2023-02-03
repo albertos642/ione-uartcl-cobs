@@ -4,7 +4,7 @@ ionadmin - ION node administration interface
 
 =head1 SYNOPSIS
 
-B<ionadmin> [ I<commands_filename> | . | ! ]
+B<ionadmin> [ { I<commands_filename> | . | ! } [ I<vested_region_nbr> ] ]
 
 =head1 DESCRIPTION
 
@@ -21,6 +21,13 @@ the single command 'x' were passed to B<ionadmin> -- that is, the ION
 node's I<rfxclock> task is stopped.  If I<commands_filename> is an
 exclamation point (!), that effect is reversed: the ION node's I<rfxclock>
 task is restarted.
+
+If I<vested_region_nbr> is provided, then all commands pertaining to
+contact plan configuration are processed even when the applicable region
+number does not identify any region of which the node is a member.  This
+enables "pre-registration", i.e., it pre-places contact plan information 
+for the region in which the node is about to be (but has not yet been)
+registered.
 
 The format of commands for I<commands_filename> can be queried from B<ionadmin>
 by entering the command 'h' or '?' at the prompt.  The commands are documented

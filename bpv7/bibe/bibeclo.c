@@ -571,7 +571,7 @@ int	main(int argc, char *argv[])
 		/*	The encapsulating bundle inherits forwarding
 		 *	preferences from the encapsulated bundle,
 		 *	except the BIBE and CT requests themselves.
-		 *	Other ancillary data items are take from the
+		 *	Other ancillary data items are taken from the
 		 *	bcla as configured by bibeadmin.		*/
 
 		ctRequested = ancillaryData.flags & BP_CT_REQUESTED;

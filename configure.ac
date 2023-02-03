@@ -113,6 +113,19 @@ case $host_os in
 			AC_DEFINE([linux],[1],[Build 64-bit Linux specific platform code.])
 			AM_CFLAGS="$AM_CFLAGS -Dlinux -DSPACE_ORDER=3 -fno-strict-aliasing"
 			echo "Build 64-bit Linux specific platform code."
+		elif test $host_cpu = "aarch64" ; then
+			if test $(getconf LONG_BIT) = "32" ; then
+				AC_DEFINE([linux],[1],[Build 32-bit Linux aarch64 platform code.])
+				AM_CFLAGS="$AM_CFLAGS -Dlinux -DSPACE_ORDER=2 -fno-strict-aliasing"
+				echo "Build 32-bit Linux specific aarch64 code."
+			elif test $(getconf LONG_BIT) = "64" ; then
+				AC_DEFINE([linux],[1],[Build 64-bit Linux specific platform code.])
+				AM_CFLAGS="$AM_CFLAGS -Dlinux -DSPACE_ORDER=3 -fno-strict-aliasing"
+				echo "Build 64-bit Linux specific aarch64 code."
+			else
+				echo "Unknown LONG_BIT value for linux aarch64 build."
+				exit 1
+			fi
 		else
 			AC_DEFINE([linux],[1],[Build 32-bit Linux specific platform code.])
 			AM_CFLAGS="$AM_CFLAGS -Dlinux -fno-strict-aliasing"
@@ -483,6 +496,19 @@ AC_ARG_ENABLE(
         )
 AM_CONDITIONAL([BUILD_NM_REST], [test "x$BUILD_NM_REST" = "xtrue"])
 
+#
+# allow the user running configure to declare that the platform is musl
+#
+AC_ARG_ENABLE(
+    musl,
+    [AC_HELP_STRING([--enable-musl], [declare that the platform is musl])],
+    [AM_CFLAGS="$AM_CFLAGS -Dmusl"
+     musl=yes],
+    [])
+if test "x$musl" = "xyes" ; then
+	echo "Building for musl... yes"
+fi
+AM_CONDITIONAL([musl], [test "x$musl" = "xyes"])
 
 # Check for libraries.
 ORIGCFLAGS="$CFLAGS"

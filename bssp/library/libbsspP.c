@@ -802,7 +802,7 @@ int	bsspStart()
 	BsspVdb		*bsspvdb = _bsspvdb(NULL);
 	PsmAddress	elt;
 
-	CHKERR(sdr_begin_xn(sdr));	/*	Just to lock memory.	*/
+	CHKERR(sdr_begin_xn(sdr));
 
 	/*	Start the BSSP events clock if necessary.		*/
 
@@ -827,7 +827,11 @@ int	bsspStart()
 		startSeat((BsspVseat *) psp(bsspwm, sm_list_data(bsspwm, elt)));
 	}
 
-	sdr_exit_xn(sdr);		/* 	Unlock memory.		*/
+	if (sdr_end_xn(sdr) < 0)
+	{
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -844,7 +848,7 @@ void	bsspStop()		/*	Reverses bsspStart.		*/
 
 	/*	Tell all BSSP processes to stop.	*/
 
-	CHKVOID(sdr_begin_xn(sdr));	/*	Just to lock memory.	*/
+	CHKVOID(sdr_begin_xn(sdr));
 	for (i = 0, client = bsspvdb->clients; i < BSSP_MAX_NBR_OF_CLIENTS;
 			i++, client++)
 	{
@@ -873,7 +877,7 @@ void	bsspStop()		/*	Reverses bsspStart.		*/
 		sm_TaskKill(bsspvdb->clockPid, SIGTERM);
 	}
 
-	sdr_exit_xn(sdr);	/*	Unlock memory.			*/
+	oK(sdr_end_xn(sdr));
 
 	/*	Wait until all BSSP processes have stopped.		*/
 
@@ -901,7 +905,7 @@ void	bsspStop()		/*	Reverses bsspStart.		*/
 
 	/*	Now erase all the tasks and reset the semaphores.	*/
 
-	CHKVOID(sdr_begin_xn(sdr));	/*	Just to lock memory.	*/
+	CHKVOID(sdr_begin_xn(sdr));
 	bsspvdb->clockPid = ERROR;
 	for (i = 0, client = bsspvdb->clients; i < BSSP_MAX_NBR_OF_CLIENTS;
 			i++, client++)
@@ -924,7 +928,7 @@ void	bsspStop()		/*	Reverses bsspStart.		*/
 		vseat->rlBsiPid = ERROR;
 	}
 
-	sdr_exit_xn(sdr);	/*	Unlock memory.			*/
+	oK(sdr_end_xn(sdr));
 }
 
 int	bsspAttach()

@@ -19,17 +19,17 @@
 #include <math.h>
 
 #include "adm_bpsec_impl.h"
-#include "shared/primitives/report.h"
-#include "agent/rda.h"
-#include "shared/primitives/ctrl.h"
-#include "shared/primitives/table.h"
+#include "report.h"
+#include "rda.h"
+#include "ctrl.h"
+#include "table.h"
 
 #include "adm_bpsec.h"
 #include "profiles.h"
 /*   STOP CUSTOM INCLUDES HERE  */
 
 
-#include "shared/adm/adm.h"
+#include "adm.h"
 #include "adm_bpsec_impl.h"
 
 /*   START CUSTOM FUNCTIONS HERE */

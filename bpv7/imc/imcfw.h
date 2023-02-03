@@ -1,8 +1,13 @@
 /*
- 	imcfw.h:	definitions supporting the implementation
-			of Interplanetary Multicast.
+ 	imcfw.h:	definitions supporting elements of ION that
+			participate in Interplanetary Multicast.
 
 	Author: Scott Burleigh, JPL
+
+	This CGR-based multicast system is built on research
+	performed by Olivier de Jonckere as a visiting researcher
+	at the Jet Propulsion Laboratory, California Institute of
+	Technology.
 
 	Modification History:
 	Date      Who   What
@@ -20,18 +25,12 @@
 #define	IMCDEBUG	0
 #endif
 
+/*	Administrative record types	*/
+#define	BP_MULTICAST_BRIEFING	(5)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef struct
-{
-	uvast		groupNbr;
-	long		secUntilDelete;	/*	Default is -1.		*/
-	int		isMember;	/*	Boolean: local node	*/
-	Object		members;	/*	SDR list of node nbrs	*/
-	int		count[2];	/*	Passageway's counts	*/
-} ImcGroup;
 
 typedef struct
 {
@@ -48,15 +47,12 @@ extern int		imcInit();
 extern Object		getImcDbObject();
 extern ImcDB		*getImcConstants();
 
-extern void		imcFindGroup(uvast groupNbr, Object *addr,
-				Object *eltp);
-
 extern int		imcHandleBriefing(BpDelivery *dlv,
 				unsigned char *cursor,
 				unsigned int unparsedBytes);
 
-/*	"Dispatches" are bundles that are privately multicast to all
- *	(and only) members of the indicated region(s).
+/*	A "dispatch" is a bundle that is privately multicast to
+ *	all (and only) members of the indicated region.
  *
  *	"Petitions" are dispatches that convey information about
  *	multicast group membership.					*/
@@ -66,6 +62,13 @@ extern int		imcSendDispatch(char *destEid, uint32_t toRegion,
 
 extern int		imcSendPetition(ImcPetition *petition,
 				uint32_t toRegion);
+
+extern int		imcGroupMember(uvast groupNbr);
+
+/*	For inter-regional multicast, the original (intra-regional)
+ *	multicast of the bundle must be replicated in other regions.	*/
+
+extern int		imcReplicate(Bundle *bundle, Object bundleObj);
 
 #ifdef __cplusplus
 }

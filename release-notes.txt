@@ -1,3 +1,126 @@
+= Release Notes for IONe 1.0.0 =
+
+January 30, 2023
+
+%%%%%%%%%%%
+= GENERAL =
+%%%%%%%%%%%
+
+IONe (Interplanetary Overlay Network, experimental) is a source code
+distribution aimed at integrating experimental features into the NASA-
+supported ION software distribution, providing an experimental baseline
+for ION in which new capabilities can be rapidly explored without impact
+on deployment in space flight missions.  A general introduction to ION
+itself is provided below in the original Release Notes for ION 4.1.1.
+
+The intent of IONe is to support the growing non-NASA ION development
+community in delay-tolerant networking (DTN) research activities, including
+the prototyping of enhancements as discussed by the IETF DTN Working
+Group. It's hoped that consolidating into a single source tree as much
+non-NASA ION development activity as possible may help the broader ION
+development community sustain focus and avoid redundant invention.
+
+IONe is a wholly unfunded initiative relying entirely on the efforts of
+volunteers (many of whom are affiliated with the Pilot Projects Working
+Group of IPNSIG, the Interplanetary Chapter of the Internet Society).  As
+such, users of IONe should not expect the level of release support that
+NASA is able to provide for ION baseline users:
+
+	New versions of the IONe baseline are tested before release, but
+	that testing is far less extensive than the regression testing
+	performed for ION baseline releases.
+
+	While Bundle Protocol version 7 is well supported, there is NO
+	ACTIVE SUPPORT FOR BPv6.
+
+	IONe is developed primarily on Linux platforms and has been tested
+	on some exotic variants of Linux, but there is as yet no specific
+	support for MacOS, Solaris, FreeBSD, Windows, VxWorks, RTEMS, or
+	Android.  If you are interested in using IONe on one of these
+	platforms (or some other that we haven't thought of), you are
+	most welcome to try compiling and, as needed, investigate any
+	porting adaptations that are needed; we'll try to help, over the
+	mailing list.
+
+	Documentation will frequently lag behind the current state of the
+	software, and obsolete elements may not be cleaned out as promptly
+	as one might wish.
+
+In short, USE OF IONe IS STRICTLY AT YOUR OWN RISK!  That said, feedback
+(especially including well-documented bug reports) is most welcome; please
+join us on the IONe mailing list (ione-discuss@lists.sourceforge.net).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+= NOTES ON RELEASE 1.0.0 =
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This initial release of IONe adds the following features to the ION 4.1.1
+baseline distribution:
+
+  *	Modifications that enable BPv7 and LTP to operate over IPv6.
+
+  *	LTP enhancements for stopping and restarting individual spans and seats,
+	to accommodate run-time changes in the IP addresses of the machines
+	on which LTP engines are running.
+
+  *	Tweaks to enable ION to run on musl-based platforms for OpenWRT.
+
+  *	A general UART convergence-layer adapter.
+
+  *	A prototype Arduino "sketch" for use with COTS LoRa modules via the
+	UART/serial convergence-layer adapter.
+
+  *	An initial implementation of inter-regional forwarding (IRF).  (Note
+	that many upgrades to this implementation are in the pipeline, so
+	nobody should make profound commitments to this code; at this point
+	it is mainly for familiarization with the concepts.)
+
+  *	An implementation of DTN Node Auto-Configuration (DNAC), which was
+	developed to simplify development of the IRF test case.  DNAC can be
+	thought of as a very rough DTN analog to DHCP.
+
+IONe 1.0.0 has been exercised using the following regression test scripts
+(from the "tests" folder within the root folder of the IONe distribution):
+
+  *	asymmetric-range
+  *	bench-stcp
+  *	bibect
+  *	cfdpv1-4node-ltp
+  *	cgr-test
+  *	cpsync
+  *	ipnd
+  *	irf
+  *	issue-325-329-fragmentation
+  *	issue-364-dtpc
+  *	limbo
+  *	ltp-green
+  *	ltp-purge
+  *	ltp-retransmission
+  *	priorities
+  *	stewardship
+
+All of these tests have been found to pass on the following platforms:
+  * 	64-bit Fedora
+  *	32-bit Fedora
+  *	Ubuntu 20.04.1, 20.04.3, 20.04.5, 22.04.1
+  *	Debian 11 on amd-64, 32-bit ARM, 64-bit ARM, and MIPS24K
+  *	Debian 12 on amd-64
+  *	Debian 11 VM on Chromebook, 64-bit ARM
+  *	Raspberry PI (RaspiOS, Raspbian)
+
+The code also builds, but has not yet been successfully tested, on cross-
+compiled OpenWRT.  Special attention has been paid to porting ION to OpenWRT;
+it is hoped that the availability of a stable OpenWRT-conformant BP
+implementation might simplify the integration of DTN capabilities into
+commercial routing hardware.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+For reference, here are the Release Notes for the NASA ION baseline source
+tree from which the IONe source tree is derived.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 = Release Notes for ION 4.1.1 =
 
 November 19, 2021

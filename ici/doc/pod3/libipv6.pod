@@ -1,0 +1,51 @@
+=head1 NAME
+
+libipv6 - C IPv6 library definitions and functions
+
+=head1 SYNOPSIS
+
+    #include "platform.h"
+    #include <netinet/in.h>
+    #include <sys/types.h>
+    #include <sys/socket.h>
+    #include <netdb.h>
+
+    [see description for available functions]
+
+=head1 DESCRIPTION
+
+I<libipv6> is a library of functions that enables IPv6 operation in all
+Convergence Layer Adapters which support IP.  Also included are CLA specific
+IPv6 related functions.
+
+=head2 LIBIPV6 GENERIC FUNCTIONS
+
+=over 5
+
+=item int     parseSocketSpecSix(char *socketSpec, struct sockaddr_in6 *ip6Address)
+
+This function parses I<socketSpec> to extract IPv6 address and port number
+from the string.  It then populates I<*ip6Address> with the data necessary
+to bind to a socket and passes that data back to the calling daemon.
+
+I<socketSpec> is expected to be of the form "{ @ | hostname }[!<portnbr>]",
+where @ signifies "the host name of the local machine".  If the IPv6 address
+can be determined, it is set to network byte order and written into the
+I<sin6_addr> member of I<ip6Address>; otherwise I<sin6_addr> is set to
+in6addr_any.  If port number is supplied and is in the range 1024 to 65535,
+it is similarly set to network byte order and written into I<sin6_port>;
+otherwise 0 is written into I<sin6_port>.
+
+=item int     itcp_connect6(char *socketSpec, unsigned short defaultPort, int *sock)
+
+This function calls I<parseSocketSpecSix> to construct an IPv6 socket name (a
+I<struct sockaddr_in6> structure), creates an IPv6 TCP socket, and connects
+that socket to the remote socket identified by that socket name.  This is used,
+for example, to create connections used by I<tcpclo6> convergence-layer output
+daemons.
+
+=back
+
+=head1 SEE ALSO
+
+udpcli6(1), udpclo6(1), udplsi6(1), udplso6(1), tcpcli6(1), tcpclo6(1)

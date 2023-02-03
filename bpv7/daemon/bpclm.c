@@ -41,6 +41,7 @@ static void	shutDown(int signum)
 
 static size_t	maxPayloadLengthKnown(VPlan *vplan, size_t *maxPayloadLength)
 {
+	time_t	fromTime;
 	size_t	secRemaining;
 	size_t	xmitRate;
 
@@ -53,8 +54,8 @@ static size_t	maxPayloadLengthKnown(VPlan *vplan, size_t *maxPayloadLength)
 		 *	if the contact plan contains contacts for
 		 *	transmission to this node.			*/
 
-		rfx_contact_state(vplan->neighborNodeNbr, &secRemaining,
-				&xmitRate);
+		rfx_contact_state(vplan->neighborNodeNbr, &fromTime,
+				&secRemaining, &xmitRate);
 		if (secRemaining == 0)	/*	No current contact.	*/
 		{
 			if (xmitRate == 0)

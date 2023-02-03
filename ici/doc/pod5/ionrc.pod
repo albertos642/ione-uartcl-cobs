@@ -63,7 +63,7 @@ node does not exist and most I<ionadmin> commands will fail.
 The command configures the local node to be identified by I<node_number>, a
 CBHE node number which uniquely identifies the node in the delay-tolerant
 network.  It also configures ION's data space (SDR) and shared working-memory
-region.  For this purpose it uses a set of default settings if no argument
+partition.  For this purpose it uses a set of default settings if no argument
 follows I<node_number> or if the argument following I<node_number> is '';
 otherwise it uses the configuration settings found in a configuration
 file.  If configuration file name '.' is provided, then the configuration
@@ -77,7 +77,7 @@ For example:
 
 would initialize ION on the local computer, assigning the local ION node the
 node number 19 and using default values to configure the data space and
-shared working-memory region.
+shared working-memory partition.
 
 =item B<@> I<time>
 
@@ -194,10 +194,20 @@ This command lists all contacts in the contact plan for the selected region.
 
 =item B<b contact>
 
-The B<brief contacts> command.  This command writes a file of commands
-that will recreate the current list of contacts, for the selected region,
-in the node's ION database.  The name of the file will be
-"contacts.I<region_number>.ionrc".
+The B<brief contacts> command.  This command writes a file of commands that
+will recreate the current list of contacts, for the selected region, in the
+ION database; the name of the file will be "contacts.I<region_number>.ionrc".
+This file can be used to initialize the contact plan for a node that is newly
+inserted into that region.
+
+=item B<b passageway>
+
+The B<brief passageways> command.  This command writes a file of commands
+that will create registration IonContact objects in the node's ION database
+identifying nodes that are passageways from the indicated region to other
+regions.  The file's name will be "passageways.I<region_number>.ionrc".  This
+file can be used to initialize the "rolodex" list for a node that is newly
+inserted into that region.
 
 =item B<a range> I<start_time> I<stop_time> I<one_node> I<the_other_node> I<distance>
 
@@ -256,8 +266,9 @@ This command lists all predicted periods of constant distance.
 =item B<b range>
 
 The B<brief ranges> command.  This command writes a file of commands that
-will recreate the current list of ranges in the node's ION database.  The
-file's name will be "ranges.ionrc".
+will recreate the current list of ranges in the node's ION database; the
+file's name will be "ranges.ionrc".  This file can be used to initialize
+the contact plan for a new node.
 
 =item B<m utcdelta> I<local_time_sec_after_UTC>
 
@@ -375,32 +386,6 @@ that are occupied by inbound and outbound zero-copy objects), the total
 zero-copy-object space occupancy ceiling, and the maximum level
 of occupancy predicted by the most recent I<ionadmin> congestion forecast
 computation.
-
-=item B<m home> I<home_region_number>
-
-This management command asserts that the node's home region is the region
-that is identified by I<home_region_number>.  If no home region is asserted,
-home region number defaults to zero, the "root region".
-
-=item B<m outer> I<outer_region_number>
-
-This management command asserts that the node's outer region is the region
-that is identified by I<outer_region_number>.  Outer region number defaults
-to -1, "no region", indicating that the node is a "terminal node".  When a
-node's outer region number is not -1, the node is able to function as a
-"passageway" by which bundles are conveyed between nodes in the home
-region and nodes in the outer region.
-
-=item B<m passageway> I<node_number> I<home_region_number> I<outer_region_number>
-
-This management command declares the home and outer region numbers for the
-indicated passageway node.  If the outer region number is -1, then the
-node ceases to be a passageway; if the home region number is -1, then
-the passageway is simply removed.  If neither region number is -1 but
-neither region is one of the regions of which the local node is a member,
-the command has no effect.  Otherwise, the home and outer region numbers
-of the indicated node are recorded.  (This information is needed in order
-to accomplish inter-region routing.)
 
 =item B<r> 'I<command_text>'
 

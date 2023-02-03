@@ -2876,12 +2876,35 @@ int	_isprintf(char *buffer, int bufSize, char *format, ...)
 				fmt[fmtLen] = *cursor;
 				fmtLen++;
 				cursor++;
-				if ((*cursor) == 'l')	/*	Vast.	*/
+				if (LONG_LONG_OKAY)
 				{
-					isLongLong = 1;
-					fmt[fmtLen] = *cursor;
-					fmtLen++;
-					cursor++;
+					if (SPACE_ORDER == 3)
+					{
+						/*	Vast.		*/
+
+						isLongLong = 1;
+
+						/*	Might be "ll".	*/
+
+						if ((*cursor) == 'l')
+						{
+							fmt[fmtLen] = *cursor;
+							fmtLen++;
+							cursor++;
+						}
+					}
+					else	/*	Check for "ll".	*/
+					{
+						if ((*cursor) == 'l')
+						{
+							/*	Vast.	*/
+
+							isLongLong = 1;
+							fmt[fmtLen] = *cursor;
+							fmtLen++;
+							cursor++;
+						}
+					}
 				}
 			}
 			else
@@ -2891,7 +2914,7 @@ int	_isprintf(char *buffer, int bufSize, char *format, ...)
 				&& (*(cursor + 2)) == '4')
 				{
 #ifdef mingw
-					isLongLong = 1;
+					isLongLong = 1;	/*	Vast.	*/
 					fmt[fmtLen] = *cursor;
 					fmtLen++;
 					cursor++;

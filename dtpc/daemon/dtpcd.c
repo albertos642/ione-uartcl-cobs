@@ -261,7 +261,7 @@ terminating.");
 
 		sm_TaskYield();
 	}
-	
+
 	bp_interrupt(parms.rxSap);
 	pthread_join(rxThread, NULL);
 	bp_close(txSap);

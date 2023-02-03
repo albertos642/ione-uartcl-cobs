@@ -1,7 +1,6 @@
 /*
- *	libimcfw.c:	functions enabling the implementation of
- *			a multicast forwarder for the IMC endpoint
- *			ID scheme.
+ *	libimcfw.c:	functions supporting elements of ION that
+ *			participate in Interplanetary Multicast.
  *
  *	Copyright (c) 2012, California Institute of Technology.
  *	ALL RIGHTS RESERVED.  U.S. Government Sponsorship
@@ -10,7 +9,7 @@
  *	Author: Scott Burleigh, JPL
  */
 
-#include "imcfw.h"
+#include "imcfwP.h"
 
 #define	IMC_DBNAME	"imcRoute"
 
@@ -123,110 +122,13 @@ ImcDB	*getImcConstants()
 	return _imcConstants();
 }
 
-/*	*	*	Multicast group mgt functions	*	*	*/
-
-static Object	createGroup(uvast groupNbr, Object nextGroup)
-{
-	Sdr		sdr = getIonsdr();
-	ImcDB		*db = _imcConstants();
-	ImcGroup	group;
-	Object		addr;
-	Object		elt = 0;	/*	Default.		*/
-
-#if IMCDEBUG
-printf("Creating group (" UVAST_FIELDSPEC ").\n", groupNbr);
-fflush(stdout);
-#endif
-	group.groupNbr = groupNbr;
-	group.secUntilDelete = -1;
-	group.isMember = 0;
-	group.members = sdr_list_create(sdr);
-	group.count[0] = 0;
-	group.count[1] = 0;
-	addr = sdr_malloc(sdr, sizeof(ImcGroup));
-	if (addr)
-	{
-		sdr_write(sdr, addr, (char *) &group, sizeof(ImcGroup));
-		if (nextGroup)
-		{
-			elt = sdr_list_insert_before(sdr, nextGroup, addr);
-		}
-		else
-		{
-			elt = sdr_list_insert_last(sdr, db->groups, addr);
-		}
-	}
-
-	return elt;
-}
-
-static Object	locateGroup(uvast groupNbr, Object *nextGroup)
-{
-	Sdr	sdr = getIonsdr();
-	Object	elt;
-		OBJ_POINTER(ImcGroup, group);
-
-	if (nextGroup)
-	{
-		*nextGroup = 0;	/*	Default.		*/
-	}
-
-	for (elt = sdr_list_first(sdr, (_imcConstants())->groups); elt;
-			elt = sdr_list_next(sdr, elt))
-	{
-		GET_OBJ_POINTER(sdr, ImcGroup, group, sdr_list_data(sdr, elt));
-		if (group->groupNbr < groupNbr)
-		{
-			continue;
-		}
-
-		if (group->groupNbr > groupNbr)
-		{
-			if (nextGroup)
-			{
-				*nextGroup = elt;
-			}
-
-			break;		/*	Same as end of list.	*/
-		}
-
-		return elt;		/*	Found group.		*/
-	}
-
-	return 0;
-}
-
-void	imcFindGroup(uvast groupNbr, Object *addr, Object *eltp)
-{
-	Sdr	sdr = getIonsdr();
-	Object	elt;
-	Object	nextGroupElt;
-
-	CHKVOID(addr);
-	CHKVOID(eltp);
-	CHKVOID(ionLocked());
-	*eltp = 0;			/*	Default.		*/
-	elt = locateGroup(groupNbr, &nextGroupElt);
-	if (elt == 0)			/*	Not found.		*/
-	{
-		elt = createGroup(groupNbr, nextGroupElt);
-	       	if (elt == 0)
-		{
-			putErrmsg("Can't create multicast group.", NULL);
-			return;
-		}
-	}
-
-	*addr = sdr_list_data(sdr, elt);
-	*eltp = elt;
-}
-
 /*	*	Public IMC library functions.	*	*	*	*/
 
 int	imcHandleBriefing(BpDelivery *dlv, unsigned char *cursor,
 		unsigned int unparsedBytes)
 {
 	Sdr		sdr = getIonsdr();
+	uvast		ownNodeNbr = getOwnNodeNbr();
 	MetaEid		metaEid;
 	VScheme		*vscheme;
 	PsmAddress	vschemeElt;
@@ -245,7 +147,7 @@ int	imcHandleBriefing(BpDelivery *dlv, unsigned char *cursor,
 	ImcPetition	petition;
 
 #if IMCDEBUG
-puts("Handling briefing.");
+writeMemo("Handling briefing.");
 #endif
 	if (imcInit() < 0)
 	{
@@ -315,8 +217,8 @@ puts("Handling briefing.");
 
 		/*	Must add new member of group at this point.	*/
 #if IMCDEBUG
-printf("Adding node " UVAST_FIELDSPEC " to group " UVAST_FIELDSPEC ".\n", metaEid.elementNbr, groupNbr);
-fflush(stdout);
+writeMemoNote("Adding node", itoa(metaEid.elementNbr));
+writeMemoNote("...to group", itoa(groupNbr));
 #endif
 		if (elt)
 		{
@@ -341,7 +243,7 @@ fflush(stdout);
 		 *	the immediate encompassing region.		*/
 
 			sourceRegion = ionRegionOf(metaEid.elementNbr,
-					getOwnNodeNbr(), &sourceRegionNbr);
+					ownNodeNbr, &sourceRegionNbr);
 			if (sourceRegion < 0)
 			{
 				putErrmsg("IMC system error.", NULL);
@@ -389,7 +291,7 @@ int	imcSendDispatch(char *destEid, uint32_t toRegion, unsigned char *buffer,
 	PsmAddress	vschemeElt;
 	Object		sourceData;
 	Object		payloadZco;
-	unsigned int	ttl = 86400;	/*	Seconds; 1 day.		*/
+	unsigned int	ttl = 604800;	/*	Seconds; 1 week.	*/
 	BpAncillaryData	ancillary = { 0, 0, 255 };
 
 	ancillary.imcRegionNbr = toRegion;
@@ -434,6 +336,7 @@ int	imcSendDispatch(char *destEid, uint32_t toRegion, unsigned char *buffer,
 	 *	engine doesn't know about yet; the LTP engine
 	 *	will thereupon cancel the import session,
 	 *	causing LTP session failure at the sender.)
+	 *
 	 *	Any such convergence-layer transmission failure
 	 *	will cause the sending CLA to call the BPA's
 	 *	handleXmitFailure function, causing the bundle
@@ -445,7 +348,7 @@ int	imcSendDispatch(char *destEid, uint32_t toRegion, unsigned char *buffer,
 	 *	need not be removed.					*/
 
 #if IMCDEBUG
-puts("Transmitting dispatch.");
+writeMemo("Transmitting dispatch.");
 #endif
 
 	/*	Note that ttl must be converted from seconds to
@@ -462,8 +365,7 @@ puts("Transmitting dispatch.");
 	case 0:
 		putErrmsg("IMC dispatch not sent.", NULL);
 
-		/*	Intentional fall-through to next case.	*/
-
+			/*	Intentional fall-through to next case.	*/
 	default:
 		return 0;
 	}
@@ -478,7 +380,7 @@ int	imcSendPetition(ImcPetition *petition, uint32_t toRegion)
 	int		result = 0;
 
 #if IMCDEBUG
-printf("Sending petition for group " UVAST_FIELDSPEC ".\n", petition->groupNbr);
+writeMemoNote("Sending petition for group", itoa(petition->groupNbr));
 #endif
 	if (imcInit() < 0)
 	{
@@ -514,4 +416,199 @@ printf("Sending petition for group " UVAST_FIELDSPEC ".\n", petition->groupNbr);
 	}
 
 	return result;
+}
+
+int	imcGroupMember(uvast groupNbr)
+{
+	Sdr		sdr = getIonsdr();
+	Object		groupAddr;
+	Object		groupElt;
+	ImcGroup	group;
+
+	if (groupNbr == 0)
+	{
+		/*	Group zero is IMC administration; bundles
+		 *	sent to this "group" (i.e., an entire
+		 *	region) are always delivered to every
+		 *	recipient.					*/
+
+		return 1;
+	}
+
+	/*	But a bundle sent to any other multicast group is
+	 *	delivered only if the recipient is is a member of
+	 *	the group by declaration (registering in the
+	 *	endpoint); an IRR passageway between regions might
+	 *	only be a group member "ex officio" in its capacity
+	 *	as a passageway.					*/
+
+	imcFindGroup(groupNbr, &groupAddr, &groupElt);
+	if (groupElt == 0)
+	{
+		return 0;	/*	No such group.			*/
+	}
+
+	sdr_read(sdr, (char *) &group, groupAddr, sizeof(ImcGroup));
+	return group.isMember;
+}
+
+int	imcReplicate(Bundle *bundle, Object bundleObj)
+{
+	Sdr		sdr = getIonsdr();
+	uvast		ownNodeNbr = getOwnNodeNbr();
+	IonDB		iondb;
+	uvast		groupNbr;
+	int		acqRegionIdx;
+	uint32_t	acqRegionNbr;
+	int		fwdRegionIdx;
+	uint32_t	fwdRegionNbr;
+	Object		groupAddr;
+	Object		groupElt;
+	ImcGroup	group;
+	Lyst		members;
+	Object		elt;
+	uvast		nodeNbr;
+	RegionMember	member;
+	Object		memberElt;
+	Bundle		newBundle;
+	Object		newBundleObj;
+	LystElt		destinationElt;
+
+	sdr_read(sdr, (char *) &iondb, getIonDbObject(), sizeof(IonDB));
+	if (iondb.regions[1].regionNbr == 0)
+	{
+		/*	This node is not a passageway.  No need to
+		 *	replicate the multicast.			*/
+
+		return 0;
+	}
+
+	/*	This node is a passageway that received a bundle
+	 *	via multicast within one of the regions of which
+	 *	it is a member.  We need to re-initiate that
+	 *	intra-regional multicast within the passageway's
+	 *	other region.						*/
+
+	acqRegionIdx = ionRegionOf(bundle->clDossier.senderNodeNbr, ownNodeNbr,
+			&acqRegionNbr);
+	fwdRegionIdx = 1 - acqRegionIdx;
+	fwdRegionNbr = iondb.regions[fwdRegionIdx].regionNbr;
+#if IMCDEBUG
+writeMemoNote("In imcReplicate, multicasting in region", itoa(fwdRegionNbr));
+#endif
+
+	/*	Have now identified the region within which we
+	 *	want to re-multicast this bundle.			*/
+
+	groupNbr = bundle->destination.ssp.imc.groupNbr;
+	imcFindGroup(groupNbr, &groupAddr, &groupElt);
+	if (groupElt == 0)
+	{
+		putErrmsg("Can't find multicast group.", itoa(groupNbr));
+		return 0;
+	}
+
+	sdr_read(sdr, (char *) &group, groupAddr, sizeof(ImcGroup));
+	if (sdr_list_length(sdr, group.members) == 0)
+	{
+#if IMCDEBUG
+writeMemoNote("In imcReplicate, group has no members", itoa(groupNbr));
+#endif
+		return 0;
+	}
+
+	/*	Now we need to identify all nodes that are members
+	 *	of this multicast group AND reside in that region.	*/
+
+	members = lyst_create_using(getIonMemoryMgr());
+	if (members == NULL)
+	{
+		putErrmsg("Can't create lyst of members.", NULL);
+		return -1;
+	}
+
+	for (elt = sdr_list_first(sdr, group.members); elt;
+			elt = sdr_list_next(sdr, elt))
+	{
+		nodeNbr = (uvast) sdr_list_data(sdr, elt);
+		if (nodeNbr == ownNodeNbr)
+		{
+			continue;
+		}
+
+		if (findLocalNode(nodeNbr, &member, &memberElt) == 0)
+		{
+#if IMCDEBUG
+writeMemoNote("In imcReplicate, group member not in rolodex", itoa(nodeNbr));
+#endif
+			continue;
+		}
+
+		if (member.homeRegionNbr != fwdRegionNbr
+		&& member.outerRegionNbr != fwdRegionNbr)
+		{
+			continue;
+		}
+
+		/*	Found one.					*/
+
+		if (lyst_insert_last(members, (void *) (uintptr_t)nodeNbr) == NULL)
+		{
+			lyst_destroy(members);
+			putErrmsg("Can't insert member into lyst.",
+					itoa(nodeNbr));
+			return -1;
+		}
+	}
+
+#if IMCDEBUG
+writeMemoNote("Number of group members in region", itoa(lyst_length(members)));
+#endif
+	if (lyst_length(members) == 0)
+	{
+		lyst_destroy(members);
+		return 0;
+	}
+
+	/*	We need to multicast to these group members.  To
+	 *	do this, we load all group members into a clone
+	 *	of the bundle and then pass the clone bundle to
+	 *	imcForwardBundle just as if we were originating
+	 *	the multicast.						*/
+
+	if (bpClone(bundle, &newBundle, &newBundleObj, 0, 0) < 0)
+	{
+		putErrmsg("Failed on clone.", NULL);
+		lyst_destroy(members);
+		return -1;
+	}
+	
+	/*	Erase clone's original destinations list.		*/
+	
+	while ((elt = sdr_list_first(sdr, newBundle.destinations)))
+	{
+		sdr_list_delete(sdr, elt, NULL, NULL);
+	}
+
+	/*	Now insert all identified group members into the
+	 *	clone's list of destinations.				*/
+
+	for (destinationElt = lyst_first(members); destinationElt;
+			destinationElt = lyst_next(destinationElt))
+	{
+		nodeNbr = (uvast) (uintptr_t)lyst_data(destinationElt);
+		if (sdr_list_insert_last(sdr, newBundle.destinations, nodeNbr)
+				== 0)
+		{
+			putErrmsg("Can't insert new destination.",
+					itoa(nodeNbr));
+			lyst_destroy(members);
+			return -1;
+		}
+	}
+
+	/*	Finally, multicast the clone.				*/
+
+	lyst_destroy(members);
+	return imcForwardBundle(&newBundle, newBundleObj);
 }
