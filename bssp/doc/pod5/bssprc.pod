@@ -51,7 +51,14 @@ BSSP data interchange exists between the local BSSP engine and the indicated
 
 The I<max_block_size> is expressed as a number of bytes of data.
 I<max_block_size> is used to configure transmission buffer sizes; as such, it
-limits client data item size.
+limits client data item size. When exceeded, it causes bssp_send() to fail and
+causes bsspclo to shut down. To restart bsspclo without rebooting ION
+immediately, say, due to on-going data transfer over other outductss, one
+can try to first use the bsspadmin 'x' command to stop bssp, then use the
+bpadmin 'x' command to stop bp, then run ionrestart to repair any issue in
+the non-volatile database, then use the bpadmin and bsspadmin 's' commands
+to relaunch bundle protocol and its use of bssp.  This procedure could
+temporarily enable resumption of operation until it is safe to reboot ION.
 
 I<max_nbr_of__sessions> constitutes, in effect, the local BSSP engine's
 retransmission "window" for this span.  The retransmission windows of the
@@ -88,11 +95,11 @@ bundles in each session's block, to avoid having to wait for the restart
 of transmission on this span before those bundles can be successfully
 transmitted.
 
-=item B<a seat> 'I<BE-BSO_command>' 'I<RL-BSO_command>'
+=item B<a seat> 'I<BE-BSI_command>' 'I<RL-BSI_command>'
 
 The B<add seat> command.  This command declares that the local BSSP engine
 can receive BSSP PDUs via the link service input daemons that begin
-running when 'I<BE-BSO_command>' and 'I<RL-BSO_command>' are executed.
+running when 'I<BE-BSI_command>' and 'I<RL-BSI_command>' are executed.
 
 =item B<c span> I<peer_engine_nbr> I<max_nbr_of_sessions> I<max_block_size> 'I<BE-BSO_command>' 'I<RL-BSO_command> [I<queuing_latency>]
 
@@ -105,17 +112,17 @@ The B<delete span> command.  This command deletes the span identified
 by I<peer_engine_nbr>.  The command will fail if any outbound blocks
 for this span are pending transmission.
 
-=item B<d seat> 'I<BE-BSO_command>' 'I<RL-BSO_command>'
+=item B<d seat> 'I<BE-BSI_command>' 'I<RL-BSI_command>'
 
 The B<delete span> command.  This command deletes the seat identified
-by 'I<BE-BSO_command>' and 'I<RL-BSO_command>'.
+by 'I<BE-BSI_command>' and 'I<RL-BSI_command>'.
 
 =item B<i span> I<peer_engine_nbr>
 
 This command will print information (all configuration parameters)
 about the span identified by I<peer_engine_nbr>.
 
-=item B<i seat> 'I<BE-BSO_command>' 'I<RL-BSO_command>'
+=item B<i seat> 'I<BE-BSI_command>' 'I<RL-BSI_command>'
 
 This command will print all information (i.e., process ID numbers)
 about the seat identified by 'I<BE-BSO_command>' and 'I<RL-BSO_command>'.
@@ -136,7 +143,7 @@ BSSP engine, and it starts the reliable and best-efforts link service input
 tasks for the local engine.  'I<BE-BSI_command>' and 'I<RL-BSI_command>'
 are deprecated but are supported for backward compatibility; if provided,
 the effect is the same as entering the command 
-"a seat 'I<BE-BSO_command>' 'I<RL-BSO_command>'" prior to starting all
+"a seat 'I<BE-BSI_command>' 'I<RL-BSI_command>'" prior to starting all
 daemon tasks.
 
 =item B<m ownqtime> I<own_queuing_latency>
@@ -158,28 +165,28 @@ The B<BSSP watch> command.  This command enables and disables production of
 a continuous stream of user-selected BSSP activity indication characters.  A
 watch parameter of "1" selects all BSSP activity indication characters; "0"
 de-selects all BSSP activity indication characters; any other I<activity_spec>
-such as "df=" selects all activity indication characters in the string,
+such as "DF-" selects the activity indication characters in the string,
 de-selecting all others.  BSSP will print each selected activity indication
 character to B<stdout> every time a processing event of the associated type
 occurs:
 
-B<d>	bssp send completed
+B<D>	bssp send completed
 
-B<e>	bssp block constructed for issuance
+B<E>	bssp block constructed for issuance
 
-B<f>	bssp block issued
+B<F>	bssp block issued
 
-B<g>	bssp block popped from best-efforts transmission queue
+B<G>	bssp block popped from best-efforts transmission queue
 
-B<h>	positive ACK received for bssp block, session ended
+B<H>	positive ACK received for bssp block, session ended
 
-B<s>	bssp block received
+B<S>	bssp block received
 
-B<t>	bssp block popped from reliable transmission queue
+B<T>	bssp block popped from reliable transmission queue
 
-B<=>	unacknowledged best-efforts block requeued for reliable transmission
+B<->	unacknowledged best-efforts block requeued for reliable transmission
 
-B<{>	session canceled locally by sender
+B<*>	session canceled locally by sender
 
 =item B<h>
 

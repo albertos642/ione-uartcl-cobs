@@ -7,6 +7,7 @@
 	Copyright (c) 2015, California Institute of Technology.
 	ALL RIGHTS RESERVED.  U.S. Government Sponsorship
 	acknowledged.
+	
 									*/
 #include "bpP.h"
 #include "llcv.h"
@@ -18,7 +19,11 @@
 #endif
 
 #ifndef MAX_RESCAN_INTERVAL
-#define MAX_RESCAN_INTERVAL	(20)
+#if defined (TCPCL_LOW_CYCLE)
+#define MAX_RESCAN_INTERVAL	(240)
+#else
+   #define MAX_RESCAN_INTERVAL (20)
+#endif
 #endif
 
 #ifndef KEEPALIVE_INTERVAL
@@ -2688,7 +2693,11 @@ static void	*handleEvents(void *parm)
 			}
 
 			secUntilRescan = rescanInterval;
+#if defined (TCPCL_LOW_CYCLE)
+			rescanInterval <<= 3;
+#else
 			rescanInterval <<= 1;
+#endif
 			if (rescanInterval > MAX_RESCAN_INTERVAL)
 			{
 				rescanInterval = MAX_RESCAN_INTERVAL;

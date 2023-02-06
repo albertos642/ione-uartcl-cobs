@@ -8,7 +8,7 @@
 
 
 AC_PREREQ(2.69)
-AC_INIT(ion, open source 4.1.1, ion-dtn-support@lists.sourceforge.net)
+AC_INIT(ion, open source 4.1.2, ion-dtn-support@lists.sourceforge.net)
 IS_NASA_B=0
 
 #  Josh Schendel removed the -Werror on 05/15/2012 per issue #355 to deal with
@@ -98,6 +98,10 @@ case $host_os in
 		if test $host_cpu = "x86_64" ; then
 			AM_CFLAGS="$AM_CFLAGS -Dunix -Ddarwin -DSPACE_ORDER=3 -m64 "
 			echo "Build 64-bit Darwin specific platform code."
+		elif test $host_cpu = "aarch64" ; then
+                        AM_CFLAGS="$AM_CFLAGS -Dunix -Ddarwin -DSPACE_ORDER=3 -m64"
+                        echo "Build 64-bit ARM Darwin specific platform code."
+
 		elif test $host_cpu = "arm" ; then
 			AM_CFLAGS="$AM_CFLAGS -Dunix -Ddarwin -DSPACE_ORDER=3 -m64 "
 			echo "Build 64-bit ARM Darwin specific platform code."
@@ -226,7 +230,7 @@ AM_CONDITIONAL(ENABLE_BPACS, test "x$ENABLE_BPACS" = "xyes")
 AC_ARG_ENABLE(
     bpv6,
     [AC_HELP_STRING([--enable-bpv6], [force build of bpv6])],
-    [VER="4.1.1"
+    [VER="4.1.2"
      VER="-DVNAME=ION-OPEN-SOURCE-$VER"
      AM_CFLAGS="$AM_CFLAGS $VER -DBUILD_BPv6"
      BUILD_BPv6=true
@@ -238,7 +242,7 @@ AC_ARG_ENABLE(
 		no)  ENABLE_BPACS=no;;
      esac
      echo "Building ION with BP version 6"],
-    [VER="4.1.1"
+    [VER="4.1.2"
      VER="-DVNAME=ION-OPEN-SOURCE-$VER"
      AM_CFLAGS="$AM_CFLAGS $VER -DBUILD_BPv7"
      BUILD_BPv7=true
@@ -509,6 +513,21 @@ if test "x$musl" = "xyes" ; then
 	echo "Building for musl... yes"
 fi
 AM_CONDITIONAL([musl], [test "x$musl" = "xyes"])
+
+#
+# allow the user running configure to choose the TCPCL_LOW_CYCLE option
+#
+AC_ARG_ENABLE(
+	tcpcl-low-cycle,
+	[AC_HELP_STRING([--enable-tcpcl-low-cycle], [enable TCPCL_LOW_CYCLE option])],
+	[AM_CFLAGS="$AM_CFLAGS -DTCPCL_LOW_CYCLE"
+	 TCPCL_LOW_CYCLE=yes],
+	[]
+)
+if test "x$TCPCL_LOW_CYCLE" = "xyes" ; then
+	echo "Enabling TCPCL_LOW_CYCLE... yes"
+fi
+AM_CONDITIONAL([TCPCL_LOW_CYCLE], [test "x$TCPCL_LOW_CYCLE" = "xyes"])
 
 # Check for libraries.
 ORIGCFLAGS="$CFLAGS"

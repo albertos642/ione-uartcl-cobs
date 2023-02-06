@@ -124,13 +124,28 @@ int	bssp_send(uvast destinationEngineId, unsigned int clientSvcId,
 			span.currentExportSessionObj, inOrder);
 	switch (blockIssued)
 	{
-	case -1:		/*	System error.		*/
+	case -1:		/*	System error.			*/
 		putErrmsg("Can't issue block.", NULL);
 		sdr_cancel_xn(sdr);
 		return -1;
 
-	case 0:			/*	Database too full.	*/
-		sdr_cancel_xn(sdr);
+	case 0:
+		/*	Database too full or block exceeds max size.
+		 *
+		 *	Reset span buffer but keep
+		 *	currentExportSessionObj	which was not used 	*/
+
+		span.lengthOfBufferedBlock = 0;
+		span.clientSvcIdOfBufferedBlock = 0;
+		sdr_write(sdr, spanObj, (char *) &span, sizeof(BsspSpan));
+
+		sessionId->sourceEngineId = vdb->ownEngineId;
+		sessionId->sessionNbr = session.sessionNbr;
+		session.svcDataObject = 0;
+		session.block = 0;
+
+		/* end transaction */
+		sdr_end_xn(sdr);
 		return 0;
 	}
 
@@ -138,8 +153,11 @@ int	bssp_send(uvast destinationEngineId, unsigned int clientSvcId,
 
 	if (vdb->watching & WATCH_f)
 	{
-		putchar('f');
+		/*
+		putchar('F');
 		fflush(stdout);
+		*/
+		iwatch('F');
 	}
 	/*	Commit changes to current session to the
 	 *	database.					*/
@@ -165,8 +183,11 @@ int	bssp_send(uvast destinationEngineId, unsigned int clientSvcId,
 
 	if (vdb->watching & WATCH_d)
 	{
-		putchar('d');
+		/* 
+		putchar('D');
 		fflush(stdout);
+		*/
+		iwatch('D');
 	}
 
 	if (sdr_end_xn(sdr))
