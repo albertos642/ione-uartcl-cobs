@@ -15,7 +15,6 @@
  */
 
 #include "bpP.h"
-#include "bpsec.h"
 
 extern void	bpEndpointTally(VEndpoint *vpoint, unsigned int idx,
 			unsigned int size);
@@ -235,45 +234,28 @@ int	bp_parse_quality_of_service(const char *token,
 		BpAncillaryData *ancillaryData, BpCustodySwitch *custodySwitch,
 		int *priority)
 {
-	int		count;
-	unsigned int	myCustodyRequested = 0;
-	unsigned int	myPriority = 1;
-	unsigned int	myOrdinal = 0;
-	unsigned int	myUnreliable = 0;
-	unsigned int	myCritical = 0;
-	unsigned int	myDataLabel = 0;
-	unsigned int	myIptRptRequested = 0;
+	int	count;
+	unsigned int myCustodyRequested;
+	unsigned int myPriority;
+	unsigned int myOrdinal;
+	unsigned int myUnreliable;
+	unsigned int myCritical;
+	unsigned int myDataLabel;
 
-	count = sscanf(token, "%11u.%11u.%11u.%11u.%11u.%11u.%11u",
+	count = sscanf(token, "%11u.%11u.%11u.%11u.%11u.%11u",
 			&myCustodyRequested, &myPriority, &myOrdinal,
-			&myUnreliable, &myCritical, &myDataLabel,
-			&myIptRptRequested);
+			&myUnreliable, &myCritical, &myDataLabel);
 	switch (count)
 	{
-	case 7:
-		if (myIptRptRequested != 0 && myIptRptRequested != 1)
-		{
-			return 0;	/*	Invalid value.		*/
-		}
-
-		/*	Intentional fall-through to next case.		*/
-
 	case 6:
 		/*	All unsigned ints are valid data labels.	*/
 		/*	Intentional fall-through to next case.		*/
 
 	case 5:
-		if (myCritical != 0 && myCritical != 1)
+		if ((myCritical != 0 && myCritical != 1)
+		|| (myUnreliable != 0 && myUnreliable != 1))
 		{
-			return 0;	/*	Invalid value.		*/
-		}
-
-		/*	Intentional fall-through to next case.		*/
-
-	case 4:
-		if (myUnreliable != 0 && myUnreliable != 1)
-		{
-			return 0;	/*	Invalid value.		*/
+			return 0;	/*	Invalid format.		*/
 		}
 
 		/*	Intentional fall-through to next case.		*/
@@ -281,23 +263,15 @@ int	bp_parse_quality_of_service(const char *token,
 	case 3:
 		if (myOrdinal > 254)
 		{
-			return 0;	/*	Invalid value.		*/
+			return 0;	/*	Invalid format.		*/
 		}
 
 		/*	Intentional fall-through to next case.		*/
 
 	case 2:
-		if (myPriority > 2)
+		if (myPriority > 2 || myCustodyRequested > 1)
 		{
-			return 0;	/*	Invalid value.		*/
-		}
-
-		/*	Intentional fall-through to next case.		*/
-
-	case 1:
-		if (myCustodyRequested > 1)
-		{
-			return 0;	/*	Invalid value.		*/
+			return 0;	/*	Invalid format.		*/
 		}
 
 		break;
@@ -309,15 +283,6 @@ int	bp_parse_quality_of_service(const char *token,
 	/*	Syntax and bounds-checking passed; assign to outputs.	*/
 
 	ancillaryData->flags = 0;
-	if (count == 7)
-	{
-		ancillaryData->irfTraceRptRequested = myIptRptRequested;
-	}
-	else
-	{
-		ancillaryData->irfTraceRptRequested = 0;
-	}
-
 	if (count >= 6)
 	{
 		ancillaryData->dataLabel = myDataLabel;
@@ -330,12 +295,12 @@ int	bp_parse_quality_of_service(const char *token,
 
 	if (count >= 5)
 	{
-		ancillaryData->flags |= (myCritical ? BP_MINIMUM_LATENCY : 0);
+		ancillaryData->flags |= ((myUnreliable ? BP_BEST_EFFORT : 0)
+				| (myCritical ? BP_MINIMUM_LATENCY : 0));
 	}
-
-	if (count >= 4)
+	else
 	{
-		ancillaryData->flags |= (myUnreliable ? BP_BEST_EFFORT : 0);
+		ancillaryData->flags = 0;
 	}
 
 	if (count >= 3)
@@ -356,7 +321,6 @@ int	bp_send(BpSAP sap, char *destEid, char *reportToEid, int lifespan,
 {
 	BpAncillaryData	defaultAncillaryData = { 0, 0, 0, 0, 0, "\0" };
 	MetaEid		*sourceMetaEid;
-	uvast		ttl;
 
 	if (adu == 0)
 	{
@@ -409,11 +373,9 @@ int	bp_send(BpSAP sap, char *destEid, char *reportToEid, int lifespan,
 	/*	Note: lifespan must be converted from seconds to
 	 *	millisecnods for BP processing.				*/
 
-	ttl = lifespan;
-	ttl *= 1000;
-	return bpSend(sourceMetaEid, destEid, reportToEid, ttl, classOfService,
-			custodySwitch, srrFlags, ackRequested, ancillaryData,
-			adu, bundleObj, 0);
+	return bpSend(sourceMetaEid, destEid, reportToEid, (uvast) lifespan * 1000,
+			classOfService, custodySwitch, srrFlags, ackRequested,
+			ancillaryData, adu, bundleObj, 0);
 }
 
 int	bp_track(Object bundleObj, Object trackingElt)

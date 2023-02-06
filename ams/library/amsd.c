@@ -4,9 +4,15 @@
 
 	Author: Scott Burleigh, JPL
 
-	Copyright (c) 2005, California Institute of Technology.
+	Modified by Sky DeBaun	
+	Jet Propulsion Laboratory 2023
+
+	Copyright (c) 2023, California Institute of Technology.
 	ALL RIGHTS RESERVED.  U.S. Government Sponsorship
 	acknowledged.
+
+	
+
 									*/
 #include "amscommon.h"
 #include "ams.h"
@@ -161,7 +167,7 @@ static void	*csHeartbeat(void *parm)
 	while (1)
 	{
 		lockMib();
-		if (cycleCount > 5)	/*	Every N5_INTERVAL sec.	*/
+		if (cycleCount > 5)	/* Every 5 * N3_INTERVAL seconds */
 		{
 			cycleCount = 0;
 			stopOtherConfigServers(csState);
@@ -181,12 +187,12 @@ static void	*csHeartbeat(void *parm)
 					continue;
 				}
 
-				if (cell->heartbeatsMissed == 3)
+				if (cell->heartbeatsMissed == N6_COUNT)
 				{
 					clearMamsEndpoint
 						(&(cell->mamsEndpoint));
 				}
-				else if (cell->heartbeatsMissed < 3)
+				else if (cell->heartbeatsMissed < N6_COUNT)
 				{
 					if (sendMamsMsg (&cell->mamsEndpoint,
 						&csState->tsif, heartbeat,
@@ -903,7 +909,7 @@ static void	processHeartbeatCycle(RsState *rsState, int *cycleCount,
 
 	/*	Send heartbeats to modules as necessary.		*/
 
-	if (*cycleCount > 1)	/*	Every 20 seconds.		*/
+	if (*cycleCount > 1)	/* Every N4_INTERVAL (i.e. 2 * N3_INTERVAL) seconds */
 	{
 		*cycleCount = 0;
 
@@ -925,7 +931,7 @@ static void	processHeartbeatCycle(RsState *rsState, int *cycleCount,
 				continue;
 			}
 
-			if (module->heartbeatsMissed == 3)
+			if (module->heartbeatsMissed == N6_COUNT)
 			{
 				if (sendMamsMsg(&(module->mamsEndpoint),
 					&(rsState->tsif), you_are_dead,
@@ -945,7 +951,7 @@ termination to peer modules.", NULL);
 
 				forgetModule(module);
 			}
-			else if (module->heartbeatsMissed < 3)
+			else if (module->heartbeatsMissed < N6_COUNT)
 			{
 				if (sendMamsMsg(&(module->mamsEndpoint),
 					&(rsState->tsif), heartbeat,
@@ -1011,7 +1017,7 @@ static void	*rsHeartbeat(void *parm)
 
 		/*	Send heartbeat to configuration server.		*/
 
-		if (rsState->heartbeatsMissed == 3)
+		if (rsState->heartbeatsMissed == N6_COUNT)
 		{
 			rsState->csEndpoint = NULL;
 		}
@@ -1364,7 +1370,7 @@ accepting it", itoa(unitNbr));
 			return;		/*	Can't respond.		*/
 		}
 
-		if (rsState->cellHeartbeats < 4)
+		if (rsState->cellHeartbeats <= N6_COUNT) /* Sky replaces original value: 4 */
 		{
 			reasonCode = REJ_NO_CENSUS;
 			if (sendMamsMsg(&endpoint, &(rsState->tsif), rejection,
@@ -1506,7 +1512,7 @@ accepting it", itoa(unitNbr));
 			return;		/*	Can't respond.		*/
 		}
 
-		if (rsState->cellHeartbeats > 3)
+		if (rsState->cellHeartbeats > N6_COUNT)
 		{
 			if (sendMamsMsg(&endpoint, &(rsState->tsif),
 					you_are_dead, 0, 0, NULL) < 0)
@@ -2053,13 +2059,8 @@ static int	run_amsd(char *mibSource, char *csEndpointSpec,
 #if AMSDEBUG
 PUTS("...in run_amsd...");
 #endif
-	/*	Apply defaults as necessary.				*/
-
-	if (strcmp(mibSource, "@") == 0)
-	{
-		mibSource = NULL;
-	}
-
+		
+	//if '@' set Config Server to ownHostName at default port
 	if (strcmp(csEndpointSpec, "@") == 0)
 	{
 		getNameOfHost(ownHostName, sizeof ownHostName);

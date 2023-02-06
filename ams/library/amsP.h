@@ -231,7 +231,7 @@ typedef struct
 	int		roleNbr;
 	int		domainContinuumNbr;
 	int		domainUnitNbr;
-	int		subjectNbr;
+	short		subjectNbr;
 	int		priority;
 	unsigned char	flowLabel;
 	AmsSequence	sequence;

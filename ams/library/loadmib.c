@@ -7,7 +7,31 @@
 	Copyright (c) 2005, California Institute of Technology.
 	ALL RIGHTS RESERVED.  U.S. Government Sponsorship
 	acknowledged.
-									*/
+
+	Modified by Sky DeBaun	
+	Jet Propulsion Laboratory 2023
+
+	Modifications address the following issues:
+
+	1.) Allow for SANA range of node numbers (see MAX_CONTIN_NBR directive)
+		Note: this is currently constrained by the 16 bit field width in AMS' 
+		constructMessage() header array.
+		
+		See MAX_CONTIN_NBR directive in amscommon.h 
+
+		Modifications include switching arrays and for-loops
+		using the MAX_CONTIN_NBR to use ici's lyst
+
+	2.) Modified loadMib() to align with documentation. The 'test MIB' is now 
+		initialized and loaded using '@' character (as specified in man pages). 
+		
+		Additional modifications include removal of nested (redundant) checks 
+		for the NULL argument (as relates to the MIB filename). This update 
+		provides a more clearly delineated path for the desired functionality 
+		(i.e. consolidating the parameter check to a single logical location)
+
+*/
+
 #include "amscommon.h"
 #ifndef NOEXPAT
 #include "expat.h"
@@ -73,7 +97,7 @@ static int	loadTestMib()
 	{
 		return crash();
 	}
-
+	//note the 1 here creates venture #1
 	venture = createVenture(1, "amsdemo", "test", NULL, 0, 0);
 	if (venture == NULL)
 	{
@@ -305,8 +329,9 @@ static void	handle_continuum_start(LoadMibState *state, const char **atts)
 	else
 	{
 		if (contnbr == 0 || contnbr == idx)
-		{
-			contin = (_mib(NULL))->continua[idx];
+		{			
+			/*Sky modifies to use continuum_lyst instead of array */
+			contin = getContinuaByNbr(idx);
 		}
 		else
 		{
@@ -1109,7 +1134,7 @@ static void	handle_msgspace_start(LoadMibState *state, const char **atts)
 	char		*name;
 	char		*value;
 	Continuum	*contin;
-	Subject		*msgspace;
+	Subject		*msgspace = NULL;
 
 	if (noMibYet(state)) return;
 	if (state->venture == NULL)
@@ -1158,14 +1183,18 @@ static void	handle_msgspace_start(LoadMibState *state, const char **atts)
 		return;
 	}
 
-	contin = (_mib(NULL))->continua[contnbr];
+	/* Sky modifies to use AmsMib->continuum_lyst instead of array */
+	contin = getContinuaByNbr(contnbr);
+
 	if (contin == NULL)
 	{
 		noteLoadError(state, "Unknown continuum.");
 		return;
 	}
 
-	msgspace = state->venture->msgspaces[contnbr];
+	/* Sky gets msgspace for contNbr here*/
+	msgspace = getMsgSpaceByNbr(state->venture, contnbr);		
+
 	switch (state->currentOperation)
 	{
 	case LoadAdding:
@@ -1604,7 +1633,7 @@ static int	loadMibFromRcSource(char *mibSource)
 
 	if (*mibSource == '\0')		/*	Use default file name.	*/
 	{
-		mibSource = "mib.amsrc";
+		mibSource = "mib.amsrc"; //default to this if nothing specified
 	}
 
 	sourceFile = iopen(mibSource, O_RDONLY, 0777);
@@ -1664,7 +1693,7 @@ static int	loadMibFromXmlSource(char *mibSource)
 
 	if (*mibSource == '\0')		/*	Use default file name.	*/
 	{
-		mibSource = "amsmib.xml";
+		mibSource = "amsmib.xml"; //default to this if nothing specified
 	}
 
 	sourceFile = iopen(mibSource, O_RDONLY, 0777);
@@ -1765,13 +1794,15 @@ AmsMib	*loadMib(char *mibSource)
 		unlockMib();
 		return mib;	/*	MIB is already loaded.		*/
 	}
-
-	if (mibSource == NULL)
+	
+	//load in-memory test MIB if '@' specified
+	if (*mibSource == '@')
 	{
 		result = loadTestMib();
 	}
 	else
 	{
+/* load the specified MIB or use default filename (if NULL argument) */
 #ifdef NOEXPAT
 		result = loadMibFromRcSource(mibSource);
 #else
