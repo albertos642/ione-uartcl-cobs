@@ -13,6 +13,11 @@
 /*									*/
 #include "platform.h"
 
+/* Only for Ubuntu as of ION 4.1.2 */
+#if defined (TCP_LOW_CYCLE)
+#include <netinet/tcp.h>
+#endif
+
 #define	ABORT_AS_REQD		if (_coreFileNeeded(NULL)) sm_Abort()
 
 void	icopy(char *fromPath, char *toPath)
@@ -2876,35 +2881,12 @@ int	_isprintf(char *buffer, int bufSize, char *format, ...)
 				fmt[fmtLen] = *cursor;
 				fmtLen++;
 				cursor++;
-				if (LONG_LONG_OKAY)
+				if ((*cursor) == 'l')	/*	Vast.	*/
 				{
-					if (SPACE_ORDER == 3)
-					{
-						/*	Vast.		*/
-
-						isLongLong = 1;
-
-						/*	Might be "ll".	*/
-
-						if ((*cursor) == 'l')
-						{
-							fmt[fmtLen] = *cursor;
-							fmtLen++;
-							cursor++;
-						}
-					}
-					else	/*	Check for "ll".	*/
-					{
-						if ((*cursor) == 'l')
-						{
-							/*	Vast.	*/
-
-							isLongLong = 1;
-							fmt[fmtLen] = *cursor;
-							fmtLen++;
-							cursor++;
-						}
-					}
+					isLongLong = 1;
+					fmt[fmtLen] = *cursor;
+					fmtLen++;
+					cursor++;
 				}
 			}
 			else
@@ -2914,7 +2896,7 @@ int	_isprintf(char *buffer, int bufSize, char *format, ...)
 				&& (*(cursor + 2)) == '4')
 				{
 #ifdef mingw
-					isLongLong = 1;	/*	Vast.	*/
+					isLongLong = 1;
 					fmt[fmtLen] = *cursor;
 					fmtLen++;
 					cursor++;
@@ -3481,6 +3463,7 @@ int	itcp_connect(char *socketSpec, unsigned short defaultPort, int *sock)
 	struct sockaddr_in	*inetName;
 	char			dottedString[16];
 	char			socketTag[32];
+	static int iciTcpConnectionOK = 1;
 
 	CHKERR(socketSpec);
 	CHKERR(sock);
@@ -3520,16 +3503,30 @@ int	itcp_connect(char *socketSpec, unsigned short defaultPort, int *sock)
 		return -1;
 	}
 
+#if defined (TCPCL_LOW_CYCLE)
+	/* set lower SYN retries */
+	int syncnt = 1;
+	int syncnt_sz = sizeof(syncnt);
+	setsockopt(*sock, IPPROTO_TCP, TCP_SYNCNT, &syncnt, syncnt_sz);
+#endif
+
 	if (connect(*sock, &socketName, sizeof(struct sockaddr)) < 0)
 	{
 		if (errno == ECONNREFUSED)
 		{
-			writeMemoNote("[i] Can't connect to TCP socket \
+			if (iciTcpConnectionOK == 1){
+				writeMemoNote("[i] Can't connect to TCP socket \
 (refused)", socketTag);
+				iciTcpConnectionOK = 0;
+			}
 		}
 		else
 		{
-			putSysErrmsg("Can't connect to TCP socket", socketTag);
+			if (iciTcpConnectionOK == 1){
+				putSysErrmsg("Can't connect to TCP socket", socketTag);
+				iciTcpConnectionOK = 0;
+			}
+			
 		}
 
 		closesocket(*sock);
@@ -3537,6 +3534,7 @@ int	itcp_connect(char *socketSpec, unsigned short defaultPort, int *sock)
 		return 0;
 	}
 
+	iciTcpConnectionOK = 1;
 	writeMemoNote("[i] Connected to TCP socket", socketTag);
 	return 1;	/*	Connected to remote socket.		*/
 }

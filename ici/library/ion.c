@@ -142,6 +142,22 @@ static PsmPartition	_ionwm(sm_WmParms *parms)
 
 	if (parms)
 	{
+		if (parms->wmKey == -11111)
+		{
+			ionwm = NULL;	/*	reset database state	*/
+			return ionwm;
+		}
+
+		if (ionwm == NULL)	/*	re-initialize statics	*/
+		{
+			ionSmId = 0;
+			memmgrIdx = -1;
+			wmtake = allocFromIonMemory;
+			wmrelease = releaseToIonMemory;
+			wmatop = ionMemAtoP;
+			wmptoa = ionMemPtoA;
+		}
+
 		if (parms->wmName == NULL)	/*	Destroy.	*/
 		{
 			if (ionwm)
@@ -717,9 +733,7 @@ int	ionInitialize(IonParms *parms, uvast ownNodeNbr)
 		iondbBuf.ownNodeNbr = ownNodeNbr;
 		iondbBuf.rolodex = sdr_list_create(ionsdr);
 		iondbBuf.cpsNotices = sdr_list_create(ionsdr);
-		iondbBuf.pwcNotices = sdr_list_create(ionsdr);
 		iondbBuf.ranges = sdr_list_create(ionsdr);
-		iondbBuf.contacts = sdr_list_create(ionsdr);
 		iondbBuf.productionRate = -1;	/*	Unknown.	*/
 		iondbBuf.consumptionRate = -1;	/*	Unknown.	*/
 		limit = (sdr_heap_size(ionsdr) / 100) * (100 - ION_SEQUESTERED);
@@ -1062,9 +1076,40 @@ void	ionDetach()
 
 	if (ionsdr)
 	{
+		/*	sdr_stop_using(): detaches from sdr & cleans up	*
+		 *	sdr in file and memory, log file, log in memory.
+		 *	Then detach from working memory.      		*/
+
 		sdr_stop_using(ionsdr);
-		ionsdr = NULL;		/*	To reset to NULL.	*/
+		ionsdr = NULL;	/*	Reset ionsdr database to NULL.	*/
 		oK(_ionsdr(&ionsdr));
+
+		/* 	Now detach from ION working memory		*/
+		PsmPartition	ionwm = _ionwm(NULL);
+		sm_ShmDetach(ionwm->space);
+
+		/* 	Now reset the ION working memory database	*/
+		sm_WmParms reset;
+		reset.wmKey = -11111;
+		oK(_ionwm(&reset));
+
+		/* 	reset ION database object 			*/
+		Object	obj = 0;
+		oK(_iondbObject(&obj));
+
+		/*	reset ION volatile database			*/
+		char	*ionvdbName = NULL;
+		oK(_ionvdb(&ionvdbName));
+
+		/*	unregister ZCO callback				*/
+		zco_unregister_callback();
+
+#if defined( SVR4_SEMAPHORES )
+		/*	Completes detaching from ION: reset and detach
+		 *	from ipc semaphore set.	Only implemented for
+		 *	SVR4 platform.					*/
+		sm_ipc_detach();
+#endif
 	}
 #ifdef mingw
 	oK(_winsock(1));
@@ -1134,6 +1179,10 @@ void	ionTerminate()
 	}
 
 	oK(_iondbObject(&obj));
+
+	/* 	Now will destroy ionwm. This is different from just
+	 *  	resetting the static variables.				*/
+
 	ionwmParms.wmKey = 0;
 	ionwmParms.wmSize = 0;
 	ionwmParms.wmAddress = NULL;
@@ -1199,23 +1248,6 @@ int	ionRegionOf(uvast nodeNbrA, uvast nodeNbrB, uint32_t *regionNbr)
 	sdr_read(sdr, (char *) &iondb, iondbObj, sizeof(IonDB));
 	localHomeRegion = iondb.regions[0].regionNbr;
 	localOuterRegion = iondb.regions[1].regionNbr;
-#if RFXDEBUG
-writeMemo("In ionRegionOf...");
-writeMemoNote("Node A is", itoa(nodeNbrA));
-writeMemoNote("Node B is", itoa(nodeNbrB));
-writeMemoNote("Local node home region", itoa(localHomeRegion));
-writeMemoNote("Local node outer region", itoa(localOuterRegion));
-#endif
-	if (sdr_list_length(sdr, iondb.rolodex) < 2)
-	{
-		/*	No IRF enabled, rolodex contains at
-		 *	most only the local node.  Assume the
-		 *	local home region.				*/
-
-		*regionNbr = localHomeRegion;
-		return 0;
-	}
-
 	for (elt = sdr_list_first(sdr, iondb.rolodex); elt;
 		       elt = sdr_list_next(sdr, elt))
 	{
@@ -1236,17 +1268,8 @@ writeMemoNote("Local node outer region", itoa(localOuterRegion));
 
 	/*	Identify the common region.				*/
 
-#if RFXDEBUG
-writeMemoNote("Node A home region", itoa(nodeA.homeRegionNbr));
-writeMemoNote("Node A outer region", itoa(nodeA.outerRegionNbr));
-writeMemoNote("Node B home region", itoa(nodeB.homeRegionNbr));
-writeMemoNote("Node B outer region", itoa(nodeB.outerRegionNbr));
-#endif
 	if (nodeA.homeRegionNbr == 0)	/*	Unknown node.		*/
 	{
-#if RFXDEBUG
-writeMemoNote("Node A is unknown", itoa(nodeA.nodeNbr));
-#endif
 		return -1;	/*	No common region.		*/
 	}
 
@@ -1262,9 +1285,6 @@ writeMemoNote("Node A is unknown", itoa(nodeA.nodeNbr));
 		|| nodeB.outerRegionNbr == localHomeRegion)
 		{
 			*regionNbr = localHomeRegion;
-#if RFXDEBUG
-writeMemo("Both are in local home region.");
-#endif
 			return 0;	/*	Found in home region.	*/
 		}
 	}
@@ -1277,13 +1297,9 @@ writeMemo("Both are in local home region.");
 	|| nodeA.outerRegionNbr == localOuterRegion)
 	{
 		if (nodeNbrB == 0
-		|| nodeB.homeRegionNbr == localOuterRegion
-		|| nodeB.outerRegionNbr == localOuterRegion)
+		|| nodeB.homeRegionNbr == localOuterRegion)
 		{
 			*regionNbr = localOuterRegion;
-#if RFXDEBUG
-writeMemo("Both are in local outer region.");
-#endif
 			return 1;	/*	Found in outer region.	*/
 		}
 	}
@@ -1291,119 +1307,7 @@ writeMemo("Both are in local outer region.");
 	/*	Neither node A nor (if non-zero) node B reside in
 	 *	either of the local node's regions.			*/
 
-#if RFXDEBUG
-writeMemo("Neither local region is common to both nodes.");
-#endif
 	return -1;
-}
-
-void	ionRemoteRegionOf(uvast nodeNbr, uint32_t *regionNbr)
-{
-	/*	This function determines the region in which a given
-	 *	node resides but the local node does not.  If there
-	 *	is such a region, it places the number of that
-	 *	region in regionNbr; otherwise it places zero in
-	 *	regionNbr.						*/
-
-	Sdr		sdr = getIonsdr();
-	Object		iondbObj;
-	IonDB		iondb;
-	uint32_t	localHomeRegion;
-	uint32_t	localOuterRegion;
-	Object		addr;
-	RegionMember	member;
-	Object		elt;
-
-	CHKVOID(regionNbr);
-	*regionNbr = 0;		/*	Default.			*/
-#if RFXDEBUG
-writeMemoNote("Looking up remote region number of node", itoa(nodeNbr));
-#endif
-	if (nodeNbr == 0)
-	{
-		return;
-	}
-
-	iondbObj = getIonDbObject();
-	CHKVOID(iondbObj);
-	sdr_read(sdr, (char *) &iondb, iondbObj, sizeof(IonDB));
-	localHomeRegion = iondb.regions[0].regionNbr;
-	localOuterRegion = iondb.regions[1].regionNbr;
-	addr = findLocalNode(nodeNbr, &member, &elt);
-	if (addr == 0)
-	{
-#if RFXDEBUG
-writeMemoNote("Candidate is not in local node's rolodex.", itoa(nodeNbr));
-#endif
-		return;
-	}
-
-	if (member.homeRegionNbr == localHomeRegion)
-	{
-		if (member.outerRegionNbr == 0
-		|| member.outerRegionNbr == localOuterRegion)
-		{
-#if RFXDEBUG
-writeMemoNote("Candidate not a passageway to any foreign region.", itoa(nodeNbr));
-#endif
-			/*	Not a passageway to a remote region.	*/
-
-			return;
-		}
-
-		if (localOuterRegion == 0)
-		{
-#if RFXDEBUG
-writeMemoNote("Candidate is a passageway to a super-region.", itoa(nodeNbr));
-#endif
-			*regionNbr = member.outerRegionNbr;
-			return;
-		}
-
-		/*	Non-zero outer region of member differs from
-		 *	non-zero outer region of local node.		*/
-
-		putErrmsg("Outer region conflict!", itoa(member.nodeNbr));
-		return;
-	}
-
-	/*	Home regions are different.				*/
-
-	if (member.homeRegionNbr == localOuterRegion)
-	{
-		if (member.outerRegionNbr == 0)
-		{
-#if RFXDEBUG
-writeMemoNote("Candidate not a passageway to a super-region.", itoa(nodeNbr));
-#endif
-			/*	Not a passageway to a remote region.	*/
-
-			return;
-		}
-
-		/*	Passageway to a super-region.			*/
-
-#if RFXDEBUG
-writeMemoNote("Candidate is a passageway to a super-region.", itoa(nodeNbr));
-#endif
-		*regionNbr = member.outerRegionNbr;
-		return;
-	}
-
-	if (member.outerRegionNbr == localHomeRegion
-	|| member.outerRegionNbr == localOuterRegion)
-	{
-		/*	Passageway to a sub-region.			*/
-
-#if RFXDEBUG
-writeMemoNote("Candidate is a passageway to a sub-region.", itoa(nodeNbr));
-#endif
-		*regionNbr = member.homeRegionNbr;
-		return;
-	}
-
-	putErrmsg("Orphan passageway!", itoa(member.nodeNbr));
-	return;
 }
 
 /*	Utility functions.						*/
@@ -1595,12 +1499,10 @@ static time_t	readTimestamp(char *timestampBuffer, time_t referenceTime,
 	}
 #endif
 	result = mktime(&ts);
-	if (result == (time_t) -1 || result > MAX_POSIX_TIME)
+	if (result < 0 || result > MAX_POSIX_TIME)
 	{
 		putErrmsg("Time value not supported (must be before 19 January \
 2038).", timestampBuffer);
-putErrmsg("Aborting.", NULL);
-abort();
 		return 0;
 	}
 

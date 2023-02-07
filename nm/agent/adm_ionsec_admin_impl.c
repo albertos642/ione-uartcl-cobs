@@ -19,12 +19,12 @@
 #include "ion.h"
 #include "ionsec.h"
 #include "ltpsec.h"
-#include "bpsec.h"
+
 
 /*   STOP CUSTOM INCLUDES HERE  */
 
 
-#include "adm.h"
+#include "shared/adm/adm.h"
 #include "adm_ionsec_admin_impl.h"
 
 /*   START CUSTOM FUNCTIONS HERE */

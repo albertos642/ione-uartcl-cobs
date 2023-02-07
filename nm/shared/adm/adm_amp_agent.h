@@ -21,8 +21,12 @@
 #define _HAVE_AMP_AGENT_ADM_
 #ifdef _HAVE_AMP_AGENT_ADM_
 
-#include "nm_types.h"
-#include "adm.h"
+#include "shared/utils/nm_types.h"
+#include "shared/adm/adm.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 extern vec_idx_t g_amp_agent_idx[11];
 
@@ -473,5 +477,13 @@ void amp_agent_init_ctrl();
 void amp_agent_init_mac();
 void amp_agent_init_rpttpl();
 void amp_agent_init_tblt();
+
+
 #endif /* _HAVE_AMP_AGENT_ADM_ */
-#endif //ADM_AMP_AGENT_H_
+
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif  /* _ADM_AMP_AGENT_H_ */

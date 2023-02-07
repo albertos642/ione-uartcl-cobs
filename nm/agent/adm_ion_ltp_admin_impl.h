@@ -22,10 +22,14 @@
 /*   STOP CUSTOM INCLUDES HERE  */
 
 
-#include "utils.h"
-#include "ctrl.h"
-#include "table.h"
-#include "tnv.h"
+#include "shared/utils/utils.h"
+#include "shared/primitives/ctrl.h"
+#include "shared/primitives/table.h"
+#include "shared/primitives/tnv.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*   START typeENUM */
 /*             TODO              */
@@ -77,4 +81,9 @@ tnv_t *dtn_ion_ltpadmin_ctrl_watch_set(eid_t *def_mgr, tnvc_t *parms, int8_t *st
 /* Table Build Functions */
 tbl_t *dtn_ion_ltpadmin_tblt_spans(ari_t *id);
 
-#endif //ADM_ION_LTP_ADMIN_IMPL_H_
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif  /* _ADM_ION_LTP_ADMIN_IMPL_H_ */

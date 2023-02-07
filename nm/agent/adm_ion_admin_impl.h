@@ -23,10 +23,14 @@
 /*   STOP CUSTOM INCLUDES HERE  */
 
 
-#include "utils.h"
-#include "ctrl.h"
-#include "table.h"
-#include "tnv.h"
+#include "shared/utils/utils.h"
+#include "shared/primitives/ctrl.h"
+#include "shared/primitives/table.h"
+#include "shared/primitives/tnv.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*   START typeENUM */
 /*             TODO              */
@@ -99,4 +103,8 @@ tnv_t *dtn_ion_ionadmin_ctrl_node_time_delta_set(eid_t *def_mgr, tnvc_t *parms, 
 tbl_t *dtn_ion_ionadmin_tblt_contacts(ari_t *id);
 tbl_t *dtn_ion_ionadmin_tblt_ranges(ari_t *id);
 
-#endif //ADM_ION_ADMIN_IMPL_H_
+#ifdef __cplusplus
+}
+#endif
+
+#endif  /* _ADM_ION_ADMIN_IMPL_H_ */

@@ -21,9 +21,12 @@
 #define _HAVE_DTN_ION_IONADMIN_ADM_
 #ifdef _HAVE_DTN_ION_IONADMIN_ADM_
 
-#include "nm_types.h"
-#include "adm.h"
+#include "shared/utils/nm_types.h"
+#include "shared/adm/adm.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * +---------------------------------------------------------------------------------------------+
@@ -414,5 +417,13 @@ void dtn_ion_ionadmin_init_ctrl();
 void dtn_ion_ionadmin_init_mac();
 void dtn_ion_ionadmin_init_rpttpl();
 void dtn_ion_ionadmin_init_tblt();
+
+
 #endif /* _HAVE_DTN_ION_IONADMIN_ADM_ */
-#endif //ADM_ION_ADMIN_H_
+
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif  /* _ADM_ION_ADMIN_H_ */

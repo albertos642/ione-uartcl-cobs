@@ -216,7 +216,7 @@ uint8_t  ui_input_byte(char *prompt)
 	uint8_t result = 0;
 	char line[3];
 	memset(line,0,3);
-	ui_input_get_line(prompt, (char**)&line, 2);
+	ui_input_get_line(prompt, (char**)&line, 3);
 
 	blob_t *blob = utils_string_to_hex(line);
 	if(blob == NULL)
@@ -224,6 +224,7 @@ uint8_t  ui_input_byte(char *prompt)
 		AMP_DEBUG_ERR("ui_input_byte","Problem reading value. Returning 0.", NULL);
 		return 0;
 	}
+
 	if(blob->length > 1)
 	{
 		ui_printf("Read %d bytes. Only selecting first.", blob->length);
@@ -478,7 +479,6 @@ ari_t* ui_input_ari_build(uvast mask)
 	uint8_t flags;
 	int success;
 
-
 	ui_input_ari_flags(&flags);
 
 
@@ -494,18 +494,27 @@ ari_t* ui_input_ari_build(uvast mask)
 
 	if(result->type == AMP_TYPE_LIT)
 	{
+		ari_release(result, 1);
+		result = ui_input_ari_lit("");
 
-		result->type = AMP_TYPE_LIT;
-		tnv_t *tmp = ui_input_tnv(AMP_TYPE_LIT, "");
-		result->as_lit = tnv_copy(*tmp, &success);
-		tnv_release(tmp, 1);
-
-		if(result->as_lit.type == AMP_TYPE_UNK)
+		if((result == NULL) || (result->as_lit.type == AMP_TYPE_UNK))
 		{
 			AMP_DEBUG_ERR("ui_input_ari_build", "Problem building ARI.", NULL);
 			ari_release(result, 1);
 			result = NULL;
 		}
+		else
+		{
+			blob_t* blob = ari_serialize_wrapper(result);
+			if(blob)
+			{
+				char *ari_str = utils_hex_to_string(blob->value, blob->length);
+				AMP_DEBUG_INFO("ui_input_ari_build", "Constructed ARI: %s\n", ari_str);
+				SRELEASE(ari_str);
+				blob_release(blob, 1);
+			}
+		}
+
 		return result;
 	}
 

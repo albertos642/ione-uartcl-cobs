@@ -1632,6 +1632,19 @@ static SemaphoreBase	*_sembase(int stop)
 	IciSemaphoreSet		*semset;
 	int			i;
 
+	/* 	detach & reset, but not stopping	*/
+	if (stop == -11111)  	
+	{
+		/* if sembase exists, detach from shared memory */
+		if (semaphoreBase != NULL) 
+		{
+			oK(shmdt(semaphoreBase));
+		}
+		semaphoreBase = NULL;
+		sembaseId = 0;
+		return NULL;
+	}
+
 	if (stop)
 	{
 		if (semaphoreBase != NULL)
@@ -1703,6 +1716,18 @@ static int	_ipcSemaphore(int stop)
 {
 	static int	ipcSem = -1;
 
+	/* 	reset but not stopping	*/
+	if (stop == -11111)  	
+	{
+		/* if semaphore exists */
+		if (ipcSem != -1) 
+		{
+			oK(_sembase(-11111));
+			ipcSem = -1;
+		}
+		return ipcSem;
+	}
+
 	if (stop)
 	{
 		oK(_sembase(1));
@@ -1752,6 +1777,11 @@ void	sm_ipc_stop()
 	oK(_ipcSemaphore(1));
 }
 
+void 	sm_ipc_detach()
+{
+	oK(_ipcSemaphore(-11111));
+}
+
 static void	takeIpcLock()
 {
 	struct sembuf	sem_op[2] = { {0,0,0}, {0,1,0} };
@@ -1775,13 +1805,6 @@ sm_SemId	sm_SemCreate(int key, int semType)
 	int		semSetIdx;
 	int		semid;
 
-	/*	If key is not specified, invent one.			*/
-
-	if (key == SM_NO_KEY)
-	{
-		key = sm_GetUniqueKey();
-	}
-
 	/*	Look through list of all existing ICI semaphores.	*/
 
 	takeIpcLock();
@@ -1793,13 +1816,25 @@ sm_SemId	sm_SemCreate(int key, int semType)
 		return SM_SEM_NONE;
 	}
 
-	for (i = 0, sem = sembase->semaphores; i < sembase->idsAllocated;
-			i++, sem++)
+	/*	If key is not specified, invent one.			*/
+
+	if (key == SM_NO_KEY)
 	{
-		if (sem->key == key)
+		key = sm_GetUniqueKey();
+	}
+	else
+	{
+	     	/*	Key is specified, so see if that semaphore
+		 *	already exists.					*/
+
+		for (i = 0, sem = sembase->semaphores;
+				i < sembase->idsAllocated; i++, sem++)
 		{
-			giveIpcLock();
-			return i;	/*	already created		*/
+			if (sem->key == key)
+			{
+				giveIpcLock();
+				return i;	/*	Already created.*/
+			}
 		}
 	}
 
@@ -3350,7 +3385,12 @@ int	sm_GetUniqueKey()
 
 	/*	Compose unique key: low-order 16 bits of process ID
 		followed by low-order 16 bits of process-specific
-		sequence count.						*/
+		sequence count randomized by starting time in seconds.	*/
+
+	if (ipcUniqueKey == 0)
+	{
+		ipcUniqueKey = clock()/CLOCKS_PER_SEC;
+	}
 
 	ipcUniqueKey = (ipcUniqueKey + 1) & 0x0000ffff;
 #ifdef mingw
