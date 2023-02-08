@@ -216,6 +216,16 @@ void bpsec_instr_update(char *src, uvast blk, uvast bytes, bpsec_instr_type_e ty
 	Object sdrElt = 0;
 	Object sdrData = 0;
 
+	/*
+	 * TODO: Currently the instrumentation API uses the same SDR as
+	 * the rest of bundle processing. This must be fixed, as this
+	 * can cause transaction and rollback problems in ION.
+	 *
+	 * This should be fixed in ION 4.2.
+	 */
+	return;
+
+
 	CHKVOID(sdr_begin_xn(sdr));
 
 	/* If we can't find the source to update, then add it. */
@@ -916,7 +926,7 @@ int  bpsec_instr_get_tot_update(time_t *result)
 uint32_t bpsec_instr_get_num_keys()
 {
 	int size;
-	return (uint32_t) sec_get_bpsecNumKeys(&size);
+	return (uint32_t) bpsec_util_numKeysGet(&size);
 }
 
 
@@ -945,7 +955,7 @@ char *bpsec_instr_get_keynames()
 	uint32_t total_size = 0;
 	char *result = NULL;
 
-	num_keys = sec_get_bpsecNumKeys(&size);
+	num_keys = bpsec_util_numKeysGet(&size);
 
 	/* Total size is size of each key, plus 1 character
 	 * per key for a comma to separate values, plus
@@ -959,7 +969,7 @@ bytes", total_size);
 		return NULL;
 	}
 
-	sec_get_bpsecKeys(result, total_size);
+	bpsec_util_keysGet(result, total_size);
 
 	return result;
 }
@@ -989,7 +999,7 @@ char * bpsec_instr_get_csnames()
 	uint32_t total_size = 0;
 	char *result = NULL;
 
-	num = sec_get_bpsecNumCSNames(&size);
+	num = bpsec_util_numCSNamesGet(&size);
 
 	/* Total size is size of each key, plus 1 character
 	 * per key for a comma to separate values, plus
@@ -1003,7 +1013,7 @@ bytes", total_size);
 		return NULL;
 	}
 
-	sec_get_bpsecCSNames(result, total_size);
+	bpsec_util_cSNamesGet(result, total_size);
 
 	return result;
 }

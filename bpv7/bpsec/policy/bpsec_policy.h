@@ -31,8 +31,8 @@
  *                              FILE INCLUSIONS                              *
  *****************************************************************************/
 
-#include "bpsec.h"
-#include "bpsec_util.h"
+#include "bpsec_asb.h"
+//#include "bpsec_util.h"
 #include "radix.h"
 #include "smrbt.h"
 #include "csi.h"
@@ -85,7 +85,6 @@ typedef enum
  *                             BPSEC POLICY DATA                             *
  *****************************************************************************/
 
-
 /*
  * +--------------------------------------------------------------------------+
  * |							  DATA TYPES  								  +
@@ -123,7 +122,7 @@ void       bsl_cb_ed_delete(PsmPartition partition, PsmAddress user_data);
  * +--------------------------------------------------------------------------+
  */
 int        bsl_handle_sender_sop_event(Bundle *bundle, BpSecEventId sopEvent,
-		     ExtensionBlock *sop, BpsecOutboundBlock *asb, unsigned char tgtNum);
+		     ExtensionBlock *sop, BpsecOutboundASB *asb, unsigned char tgtNum);
 int        bsl_handle_receiver_sop_event(AcqWorkArea *wk, int role,
 		     BpSecEventId sopEvent, LystElt sop, LystElt tgt, unsigned char tgtNum);
 
@@ -136,7 +135,7 @@ int        bsl_handle_receiver_sop_event(AcqWorkArea *wk, int role,
 /* Sender Optional Processing Action Callbacks */
 void       bsl_remove_sop_at_sender(Bundle *bundle, ExtensionBlock *sopBlk);
 void       bsl_remove_sop_target_at_sender(Bundle *bundle, ExtensionBlock *sopBlk,
-		     BpsecOutboundBlock *asb, unsigned char tgtNum);
+		     BpsecOutboundASB *asb, unsigned char tgtNum);
 void       bsl_remove_all_target_sops_at_sender(Bundle *bundle, unsigned char tgtNum);
 void       bsl_do_not_forward_at_sender(Bundle *bundle);
 void       bsl_report_reason_code_at_sender(Bundle *bundle, BpSrReason reason);
@@ -148,11 +147,5 @@ void       bsl_remove_all_target_sops_at_receiver(AcqWorkArea *wk, unsigned char
 void       bsl_do_not_forward_at_receiver(AcqWorkArea *wk);
 void       bsl_report_reason_code_at_receiver(AcqWorkArea *wk, BpSrReason reason);
 
-/* Optional Processing Action Utilities */
-void       bsl_discardInboundTarget(LystElt targetElt, LystElt sopElt);
-Object     bsl_findOutboundBpsecBlock(Bundle *bundle, int tgtBlkNum, BpBlockType
-		     sopType);
-Object     bsl_findOutboundTarget(Bundle *bundle, int tgtBlkNum, BpBlockType
-		     sopType);
 
 #endif /*_BPSEC_POLICY_H_*/

@@ -23,7 +23,9 @@
  *                              FILE INCLUSIONS                              *
  *****************************************************************************/
 
-#include "bpsec.h"
+#include "bpsec_asb.h"
+#include "bpsec_util.h"
+
 #include "bpsec_policy.h"
 #include "bpsec_policy_event.h"
 
@@ -35,7 +37,7 @@
 
 // MUST stay less than 1 byte or else serialization rules need to change.
 #define MAX_EVENT_SET_NAME_LEN			(12)
-
+#define MAX_EVENT_SET_DESC_LEN			(32)
 
 /*****************************************************************************
  *                           Eventset Structures                             *
@@ -45,6 +47,7 @@ typedef struct BpSecEventSet
 {
 	//uint8_t 	id;							  /**< Event set ID			    */
 	char 		name[MAX_EVENT_SET_NAME_LEN]; /**< Unique event set name    */
+	char		desc[MAX_EVENT_SET_DESC_LEN]; /**< Event set description	*/
 	uint16_t 	mask;						  /**< Configured events 	    */
 	PsmAddress 	events; 					  /**< sm_list of BPsecPolEvent	*/
 	uint8_t		ruleCount;			          /**< # rules using the set.   */
@@ -54,9 +57,9 @@ typedef struct BpSecEventSet
  *                        Eventset Function Prototypes                       *
  *****************************************************************************/
 
-int            bsles_add(PsmPartition wm, char *name);
+int            bsles_add(PsmPartition wm, char *name, char *desc);
 int            bsles_add_event(PsmPartition wm, BpSecEventSet *esPtr, PsmAddress eventAddr, BpSecEventId eventId);
-BpSecEventSet* bsles_create(PsmPartition wm, char *name, uint8_t ruleCnt, PsmAddress *addr);
+BpSecEventSet* bsles_create(PsmPartition wm, char *name, char *desc, uint8_t ruleCnt, PsmAddress *addr);
 int            bsles_clear_event(PsmPartition wm, BpSecEventSet *esPtr, BpSecEventId event);
 int            bsles_delete(PsmPartition wm, char *name);
 int            bsles_destroy(PsmPartition wm, PsmAddress esAddr, BpSecEventSet *esPtr);

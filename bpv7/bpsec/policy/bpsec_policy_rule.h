@@ -23,15 +23,16 @@
  *                              FILE INCLUSIONS                              *
  *****************************************************************************/
 
-#include "bpsec.h"
+#include "bpsec_asb.h"
+#include "bpsec_util.h"
 #include "bpsec_policy.h"
 #include "bpsec_policy_eventset.h"
 #include "csi.h"
-#include "profiles.h"
+#include "sci.h"
 
 /*
  * +--------------------------------------------------------------------------+
- * |							  CONSTANTS  								  +
+ * |							  CONSTANTS  								  |
  * +--------------------------------------------------------------------------+
  */
 
@@ -50,9 +51,11 @@
 #define BPRF_USE_BTYP (0x40)
 #define BPRF_USE_SCID (0x80)
 
+#define BPSEC_MAX_NUM_RULES (255)
+
 /*
  * +--------------------------------------------------------------------------+
- * |							  	MACROS  								  +
+ * |							  	MACROS  								  |
  * +--------------------------------------------------------------------------+
  */
 
@@ -129,8 +132,9 @@ typedef struct
 	uint16_t   ssrc_len;    /**< Length of security source EID.    */
 
 	uint8_t	   blk_type;    /**< Applicable block type         */
-	uint8_t    scid;        /**< Required Security Context ID  */
+	int        scid;        /**< Required Security Context ID  */
 	uint8_t	   score;       /**< Specificity score of the rule */
+	uint8_t    svc;			/**< Security service			   */
 } BpSecFilter;
 
 
@@ -244,6 +248,10 @@ typedef struct
 	int type;
 	int scid;
 	int role;
+	int svc;
+
+	char *es_name;
+	uint16_t es_name_len;
 } BpSecPolRuleSearchTag;
 
 
@@ -268,8 +276,16 @@ typedef struct
  */
 
 /* Rule Filter Functions */
-BpSecFilter bslpol_filter_build(PsmPartition partition, char *bsrc, char *bdest, char *ssrc, int type, int role, int scid);
+BpSecFilter bslpol_filter_build(PsmPartition partition, char *bsrc, char *bdest, char *ssrc, int type, int role, int scid, int svc);
 void        bslpol_filter_score(PsmPartition partition, BpSecFilter *filter);
+
+/* Rule Processing for Bundle. */
+int bslpol_proc_applyReceiverPolRule(AcqWorkArea *wk, BpSecPolRule *polRule, int service,
+                                     AcqExtBlock *secBlk, BpsecInboundASB *asb, BpsecInboundTargetResult *tgtResult,
+                                     sc_Def *def, LystElt *tgtBlkElt, size_t *tgtBlkOrigLen);
+
+int bslpol_proc_applySenderPolRule(Bundle *bundle, BpBlockType secBlkType, BpSecPolRule *polRule, int tgtNum);
+
 
 
 /* General Rule Processing Functions */
@@ -278,10 +294,12 @@ PsmAddress    bslpol_rule_create(PsmPartition partition, char *desc, uint16_t id
 void          bslpol_rule_delete(PsmPartition partition, PsmAddress ruleAddr);
 PsmAddress    bslpol_rule_get_addr(PsmPartition partition, int user_id);
 Lyst          bslpol_rule_get_all_match(PsmPartition partition, BpSecPolRuleSearchTag criteria);
+BpSecPolRule* bslpol_rule_find_best_match(PsmPartition partition, BpSecPolRuleSearchTag tag);
 BpSecPolRule* bslpol_rule_get_best_match(PsmPartition partition, BpSecPolRuleSearchTag criteria);
 BpSecPolRule* bslpol_rule_get_ptr(PsmPartition partition, int user_id);
 BpSecPolRule* bslpol_get_sender_rule(Bundle *bundle, BpBlockType sopType, BpBlockType tgtType);
-BpSecPolRule* bslpol_get_receiver_rule(Bundle *bundle, unsigned char tgtNum, int scid);
+BpSecPolRule* bslpol_get_receiver_rule(AcqWorkArea *work, unsigned char tgtNum, int scid);
+
 int           bslpol_rule_insert(PsmPartition partition, PsmAddress ruleAddr, int remember);
 int           bslpol_rule_matches(PsmPartition partition, BpSecPolRule *rulePtr, BpSecPolRuleSearchTag *tag);
 int           bslpol_rule_remove(PsmPartition partition, PsmAddress ruleAddr);
@@ -301,8 +319,6 @@ int     bslpol_sdr_rule_forget(PsmPartition wm, PsmAddress ruleAddr);
 int     bslpol_sdr_rule_persist(PsmPartition wm, PsmAddress ruleAddr);
 int     bslpol_sdr_rule_restore(PsmPartition vm, BpSecPolicyDbEntry entry);
 int     bslpol_sdr_rule_size(PsmPartition wm, PsmAddress ruleAddr);
-
-
 
 
 /* Rule Searching Functions */

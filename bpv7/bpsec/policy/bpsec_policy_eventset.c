@@ -38,7 +38,8 @@
  * auto-generated ID.
  *
  * @param[in]  wm			 PsmPartition ION working memory.
- * @param[in]  name  		 Name of the event set to be added
+ * @param[in]  name  		 Name of the event set to be added.
+ * @param[in]  desc  		 The (optional) description of the event set.
  *
  * @note
  * The new Event Set is not associated with any security policy rules
@@ -52,7 +53,7 @@
  * @retval >0  - Event set successfully added
  *****************************************************************************/
 
-int bsles_add(PsmPartition wm, char *name)
+int bsles_add(PsmPartition wm, char *name, char *desc)
 {
 	PsmAddress addr = 0;
 	SecVdb	*secvdb = getSecVdb();
@@ -68,7 +69,7 @@ int bsles_add(PsmPartition wm, char *name)
 	}
 
 	/* Create and persist the event set. */
-	if(bsles_create(wm, name, 0, &addr))
+	if(bsles_create(wm, name, desc, 0, &addr))
 	{
 		sm_rbt_insert(wm, secvdb->bpsecEventSet, addr, bsles_cb_rbt_key_comp, name);
 		bsles_sdr_persist(wm, addr);
@@ -190,9 +191,10 @@ int	bsles_clear_event(PsmPartition wm, BpSecEventSet *esPtr, BpSecEventId eventI
  * created, but stored in a policyrule, and not in a named eventset list.
  *
  * @param[in]  wm      - PsmPartition ION working memory.
- * @param[in]  name    - The name of the new eventset
- * @param[in]  ruleCnt - How many rules are associated with this eventset
- * @param[out] addr    - The address of the allocated eventset
+ * @param[in]  name    - The name of the new eventset.
+ * @param[in]  desc    - The description of the new eventset.
+ * @param[in]  ruleCnt - How many rules are associated with this eventset.
+ * @param[out] addr    - The address of the allocated eventset.
  *
  * @note
  * The rule count may be 1 if we are creating an anonymous eventset. Otherwise
@@ -202,7 +204,7 @@ int	bsles_clear_event(PsmPartition wm, BpSecEventSet *esPtr, BpSecEventId eventI
  * @retval NULL  - There was an error creating the eventset.
  *****************************************************************************/
 
-BpSecEventSet *bsles_create(PsmPartition wm, char *name, uint8_t ruleCnt, PsmAddress *addr)
+BpSecEventSet *bsles_create(PsmPartition wm, char *name, char *desc, uint8_t ruleCnt, PsmAddress *addr)
 {
 	BpSecEventSet *esPtr = NULL;
 	CHKNULL(addr);
@@ -218,6 +220,10 @@ BpSecEventSet *bsles_create(PsmPartition wm, char *name, uint8_t ruleCnt, PsmAdd
 		if(name)
 		{
 			istrcpy(esPtr->name, name, MAX_EVENT_SET_NAME_LEN);
+		}
+		if(desc)
+		{
+			istrcpy(esPtr->desc, desc, MAX_EVENT_SET_DESC_LEN);
 		}
 		esPtr->ruleCount = ruleCnt;
 		esPtr->events = sm_list_create(wm);

@@ -29,7 +29,8 @@
 /*****************************************************************************
  *                              FILE INCLUSIONS                              *
  *****************************************************************************/
-#include "bpsec.h"
+#include "bpsec_asb.h"
+#include "bpsec_util.h"
 #include "bpsec_policy_event.h"
 #include "bpsec_policy_eventset.h"
 
