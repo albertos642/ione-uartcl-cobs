@@ -1,6 +1,6 @@
 # Makefile for NM Manager and Agent
 #
-# This Makefile should be valid or any native GCC compiler.
+# This Makefile should be valid on any native GCC compiler.
 #
 # The manager supports two optional features that can be enabled at compile time:
 #   make MYSQL=1      Enable MYSQL Database Support
@@ -47,12 +47,6 @@ SHARED_SOURCES = \
 	$(CONTRIB)/QCBOR/src/ieee754.c
 
 AGENT_SOURCES = \
-	$(ADM)/adm_bp_agent_impl.c	\
-	$(ADM)/adm_bp_agent_agent.c   \
-	$(ADM)/adm_bpsec_impl.c	\
-	$(ADM)/adm_bpsec_agent.c	\
-	$(ADM)/adm_ion_bp_admin_impl.c	\
-	$(ADM)/adm_ion_bp_admin_agent.c	\
 	$(AGENT)/ingest.c  		\
 	$(AGENT)/instr.c		\
 	$(AGENT)/lcc.c     		\
@@ -65,20 +59,24 @@ AGENT_SOURCES = \
 	$(AGENT)/adm_ion_admin_impl.c	\
 	$(AGENT)/adm_ionsec_admin_impl.c	\
 	$(AGENT)/adm_ionsec_admin_agent.c	\
-	$(AGENT)/adm_ion_ipn_admin_impl.c	\
-	$(AGENT)/adm_ion_ipn_admin_agent.c	\
 	$(AGENT)/adm_ion_ltp_admin_impl.c	\
 	$(AGENT)/adm_ion_ltp_admin_agent.c	\
 	$(AGENT)/adm_ltp_agent_impl.c	\
 	$(AGENT)/adm_ltp_agent_agent.c 
+#	$(ADM)/adm_bp_agent_impl.c	\
+#	$(ADM)/adm_bp_agent_agent.c   \
+#	$(ADM)/adm_bpsec_impl.c	\
+#	$(ADM)/adm_bpsec_agent.c	\
+#	$(ADM)/adm_ion_bp_admin_impl.c	\
+#	$(ADM)/adm_ion_bp_admin_agent.c	\
+#	$(AGENT)/adm_ion_ipn_admin_impl.c	\
+#	$(AGENT)/adm_ion_ipn_admin_agent.c	\
+
 #	$(AGENT)/adm_sbsp_impl.c	
 #	$(AGENT)/adm_sbsp_agent.c	
 
 
 MGR_SOURCES = \
-	$(ADM)/adm_bp_agent_mgr.c	\
-	$(ADM)/adm_bpsec_mgr.c		\
-	$(ADM)/adm_ion_bp_admin_mgr.c	\
 	$(MGR)/agents.c 		\
 	$(MGR)/metadata.c		\
 	$(MGR)/nm_mgr_print.c 	 	\
@@ -93,6 +91,10 @@ MGR_SOURCES = \
 	$(MGR)/adm_ion_ipn_admin_mgr.c	\
 	$(MGR)/adm_ion_ltp_admin_mgr.c	\
 	$(MGR)/adm_ltp_agent_mgr.c
+#	$(ADM)/adm_bp_agent_mgr.c	\
+#	$(ADM)/adm_bpsec_mgr.c		\
+#	$(ADM)/adm_ion_bp_admin_mgr.c	\
+
 #	$(MGR)/adm_sbsp_mgr.c
 
 
@@ -116,7 +118,7 @@ CC = gcc $(OPT) $(ADD_FLAGS) $(INCLDIRS)
 
 LIBDIRS = -L$(ROOT)/lib -L/usr/local/mysql/lib
 
-LIBS = -lcfdp -lbp -lltp -lici -lpthread -lm
+LIBS = -lcfdp -lbp -limcfw -lipnfw -lltp -lici -lpthread -lm
 
 LD = gcc $(OPT) $(LIBDIRS)
 

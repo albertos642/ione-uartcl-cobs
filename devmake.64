@@ -86,8 +86,10 @@ mv Makefile.dev Makefile
 cd ..
 
 cd ../nm
-mv Makefile.dev Makefile
+mv Makefile.dev.64 Makefile
 cd doc
+mv Makefile.dev Makefile
+cd ../i86_64-fedora
 mv Makefile.dev Makefile
 cd ..
 

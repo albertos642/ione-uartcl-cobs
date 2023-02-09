@@ -86,8 +86,10 @@ mv Makefile.dev Makefile
 cd ..
 
 cd ../nm
-mv Makefile.dev Makefile
+mv Makefile.dev.32 Makefile
 cd doc
+mv Makefile.dev Makefile
+cd ../i86-redhat
 mv Makefile.dev Makefile
 cd ..
 
