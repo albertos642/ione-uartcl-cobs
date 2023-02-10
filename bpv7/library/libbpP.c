@@ -28,6 +28,7 @@
 /*	Interfaces to other BP-related components of ION	*	*/
 
 #include "imcfw.h"
+#include "irf.h"
 #include "saga.h"
 #include "bpsec_instr.h"
 #include "bpsec_util.h"
@@ -1275,6 +1276,7 @@ static BpVdb	*_bpvdb(char **name)
 		vdb->bundleCounter = 0;
 		vdb->clockPid = ERROR;
 		vdb->cpsdPid = ERROR;
+		vdb->irfdPid = ERROR;
 		vdb->transitSemaphore = SM_SEM_NONE;
 		vdb->transitPid = ERROR;
 		vdb->watching = db->watching;
@@ -1615,11 +1617,18 @@ int	bpStart()
 		bpvdb->clockPid = pseudoshell(cmdString);
 	}
 
-	/*	Start the contact plan manager if necessary.		*/
+	/*	Start the contact plan synchronizer if necessary.	*/
 
 	if (bpvdb->cpsdPid == ERROR || sm_TaskExists(bpvdb->cpsdPid) == 0)
 	{
 		bpvdb->cpsdPid = pseudoshell("cpsd");
+	}
+
+	/*	Start inter-regional routing if necessary.		*/
+
+	if (bpvdb->irfdPid == ERROR || sm_TaskExists(bpvdb->irfdPid) == 0)
+	{
+		bpvdb->irfdPid = pseudoshell("irfd");
 	}
 
 	/*	Start the bundle transit daemon if necessary.		*/
@@ -1729,6 +1738,11 @@ void	bpStop()		/*	Reverses bpStart.		*/
 		sm_TaskKill(bpvdb->cpsdPid, SIGTERM);
 	}
 
+	if (bpvdb->irfdPid != ERROR)
+	{
+		sm_TaskKill(bpvdb->irfdPid, SIGTERM);
+	}
+
 	sm_SemEnd(bpvdb->transitSemaphore);
 	if (bpvdb->transitPid != ERROR)
 	{
@@ -1786,6 +1800,14 @@ void	bpStop()		/*	Reverses bpStart.		*/
 		}
 	}
 
+	if (bpvdb->irfdPid != ERROR)
+	{
+		while (sm_TaskExists(bpvdb->irfdPid))
+		{
+			microsnooze(100000);
+		}
+	}
+
 	if (bpvdb->transitPid != ERROR)
 	{
 		while (sm_TaskExists(bpvdb->transitPid))
@@ -1799,6 +1821,7 @@ void	bpStop()		/*	Reverses bpStart.		*/
 	CHKVOID(sdr_begin_xn(sdr));
 	bpvdb->clockPid = ERROR;
 	bpvdb->cpsdPid = ERROR;
+	bpvdb->irfdPid = ERROR;
 	bpvdb->transitPid = ERROR;
 	for (elt = sm_list_first(bpwm, bpvdb->schemes); elt;
 			elt = sm_list_next(bpwm, elt))
@@ -3045,6 +3068,11 @@ incomplete bundle.", NULL);
 	 *	free space occupied by the bundle itself.		*/
 
 	eraseEid(&bundle.clDossier.senderEid);
+	if (bundle.passageways)		/*	Inter-regional routing.	*/
+	{
+		sdr_list_destroy(sdr, bundle.passageways, NULL, NULL);
+	}
+
 	if (bundle.destinations)	/*	For IMC multicast.	*/
 	{
 		sdr_list_destroy(sdr, bundle.destinations, NULL, NULL);
@@ -4594,13 +4622,14 @@ void	findInduct(char *protocolName, char *ductName, VInduct **vduct,
 	PsmPartition	bpwm = getIonwm();
 	PsmAddress	elt;
 
-	CHKVOID(protocolName && ductName && vduct && vductElt);
+	CHKVOID(protocolName && vduct && vductElt);
 	for (elt = sm_list_first(bpwm, (_bpvdb(NULL))->inducts); elt;
 			elt = sm_list_next(bpwm, elt))
 	{
 		*vduct = (VInduct *) psp(bpwm, sm_list_data(bpwm, elt));
 		if (strcmp((*vduct)->protocolName, protocolName) == 0
-		&& strcmp((*vduct)->ductName, ductName) == 0)
+		&& (ductName == NULL
+			|| (strcmp((*vduct)->ductName, ductName) == 0)))
 		{
 			break;
 		}
@@ -5763,6 +5792,30 @@ int	bpClone(Bundle *oldBundle, Bundle *newBundle, Object *newBundleObj,
 		}
 	}
 
+	/*	Copy IRF passageways trace list as needed.		*/
+
+	if (oldBundle->passageways)
+	{
+		newBundle->passageways = sdr_list_create(sdr);
+		if (newBundle->passageways == 0)
+		{
+			putErrmsg("Can't copy IRF passageways list.", NULL);
+			return -1;
+		}
+
+		for (elt = sdr_list_first(sdr, oldBundle->passageways); elt;
+				elt = sdr_list_next(sdr, elt))
+		{
+			nodeNbr = (uvast) sdr_list_data(sdr, elt);
+			if (sdr_list_insert_last(sdr, newBundle->passageways,
+					nodeNbr) == 0)
+			{
+				putErrmsg("Can't copy IRF passageway.", NULL);
+				return -1;
+			}
+		}
+	}
+
 	/*	Copy IMC multicast destinations list as needed.		*/
 
 	if (oldBundle->destinations)
@@ -6245,6 +6298,11 @@ when asking for status reports.");
 		{
 			bundleProcFlags |= BDL_DOES_NOT_FRAGMENT;
 		}
+
+		if (ancillaryData->irfTraceRptRequested)
+		{
+			bundleProcFlags |= BDL_IRF_TRACE_RPT_REQ;
+		}
 	}
 
 	if (ackRequested)
@@ -6427,6 +6485,7 @@ when asking for status reports.");
 	getCurrentDtnTime(&bundle.arrivalTime);
 	bundle.timeToLive = lifespan;	/*	In milliseconds.	*/
 	computeExpirationTime(&bundle);
+	bundle.passageways = sdr_list_create(sdr);
 	bundle.destinations = sdr_list_create(sdr);
 	bundle.extensions = sdr_list_create(sdr);
 	bundle.extensionsLength = 0;
@@ -6434,6 +6493,7 @@ when asking for status reports.");
 	bundle.trackingElts = sdr_list_create(sdr);
 	bundleAddr = sdr_malloc(sdr, sizeof(Bundle));
 	if (bundleAddr == 0
+	|| bundle.passageways == 0
 	|| bundle.destinations == 0
 	|| bundle.stations == 0
 	|| bundle.trackingElts == 0
@@ -6826,7 +6886,8 @@ static int	createIncompleteBundle(Object bundleObj, Bundle *bundle,
 	return 0;
 }
 
-int	deliverBundle(Object bundleObj, Bundle *bundle, VEndpoint *vpoint)
+static int	deliverBundle(Object bundleObj, Bundle *bundle,
+			VEndpoint *vpoint)
 {
 	Object	incompleteAddr = 0;
 		OBJ_POINTER(IncompleteBundle, incomplete);
@@ -6877,6 +6938,109 @@ int	deliverBundle(Object bundleObj, Bundle *bundle, VEndpoint *vpoint)
 	return enqueueForDelivery(bundleObj, bundle, vpoint);
 }
 
+static int	dispatchMulticast(Bundle *bundle, Object bundleObj,
+			VScheme *vscheme, VEndpoint **vpoint)
+{
+	uvast	groupNbr;
+
+	groupNbr = bundle->destination.ssp.imc.groupNbr;
+	if (imcGroupMember(groupNbr))	/*	Delivery okay.		*/
+	{
+		lookUpEndpoint(&bundle->destination, vscheme, vpoint);
+		if (deliverBundle(bundleObj, bundle, *vpoint) < 0)
+		{
+			putErrmsg("Bundle delivery failed.", NULL);
+			return -1;
+		}
+
+		if ((_bpvdb(NULL))->watching & WATCH_z)
+		{
+			iwatch('z');
+		}
+	}
+
+	/*	If this bundle is not an IMC administrative multicast,
+	 *	we may need to replicate the intra-regional multicast
+	 *	of this bundle in the other region.  That operation
+	 *	will be performed on a clone of this bundle.		*/
+
+	if (groupNbr != 0)
+	{
+		if (imcReplicate(bundle, bundleObj) < 0)
+		{
+			putErrmsg("Can't replicate multicast.", NULL);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+static int	dispatchUnicast(Bundle *bundle, Object bundleObj,
+			VEndpoint **vpoint)
+{
+	Sdr	sdr = getIonsdr();
+
+	/*	If source of bundle is in another region, may need
+	 *	to send a "whitelist" IRF status message back through
+	 *	the sequence of passageway nodes that succeeded in
+	 *	getting the bundle to its destination.			*/
+
+	if (sdr_list_length(sdr, bundle->passageways) > 0)
+	{
+		if (bundle->bundleProcFlags & BDL_IS_NODE_LOCATOR)
+		{
+			if (irf_source_msg(bundle, 1) < 0)
+			{
+				putErrmsg("Failed sending IRF message.", NULL);
+				return -1;
+			}
+		}
+
+		if (bundle->bundleProcFlags & BDL_IRF_TRACE_RPT_REQ)
+		{
+			if (irf_issue_ipt_rpt(bundle) < 0)
+			{
+				putErrmsg("Failed sending IPT report.", NULL);
+				return -1;
+			}
+		}
+	}
+
+	/*	Now deliver the bundle if possible.			*/
+
+	if (deliverBundle(bundleObj, bundle, *vpoint) < 0)
+	{
+		putErrmsg("Bundle delivery failed.", NULL);
+		return -1;
+	}
+
+	if ((_bpvdb(NULL))->watching & WATCH_z)
+	{
+		iwatch('z');
+	}
+
+	/*	This is not a multicast bundle.  So we now write
+	 *	the bundle state object to the SDR and authorize
+	 *	destruction of the bundle.  If deliverBundle()
+	 *	enqueued the bundle at an endpoint or retained it
+	 *	as a fragment needed for bundle reassembly, then
+	 *	the bundle will not be destroyed.  But in the event
+	 *	that the endpoint is not currently active (i.e., is
+	 *	not currently opened by any application) and the
+	 *	delivery failure action for this endpoint is
+	 *	DiscardBundle, now the the time to destroy the bundle.	*/
+
+	sdr_write(sdr, bundleObj, (char *) bundle, sizeof(Bundle));
+	if (bpDestroyBundle(bundleObj, 0) < 0)
+	{
+		putErrmsg("Can't destroy bundle.", NULL);
+		return -1;
+	}
+
+	return 0;
+}
+
 static int	dispatchBundle(Object bundleObj, Bundle *bundle,
 			VEndpoint **vpoint)
 {
@@ -6888,98 +7052,102 @@ static int	dispatchBundle(Object bundleObj, Bundle *bundle,
 	Object		newBundleObj;
 
 	CHKERR(ionLocked());
+	if (getImcDbObject() == 0)
+	{
+		imcInit();
+	}
+
+	if (sdr_list_length(sdr, bundle->passageways) == 0)
+	{
+		if (irf_load_passageways(bundle, bundleObj) < 0)
+		{
+			putErrmsg("Can't load IRF passageways.", NULL);
+			return -1;
+		}
+	}
+
 	lookUpEidScheme(&bundle->destination, &vscheme);
 	if (vscheme != NULL)	/*	Destination might be local.	*/
 	{
-		lookUpEndpoint(&bundle->destination, vscheme, vpoint);
-		if (*vpoint != NULL)	/*	Destination is here.	*/
+		if (bundle->destination.schemeCodeNbr == imc)
 		{
-			if (deliverBundle(bundleObj, bundle, *vpoint) < 0)
+			if (dispatchMulticast(bundle, bundleObj, vscheme,
+					vpoint) < 0)
 			{
-				putErrmsg("Bundle delivery failed.", NULL);
+				putErrmsg("Dispatch failed.", NULL);
 				return -1;
 			}
-
-			/*	Bundle delivery did not fail.		*/
-
-			if ((_bpvdb(NULL))->watching & WATCH_z)
+		}
+		else	/*	ipn or dtn scheme.			*/
+		{
+			lookUpEndpoint(&bundle->destination, vscheme, vpoint);
+			if (*vpoint)
 			{
-				iwatch('z');
-			}
+				/*	Bundle has been received at a
+				 *	node that is a member of its
+				 *	destination endpoint.		*/
 
-			if (bundle->destination.schemeCodeNbr != imc)
-			{
-				/*	This is not a multicast bundle.
-				 *	So we now write the bundle state
-				 *	object to the SDR and authorize
-				 *	destruction of the bundle.  If
-				 *	deliverBundle() enqueued the
-				 *	bundle at an endpoint or
-				 *	retained it as a fragment
-				 *	needed for bundle reassembly,
-				 *	then the bundle will not be
-				 *	destroyed.  But in the event
-				 *	that the endpoint is not
-				 *	currently active (i.e., is
-				 *	not currently opened by any
-				 *	application) and the delivery
-				 *	failure action for this
-				 *	endpoint is DiscardBundle,
-				 *	now the the time to destroy
-				 *	the bundle.			*/
-
-				sdr_write(sdr, bundleObj, (char *) bundle,
-						sizeof(Bundle));
-				if (bpDestroyBundle(bundleObj, 0) < 0)
+				if (dispatchUnicast(bundle, bundleObj, vpoint)
+						< 0)
 				{
-					putErrmsg("Can't destroy bundle.",
-							NULL);
+					putErrmsg("Dispatch failed.", NULL);
 					return -1;
 				}
+
+				/*	Unicast delivery succeeded.
+				 *	Nothing else to do.		*/
 
 				return 0;
 			}
-		}
-		else	/*	Not deliverable at this node.		*/
-		{
-			if (bundle->destination.schemeCodeNbr == ipn
-			&& bundle->destination.ssp.ipn.nodeNbr ==
-					getOwnNodeNbr())
+			else	/*	Not deliverable at this node.	*/
 			{
-				/*	Destination is known to be the
-				 *	local bundle agent.  Since the
-				 *	bundle can't be delivered, it
-				 *	must be abandoned.  (It can't
-				 *	be forwarded, as this would be
-				 *	an infinite forwarding loop.)
-				 *	But must first accept it, to
-				 *	prevent potential re-forwarding
-				 *	back to the local bundle agent.	*/
-
-				if (bpAccept(bundleObj, bundle) < 0)
+				if (bundle->destination.schemeCodeNbr == ipn
+				&& bundle->destination.ssp.ipn.nodeNbr ==
+						getOwnNodeNbr())
 				{
-					putErrmsg("Failed dispatching bundle.",
-							NULL);
-					return -1;
+					/*	Destination is known
+					 *	to be the local bundle
+					 *	agent.  Since the bundle
+					 *	can't be delivered, it
+					 *	can only be abandoned.
+					 *	(It can't be forwarded,
+					 *	as this would be an
+					 *	infinite forwarding
+					 *	loop.) 	But we must
+					 *	first accept it, to
+					 *	prevent potential re-
+					 *	forwarding back to
+					 *	the local bundle agent.	*/
+
+					if (bpAccept(bundleObj, bundle) < 0)
+					{
+						putErrmsg("Dispatch failed.",
+								NULL);
+						return -1;
+					}
+
+					/*	Accepting the bundle
+					 *	wrote it to the SDR,
+					 *	so we can now destroy
+					 *	it successfully.  We
+					 *	count the bundle as
+					 *	"forwarded" because
+					 *	bpAbandon will count it
+					 *	as "forwarding failed".	*/
+
+					bpDbTally(BP_DB_QUEUED_FOR_FWD,
+							bundle->payload.length);
+					return bpAbandon(bundleObj, bundle,
+							BP_REASON_NO_ROUTE);
 				}
-
-				/*	Accepting the bundle wrote it
-				 *	to the SDR, so we can now
-				 *	destroy it successfully.  We
-				 *	count the bundle as "forwarded"
-				 *	because bpAbandon will count it
-				 *	as "forwarding failed".		*/
-
-				bpDbTally(BP_DB_QUEUED_FOR_FWD,
-						bundle->payload.length);
-				return bpAbandon(bundleObj, bundle,
-						BP_REASON_NO_ROUTE);
 			}
 		}
 	}
 
-	/*	There may be a non-local destination; let the
-	 *	forwarder figure out what to do with the bundle.	*/
+	/*	There may be a non-local destination for this
+	 *	bundle (possibly in addition to the local bundle
+	 *	agent, if multicast).  Let the forwarder figure
+	 *	out what to do with the bundle.				*/
 
 	if (bundle->fragmentElt || bundle->dlvQueueElt)
 	{
@@ -7000,8 +7168,7 @@ static int	dispatchBundle(Object bundleObj, Bundle *bundle,
 	/*	Queue the bundle for insertion into Outbound ZCO
 	 *	space.							*/
 
-	bundle->transitElt = sdr_list_insert_last(sdr, db->transit,
-			bundleObj);
+	bundle->transitElt = sdr_list_insert_last(sdr, db->transit, bundleObj);
 	sm_SemGive(vdb->transitSemaphore);
 	sdr_write(sdr, bundleObj, (char *) bundle, sizeof(Bundle));
 	return 0;
@@ -8173,42 +8340,42 @@ requests prohibited for anonymous bundle.");
 		}
 
 		/*	CRC is encoded as a CBOR byte string.		*/
- 
- 		uvtemp = (uvast) -1;
- 		if (cbor_decode_byte_string(NULL, &uvtemp, &cursor,
- 				&unparsedBytes) < 1)
- 		{
- 			writeMemo("[?] Can't decode CRC.");
- 			return 0;
- 		}
+
+		uvtemp = (uvast) -1;
+		if (cbor_decode_byte_string(NULL, &uvtemp, &cursor,
+				&unparsedBytes) < 1)
+		{
+			writeMemo("[?] Can't decode CRC.");
+			return 0;
+		}
 
 		/*	Note, because the decoding destination is
- 		 *	NULL, the cursor was advanced only to the
- 		 *	end of the *size* of the CRC, not to the
- 		 *	end of the CRC itself.  The unparsedBytes
- 		 *	counter was reduced only by the length of
- 		 *	the *size* of the CRC, not by the length
- 		 *	of the CRC itself.  However, itemsRemaining
- 		 *	is reduced by 1 at this time.			*/
+		 *	NULL, the cursor was advanced only to the
+		 *	end of the *size* of the CRC, not to the
+		 *	end of the CRC itself.  The unparsedBytes
+		 *	counter was reduced only by the length of
+		 *	the *size* of the CRC, not by the length
+		 *	of the CRC itself.  However, itemsRemaining
+		 *	is reduced by 1 at this time.			*/
 
 		crcLength = uvtemp;
 		if (crcType == X25CRC16)
 		{
 			if (crcLength != 2)
- 			{
- 				writeMemoNote("[?] Wrong CRC size for CRC16",
- 						itoa(crcLength));
- 				return 0;
- 			}
+			{
+				writeMemoNote("[?] Wrong CRC size for CRC16",
+						itoa(crcLength));
+				return 0;
+			}
 		}
 		else
 		{
 			if (crcLength != 4)
- 			{
- 				writeMemoNote("[?] Wrong CRC size for CRC32C",
- 						itoa(crcLength));
- 				return 0;
- 			}
+			{
+				writeMemoNote("[?] Wrong CRC size for CRC32C",
+						itoa(crcLength));
+				return 0;
+			}
 		}
 
 		if (crcLength > unparsedBytes)
@@ -8216,11 +8383,11 @@ requests prohibited for anonymous bundle.");
 			writeMemo("[?] Primary block truncated.");
 			return 0;
 		}
-		
+
 		/*	Compute CRC over entire block including the
- 		 *	CRC itself.					*/
- 
- 		length = cursor - startOfBlock;
+		 *	CRC itself.					*/
+
+		length = cursor - startOfBlock;
 		crcComputed = computeBufferCrc(crcType, startOfBlock, 
 				length + crcLength, 1, 0, &crcReceived);
 		if (crcComputed != crcReceived)
@@ -8481,40 +8648,40 @@ undefined block.");
 		/*	CRC is encoded as a CBOR byte string.		*/
 
 		uvtemp = (uvast) -1;
- 		if (cbor_decode_byte_string(NULL, &uvtemp, &cursor,
- 				&unparsedBytes) < 1)
- 		{
- 			writeMemo("[?] Can't decode CRC.");
- 			return 0;
- 		}
+		if (cbor_decode_byte_string(NULL, &uvtemp, &cursor,
+				&unparsedBytes) < 1)
+		{
+			writeMemo("[?] Can't decode CRC.");
+			return 0;
+		}
 
 		/*	Note, because the decoding destination is
- 		 *	NULL, the cursor was advanced only to the
- 		 *	end of the *size* of the CRC, not to the
- 		 *	end of the CRC itself.  The unparsedBytes
- 		 *	counter was reduced only by the length of
- 		 *	the *size* of the CRC, not by the length
- 		 *	of the CRC itself.  However, itemsRemaining
- 		 *	is reduced by 1 at this time.			*/
- 
- 		crcLength = uvtemp;
+		 *	NULL, the cursor was advanced only to the
+		 *	end of the *size* of the CRC, not to the
+		 *	end of the CRC itself.  The unparsedBytes
+		 *	counter was reduced only by the length of
+		 *	the *size* of the CRC, not by the length
+		 *	of the CRC itself.  However, itemsRemaining
+		 *	is reduced by 1 at this time.			*/
+
+		crcLength = uvtemp;
 		if (crcType == X25CRC16)
 		{
 			if (crcLength != 2)
- 			{
- 				writeMemoNote("[?] Wrong CRC size for CRC16",
- 						itoa(crcLength));
- 				return 0;
- 			}
+			{
+				writeMemoNote("[?] Wrong CRC size for CRC16",
+						itoa(crcLength));
+				return 0;
+			}
 		}
 		else
 		{
 			if (crcLength != 4)
- 			{
- 				writeMemoNote("[?] Wrong CRC size for CRC32C",
- 						itoa(crcLength));
- 				return 0;
- 			}
+			{
+				writeMemoNote("[?] Wrong CRC size for CRC32C",
+						itoa(crcLength));
+				return 0;
+			}
 		}
 
 		if (crcLength > unparsedBytes)
@@ -8524,10 +8691,10 @@ undefined block.");
 		}
 
 		/*	Compute CRC over entire block including the
- 		 *	CRC itself.					*/
- 
- 		length = cursor - startOfBlock;
- 		crcComputed = computeBufferCrc(crcType, startOfBlock, 
+		 *	CRC itself.					*/
+
+		length = cursor - startOfBlock;
+		crcComputed = computeBufferCrc(crcType, startOfBlock,
 				length + crcLength, 1, 0, &crcReceived);
 		if (crcComputed != crcReceived)
 		{
@@ -8783,6 +8950,74 @@ static int	acqFromWork(AcqWorkArea *work)
 	return 0;
 }
 
+static int	bundleIsDuplicate(Bundle *bundle)
+{
+	Sdr		sdr = getIonsdr();
+	Object		bundles = (_bpConstants())->bundles;
+	char		*sourceEid;
+	char		*destinationEid;
+	char		bundleKey[BUNDLES_HASH_KEY_BUFLEN];
+	Address		bsetObj;
+	Object		hashElt;
+	int		result;
+
+	readEid(&(bundle->id.source), &sourceEid);
+	if (sourceEid == NULL)
+	{
+		putErrmsg("Can't print source EID.", NULL);
+		return -1;
+	}
+
+	readEid(&(bundle->destination), &destinationEid);
+	if (destinationEid == NULL)
+	{
+		MRELEASE(sourceEid);
+		putErrmsg("Can't print destination EID.", NULL);
+		return -1;
+	}
+
+	if (strcmp(destinationEid, sourceEid) == 0)
+	{
+		/*	Loopback bundle; not treated as duplicate.	*/
+
+		MRELEASE(destinationEid);
+		MRELEASE(sourceEid);
+		return 0;
+	}
+
+	MRELEASE(destinationEid);
+	if (constructBundleHashKey(bundleKey, sourceEid,
+			bundle->id.creationTime.msec,
+			bundle->id.creationTime.count,
+			bundle->id.fragmentOffset,
+			bundle->totalAduLength == 0 ? 0 :
+			bundle->payload.length) > BUNDLES_HASH_KEY_LEN)
+	{
+		writeMemoNote("[?] Max hash key length exceeded; bundle \
+cannot be retrieved by key", bundleKey);
+		MRELEASE(sourceEid);
+		return 0;
+	}
+
+	switch (sdr_hash_retrieve(sdr, bundles, bundleKey, &bsetObj, &hashElt))
+	{
+	case -1:
+		putErrmsg("Failed checking for duplicate bundle.", NULL);
+		result = -1;
+		break;
+
+	case 1:		/*	Retrieval succeeded, non-unique key.	*/
+		result = 1;
+		break;
+
+	default:	/*	No such pre-existing entry.		*/
+		result = 0;
+	}
+
+	MRELEASE(sourceEid);
+	return result;
+}
+
 static int	abortBundleAcq(AcqWorkArea *work)
 {
 	Sdr	sdr = getIonsdr();
@@ -9022,6 +9257,23 @@ static int	acquireBundle(Sdr sdr, AcqWorkArea *work, VEndpoint **vpoint)
 		return discardReceivedBundle(work, SrDepletedStorage);
 	}
 
+	switch (bundleIsDuplicate(bundle))
+	{
+	case -1:
+		putErrmsg("Can't check for duplicate bundle.", NULL);
+		sdr_cancel_xn(sdr);
+		return -1;
+
+	case 0:
+		break;		/*	Not duplicate.			*/
+
+	default:
+		writeMemo("[?] Duplicate bundle discarded.");
+		bpInductTally(work->vduct, BP_INDUCT_MALFORMED,
+				bundle->payload.length);
+		return abortBundleAcq(work);
+	}
+
 	/*	Check authenticity and integrity.			*/
 
 	initAuthenticity(work);	/*	Set default.			*/
@@ -9030,7 +9282,8 @@ static int	acquireBundle(Sdr sdr, AcqWorkArea *work, VEndpoint **vpoint)
 		/* first check for non-critical error */
 		if (bundle->corrupt == 1)
 		{
-			writeMemo("[?] security verification failed for target primary block.");
+			writeMemo("[?] security verification failed for \
+target primary block.");
 			bpInductTally(work->vduct, BP_INDUCT_MALFORMED,
 				bundle->payload.length);
 			return abortBundleAcq(work);
@@ -9038,7 +9291,8 @@ static int	acquireBundle(Sdr sdr, AcqWorkArea *work, VEndpoint **vpoint)
 
 		if (bundle->altered == 1)
 		{
-			writeMemo("[?] security verification failed for target extension block.");
+			writeMemo("[?] security verification failed for \
+target extension block.");
 			bpInductTally(work->vduct, BP_INDUCT_INAUTHENTIC,
 				bundle->payload.length);
 			return abortBundleAcq(work);	
@@ -9054,7 +9308,8 @@ static int	acquireBundle(Sdr sdr, AcqWorkArea *work, VEndpoint **vpoint)
 
 	if (work->authentic == 0)
 	{
-		writeMemo("[?] security block misconfigured for target payload block.");
+		writeMemo("[?] security block misconfigured for target \
+payload block.");
 		bpInductTally(work->vduct, BP_INDUCT_INAUTHENTIC,
 			bundle->payload.length);
 		return abortBundleAcq(work);	
@@ -9170,6 +9425,7 @@ static int	acquireBundle(Sdr sdr, AcqWorkArea *work, VEndpoint **vpoint)
 
 	/*	Construct other bundle stuctures.			*/
 
+	bundle->passageways = sdr_list_create(sdr);
 	bundle->destinations = sdr_list_create(sdr);
 	bundle->stations = sdr_list_create(sdr);
 	bundle->trackingElts = sdr_list_create(sdr);
@@ -9700,7 +9956,6 @@ int	sendStatusRpt(Bundle *bundle)
 		writeMemo("[?] Status report not transmitted.");
 
 			/*	Intentional fall-through to next case.	*/
-
 	default:
 		break;
 	}
@@ -12214,6 +12469,16 @@ int	_handleAdminBundles(char *adminEid, StatusRptCB handleStatusRpt)
 			if (bibeHandleSignal(&dlv, cursor, unparsedBytes) < 0)
 			{
 				putErrmsg("BIBE custody signal handler failed.",
+						NULL);
+				running = 0;
+			}
+
+			break;
+
+		case BP_IPT_REPORT:
+			if (irf_print_ipt_rpt(&dlv, cursor, unparsedBytes) < 0)
+			{
+				putErrmsg("IRF path trace rpt print failed.",
 						NULL);
 				running = 0;
 			}

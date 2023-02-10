@@ -110,6 +110,7 @@ typedef struct
 } AcqExtBlock;
 
 /** Functions used in creating and transmitting an outbound extension block. */
+
 typedef int		(*BpExtBlkOfferFn)(ExtensionBlock *, Bundle *);
 typedef int		(*BpExtBlkSerializeFn)(ExtensionBlock *, Bundle *);
 typedef int		(*BpExtBlkProcessFn)(ExtensionBlock *, Bundle *, void*);
@@ -117,6 +118,7 @@ typedef void		(*BpExtBlkReleaseFn)(ExtensionBlock *);
 typedef int		(*BpExtBlkCopyFn)(ExtensionBlock *, ExtensionBlock *);
 
 /** Functions used in acquiring an inbound extension block. */
+
 typedef int		(*BpAcqExtBlkAcquireFn)(AcqExtBlock *, AcqWorkArea *);
 typedef int		(*BpAcqExtReviewFn)(AcqWorkArea *);
 typedef int		(*BpAcqExtBlkDecryptFn)(AcqExtBlock *, AcqWorkArea *);
@@ -256,9 +258,6 @@ extern int	serializeExtBlk(ExtensionBlock *blk, char *blockData);
  *            S. Burleigh		   Initial Implementation
  */
 extern void	suppressExtensionBlock(ExtensionBlock *blk);
-
-
-
 
 /*	Functions that operate on inbound extension blocks		*/
 

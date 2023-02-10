@@ -377,7 +377,7 @@ Object	getExtensionBlock(Bundle *bundle, unsigned char nbr)
 	Sdr	sdr = getIonsdr();
 	Object	elt;
 	Object	addr;
-	OBJ_POINTER(ExtensionBlock, blk);
+		OBJ_POINTER(ExtensionBlock, blk);
 
 	CHKZERO(bundle);
 	for (elt = sdr_list_first(sdr, bundle->extensions); elt;
@@ -394,12 +394,12 @@ Object	getExtensionBlock(Bundle *bundle, unsigned char nbr)
 	return 0;
 }
 
-Object getExtensionBlockObj(Bundle *bundle, unsigned char blockNum)
+Object	getExtensionBlockObj(Bundle *bundle, unsigned char blockNum)
 {
 	Sdr	bpSdr = getIonsdr();
 	Object	elt = 0;
 	Object	addr = 0;
-	OBJ_POINTER(ExtensionBlock, blk);
+		OBJ_POINTER(ExtensionBlock, blk);
 
 	CHKZERO(bundle);
 	for (elt = sdr_list_first(bpSdr, bundle->extensions); elt;
@@ -409,7 +409,7 @@ Object getExtensionBlockObj(Bundle *bundle, unsigned char blockNum)
 		GET_OBJ_POINTER(bpSdr, ExtensionBlock, blk, addr);
 		if (blk->number == blockNum)
 		{
-		    return addr;
+			return addr;
 		}
 	}
 

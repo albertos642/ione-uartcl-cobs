@@ -1310,7 +1310,6 @@ static int	enqueueBundle(Bundle *bundle, Object bundleObj, CgrSAP sap)
 		case 0:
 			/*	Maybe node registration is deficient.
 			 *	Try fallback methods.			*/
-
 			break;
 
 		default:
