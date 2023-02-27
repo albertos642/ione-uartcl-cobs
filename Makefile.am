@@ -896,7 +896,8 @@ udp2file_SOURCES = dgr/test/udp2file.c
 udp2file_LDADD = libici.la -lm
 udp2file_CFLAGS = $(dgrcflags) $(AM_CFLAGS)
 
-if BUILD_BPv6
+if FALSE
+#if BUILD_BPv6
 ##########################
 #
 # BPv6 SECTION
@@ -910,7 +911,8 @@ bpPODM1 = pod2man -s 1 -c "BP executables"
 bpPODM3 = pod2man -s 3 -c "BP library functions"
 bpPODM5 = pod2man -s 5 -c "BP configuration files"
 
-if UNIBO_CGR
+if FALSE
+#if UNIBO_CGR
 ### UNIBO CGR EXTENSIONS RGR AND CGRR ###
 
 bpcflags = -I$(BP_SRC_DIR)/library -I$(BP_SRC_DIR)/library/ext -I$(BP_SRC_DIR)/library/ext/meb -I$(BP_SRC_DIR)/library/ext/bae -I$(BP_SRC_DIR)/include -I$(BP_SRC_DIR)/ipn -I$(BP_SRC_DIR)/ipnd -I$(srcdir)/ici/libbloom-master -I$(srcdir)/ici/libbloom-master/murmur2 -I$(BP_SRC_DIR)/dtn2 -I$(BP_SRC_DIR)/library/crypto -I$(BP_SRC_DIR)/imc -I$(BP_SRC_DIR)/tcp -I$(BP_SRC_DIR)/udp -I$(srcdir)/ici/include -I$(BP_SRC_DIR)/library/ext/snw -I$(BP_SRC_DIR)/bibe -I$(BP_SRC_DIR)/imc -DBP_EXTENDED -I$(BP_SRC_DIR)/library/acs -I$(BP_SRC_DIR)/library/ext/ecos -I$(BP_SRC_DIR)/library/ext/sbsp -I$(BP_SRC_DIR)/library/ext/phn -I$(BP_SRC_DIR)/library/ext/sbsp/ciphersuites -I$(BP_SRC_DIR)/library/ext/cteb -I$(BP_SRC_DIR)/library/ext/rgr -I$(BP_SRC_DIR)/library/ext/cgrr
@@ -1192,7 +1194,8 @@ $(top_builddir)/bpv6/doc/%.5: bpv6/doc/pod5/%.pod
 
 # -- Libraries --- #
 
-if UNIBO_CGR
+if FALSE
+#if UNIBO_CGR
 ### UNIBO CGR EXTENSIONS RGR AND CGRR ###
 
 libbp_la_SOURCES = \
@@ -1301,7 +1304,8 @@ libbp_la_SOURCES += \
 	$(NULL)
 endif # end ENABLE_IMC
 
-if UNIBO_CGR
+if FALSE
+#if UNIBO_CGR
 ### UNIBO CGR CORE AND INTERFACE ###
 
 libcgr_la_SOURCES = \
@@ -1779,7 +1783,8 @@ bpPODM1 = pod2man -s 1 -c "BP executables"
 bpPODM3 = pod2man -s 3 -c "BP library functions"
 bpPODM5 = pod2man -s 5 -c "BP configuration files"
 
-if UNIBO_CGR
+if FALSE
+#if UNIBO_CGR
 ### UNIBO CGR EXTENSIONS RGR AND CGRR ###
 
 bpcflags = -I$(BP_SRC_DIR)/bpsec/instr -I$(BP_SRC_DIR)/bpsec/policy -I$(BP_SRC_DIR)/bpsec/sci -I$(BP_SRC_DIR)/bpsec/utils -I$(BP_SRC_DIR)/library -I$(BP_SRC_DIR)/library/ext -I$(BP_SRC_DIR)/library/ext/meb -I$(BP_SRC_DIR)/library/ext/bae -I$(BP_SRC_DIR)/include -I$(BP_SRC_DIR)/ipn -I$(BP_SRC_DIR)/ipnd -I$(srcdir)/ici/libbloom-master -I$(srcdir)/ici/libbloom-master/murmur2 -I$(BP_SRC_DIR)/dtn2 -I$(BP_SRC_DIR)/library/crypto -I$(BP_SRC_DIR)/tcp -I$(BP_SRC_DIR)/udp -I$(srcdir)/ici/include -I$(srcdir)/ici/library -I$(BP_SRC_DIR)/library/ext/snw -I$(BP_SRC_DIR)/bibe -I$(BP_SRC_DIR)/imc -DBP_EXTENDED -I$(BP_SRC_DIR)/saga -I$(BP_SRC_DIR)/library/ext/bpsec -I$(BP_SRC_DIR)/library/ext/hcb -I$(BP_SRC_DIR)/library/ext/pnb -I$(BP_SRC_DIR)/library/ext/bpq -I$(BP_SRC_DIR)/library/ext/rgr -I$(BP_SRC_DIR)/library/ext/cgrr
@@ -1898,8 +1903,7 @@ bpnoinst = \
 	bpv7/stcp/stcpcla.h \
 	bpv7/udp/udpcla.h \
 	bpv7/uart/uartcla.h
-
-#	bpv7/include/bpsec.h \
+#	bpv7/include/bpsec.h 
 
 bpextra = \
 	bpv7/README.txt \
@@ -2002,7 +2006,6 @@ bpextra = \
 	ici/include/csi.h
 
 #	bpv7/include/bpsec.h \
-
 #	bpv7/library/ext/bpsec/bpsec_instr.h \
 #	bpv7/library/ext/bpsec/bpsec_util.h \
 #	bpv7/library/ext/bpsec/bpsec_policy.h \
@@ -2014,9 +2017,7 @@ bpextra = \
 #	bpv7/library/ext/bpsec/bpsec_policy_eventset.c \
 #	bpv7/library/ext/bpsec/bpsec_policy_event.c \
 #	bpv7/library/ext/bpsec/bpsec_policy_rule.c \
-
 #	bpv7/library/bpsec.c \
-
 if ENABLE_IMC
 bpextra += \
 	bpv7/doc/pod1/imcfw.pod
@@ -2078,7 +2079,7 @@ bpmans = \
 	$(top_builddir)/bpv7/doc/udpcli6.1 \
 	$(top_builddir)/bpv7/doc/udpclo6.1 \
 	$(top_builddir)/restart/doc/ionrestart.1 \
-	$(top_builddir)/bpv7/doc/bp.3 \	
+	$(top_builddir)/bpv7/doc/bp.3 \
 	$(top_builddir)/bpv7/doc/bpextensions.3 \
 	$(top_builddir)/bpv7/doc/biberc.5 \
 	$(top_builddir)/bpv7/doc/bprc.5 \
@@ -2113,7 +2114,8 @@ $(top_builddir)/bpv7/doc/%.5: bpv7/doc/pod5/%.pod
 
 # -- Libraries --- #
 
-if UNIBO_CGR
+if FALSE
+#if UNIBO_CGR
 ### UNIBO CGR EXTENSIONS RGR AND CGRR ###
 
 libbp_la_SOURCES = \
@@ -2170,7 +2172,6 @@ libbp_la_SOURCES = \
 	ici/libbloom-master/murmur2/MurmurHash2.c
 
 #	bpv7/library/bpsec.c \
-
 #	bpv7/library/ext/bpsec/bpsec_instr.c \
 #	bpv7/library/ext/bpsec/bpsec_util.c \
 #	bpv7/library/ext/bpsec/bpsec_policy.c \
@@ -2178,7 +2179,6 @@ libbp_la_SOURCES = \
 #	bpv7/library/ext/bpsec/bpsec_policy_event.c \
 #	bpv7/library/ext/bpsec/bpsec_policy_rule.c \
 #	bpv7/library/ext/bpsec/profiles.c \
-	
 #########################################
 else
 libbp_la_SOURCES = \
@@ -2224,7 +2224,6 @@ libbp_la_SOURCES = \
 	ici/libbloom-master/murmur2/MurmurHash2.c
 
 #	bpv7/library/bpsec.c \
-
 #	bpv7/library/ext/bpsec/bpsec_instr.c \
 #	bpv7/library/ext/bpsec/bpsec_util.c \
 #	bpv7/library/ext/bpsec/bpsec_policy.c \
@@ -2254,7 +2253,8 @@ libbp_la_SOURCES += \
 	bpv7/library/ext/imc/imc.c
 endif # end ENABLE_IMC
 
-if UNIBO_CGR
+if FALSE
+#if UNIBO_CGR
 ### UNIBO CGR CORE AND INTERFACE ###
 
 libcgr_la_SOURCES = \
@@ -3587,7 +3587,7 @@ check_PROGRAMS = tests/1000.loopback/dotest \
 	tests/nm-unit/utils/radix_ut/dotest 	 	
 #	tests/nm-unit/primitives/ari/dotest
 
-if BUILD_BPv6
+if FALSE
 check_PROGRAMS += \
 	tests/issue-279-bpMemo-timeline/driver
 endif #end BUILD_BPv6
@@ -3649,7 +3649,7 @@ tests_issue_260_teach_valgrind_mtake_domtake_CFLAGS = $(icicflags) $(AM_CFLAGS) 
 
 # issue_279_bpMemo_timeline_driver is bpv6 only
 # bpMemo function does not exist for bpv7
-if BUILD_BPv6
+if FALSE
 tests_issue_279_bpMemo_timeline_driver_SOURCES = tests/issue-279-bpMemo-timeline/driver.c
 tests_issue_279_bpMemo_timeline_driver_LDADD = libici.la -lm $(bplib) $(TESTUTILOBJS)
 tests_issue_279_bpMemo_timeline_driver_CFLAGS = $(bpcflags) -I$(BP_DIR)/library/ $(icicflags) $(AM_CFLAGS) $(TESTUTILCFLAGS)
