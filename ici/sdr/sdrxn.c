@@ -529,6 +529,9 @@ void	sdr_shutdown()		/*	Ends SDR service on machine.	*/
 
 	if (_sdrwm(NULL) != NULL)
 	{
+		wmparms.wmKey = 0;
+		wmparms.wmSize = 0;
+		wmparms.wmAddress = NULL;
 		wmparms.wmName = NULL;
 		oK(_sdrwm(&wmparms));
 	}
@@ -1743,7 +1746,6 @@ void	sdr_stop_using(Sdr sdrv)
 	sm_WmParms reset;
 	reset.wmKey = -11111; 	/* use key value of -11111 to reset database */
 	oK(_sdrwm(&reset));
-
 }
 
 void	sdr_abort(Sdr sdrv)

@@ -21,8 +21,8 @@
 #define _HAVE_DTN_ION_BPADMIN_ADM_
 #ifdef _HAVE_DTN_ION_BPADMIN_ADM_
 
-#include "nm_types.h"
-#include "adm.h"
+#include "shared/utils/nm_types.h"
+#include "shared/adm/adm.h"
 
 
 /*
