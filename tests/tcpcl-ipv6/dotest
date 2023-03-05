@@ -1,0 +1,127 @@
+#!/bin/bash
+
+# Derived from James Swaro's test, April 25, 2012
+
+SENDER_PORT=4555
+RECEIVER_PORT=4556
+
+ACS=""
+if [[ $BP_VERSION == "bpv6" ]] ; then
+    echo "Looking for acsadmin"
+    if [ $? -eq 0 ] ; then
+        ACS="found"
+    else
+        ACS="missing"
+    fi
+fi
+
+echo "Cleaning up old ION ..."
+rm ion_nodes 1.ipn.tcp/ion.log 2.ipn.tcp/ion.log 2.ipn.tcp/testfile1
+killm
+
+echo "Starting ION..."
+export ION_NODE_LIST_DIR=$PWD
+
+# Set up node 1
+cd 1.ipn.tcp/
+if [[ $ACS == "found" ]] ; then
+	./ionstart-acs
+else
+	./ionstart
+fi
+../../../system_up -i "p 30" -b "p 30"
+
+if [ $? -ne 2 ]; then
+    echo "Node 1 not started: Aborting Test"
+    exit 1
+fi
+
+# Set up node 2
+cd ../2.ipn.tcp/
+if [[ $ACS == "found" ]] ; then
+	./ionstart-acs
+else
+	./ionstart
+fi
+../../../system_up -i "p 30" -b "p 30"
+
+if [ $? -ne 2 ]; then
+    echo "Node 2 not started: Aborting Test"
+    exit 1
+fi
+echo "ION Nodes started successfully..."
+echo ""
+echo "Due to potentailly very slow start for TCPCL when"
+echo "no peer is running. We need to make sure ipnadmin"
+echo "is completed and also bp daemons were launched"
+echo "before proceeding to the next step."
+echo ""
+echo "This can take up to 2 minutes."
+echo ""
+echo "Check Node 1 first..."
+cd ../1.ipn.tcp/
+bpclm_running=""
+while [ "$bpclm_running" == "" ]
+do
+    echo "...wait for bpclm to run for 5 seconds..."
+    sleep 5
+    bpclm_running=$(grep "bpclm is running" ion.log)
+done
+echo "bpclm started for node 1"
+echo ""
+
+echo "Check Node 2 next..."
+cd ../2.ipn.tcp/
+bpclm_running=""
+while [ "$bpclm_running" == "" ]
+do
+    echo "...wait for bpclm to run for 5 seconds..."
+    sleep 5
+    bpclm_running=$(grep "bpclm is running" ion.log)
+done
+echo "bpclm started for node 2"
+echo ""
+echo "Ready to proceed to rest of the test..."
+
+# Start file receiver on node 2.
+cd ../2.ipn.tcp/
+echo "Starting bprecvfile..."
+bprecvfile ipn:2.1 &
+sleep 10
+
+
+# Send one file from node 1 to node 2.
+cd ../1.ipn.tcp/
+echo "Sending file from node 1 to node 2..."
+bpsendfile ipn:1.1 ipn:2.1 testfile
+
+sleep 5
+
+# Verify that this file arrived.
+cd ../2.ipn.tcp
+COUNT=`ls -l testfile1 | egrep 117700 | wc -l`
+
+if [[ $COUNT -eq 1 ]]; then
+    RETVAL=0
+else
+    RETVAL=1
+fi
+
+# Shut down ION processes.
+echo "Stopping ION..."
+cd ../1.ipn.tcp
+./ionstop &
+cd ../2.ipn.tcp
+./ionstop &
+
+# Give nodes time to shut down, then clean up.
+sleep 5
+killm
+
+if [[ $RETVAL -eq 0 ]]; then
+    echo "TCPCL IPv6 ACK test succeeded"
+else
+    echo "TCPCL IPv6 ACK test failed"
+fi
+
+exit $RETVAL
