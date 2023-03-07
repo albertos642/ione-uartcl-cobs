@@ -14,7 +14,7 @@ INTRODUCTION
 
 The purpose of this guide is to introduce the reader to the 
 functionality enabled with inclusion of ici/library/libipv6.c and the 
-associated IPv6 enabled convergance layer adapters (CLAs) in ION-DTN.  
+associated IPv6 enabled convergence layer adapters (CLAs) in ION-DTN.  
 Also treated will be the design decisions and methodology of 
 integration into the existing codebase.  Finally, an appendix of 
 configuration examples provides the reader with the possible run control 
@@ -52,7 +52,7 @@ ici/library/libipv6.c
 
 It is suggested that any subsequent additions 
 of similar library functions, when not specific to a particular 
-convergance layer adapter, be added to libipv6.c.  The associated 
+convergence layer adapter, be added to libipv6.c.  The associated 
 variable and function declarations were placed in:
  
 ici/include/platform.h
@@ -219,12 +219,12 @@ a plan 268435463 tcp/2602:fdf2:bee:feed::2
 
 STCP
 
-The Stcp components are found in
+The STCP components are found in
 
 bpv7/stcp
 
 and include source files:  'stcpcli6.c, stcpclo6.c, and libstcpcla6.c'
-which produce binary daemons tcpcli6 and tcpclo6 when compiles.
+which produce binary daemons stcpcli6 and stcpclo6 when compiles.
 Configuration syntax (CLA specific only) is as follows:
 
 ## begin bpadmin
