@@ -25,6 +25,7 @@ AM_CFLAGS += \
 	-I$(srcdir)/bssp/include \
 	-DSBSP \
 	-I$(srcdir)/ams/include \
+	-I$(srcdir)/nm/
 	-I$(srcdir)/cfdp/include
 
 if SOLARIS_STUDIO_CC
