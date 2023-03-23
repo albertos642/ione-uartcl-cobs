@@ -59,10 +59,8 @@
 #endif	/*	End of #if (defined(linux) && !(defined(bionic)))	*/
 #endif	/*	End if #ifdef UDP_MULTISEND				*/
 
-#ifdef	LTPGSO
 #ifndef LTPGSO_LIMIT
 #define	LTPGSO_LIMIT (64)
-#endif
 #endif
 
 #include "rfx.h"
