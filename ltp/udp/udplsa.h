@@ -21,6 +21,12 @@ extern "C" {
 #define UDPLSA_BUFSZ		((256 * 256) - 1)
 #define LtpUdpDefaultPortNbr	1113
 
+#ifdef UDP_MULTISEND
+#ifndef MULTIRECV_BUFFER_COUNT
+#define MULTIRECV_BUFFER_COUNT	16
+#endif
+#endif
+
 typedef struct
 {
 	int			linkSocket;

@@ -288,6 +288,8 @@ extern int			rtems_shell_main_cp(int argc, char *argv[]);
 
 #else				/****	not Windows		*********/
 
+#define __USE_GNU
+
 #include <sys/times.h>
 #include <limits.h>
 #include <sys/wait.h>
