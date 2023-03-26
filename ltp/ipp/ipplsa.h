@@ -11,6 +11,8 @@
 #ifndef _IPPLSA_H_
 #define _IPPLSA_H_
 
+#define UDP_MULTISEND
+
 #include "ltpP.h"
 #include <pthread.h>
 
@@ -23,10 +25,6 @@ extern "C" {
 
 #define IPPLSA_BUFSZ		((256 * 256) - 1)
 #define LtpIppDefaultPortNbr	1123
-
-#ifndef MULTIRECV_BUFFER_COUNT
-#define MULTIRECV_BUFFER_COUNT  16
-#endif
 
 typedef struct
 {
