@@ -10,12 +10,106 @@
 									*/
 #include "ipplsa.h"
 
+#ifndef	IPPLSA_HANDLERS
+#define	IPPLSA_HANDLERS		4
+#endif
+
+typedef struct
+{
+	pthread_t		handlerThread;
+	Lyst			segments;
+	sm_SemId		semaphore;
+} IpplsaHandler;
+
+typedef struct
+{
+	int			segmentLength;
+	char			*segment;
+} IpplsaCapsule;
+
+static char			*procName = "ipplsi";
+
+static void	*handleSegments(void *parm)
+{
+	/*	Main loop for UDP datagram reception and handling.	*/
+
+	IpplsaHandler	*handler = (IpplsaHandler *) parm;
+	LystElt		elt;
+	IpplsaCapsule	*capsule;
+
+	while (1)
+	{
+		sm_SemTake(handler->semaphore);
+		if (sm_SemEnded(handler->semaphore))
+		{
+			return NULL;
+		}
+
+		while ((elt = lyst_first(handler->segments)))
+		{
+			capsule = lyst_data(elt);
+			if (ltpHandleInboundSegment(capsule->segment,
+					capsule->segmentLength) < 0)
+			{
+				putErrmsg("Can't handle inbound seg.", NULL);
+				ionKillMainThread(procName);
+				return NULL;
+			}
+
+			MRELEASE(capsule->segment);
+			MRELEASE(capsule);
+			lyst_delete(elt);
+		}
+	}
+}
+
+static int	encapsulateSegment(int *handlerIdx, IpplsaHandler *handlers,
+			char *segment, int segmentLength)
+{
+	IpplsaHandler	*handler;
+	IpplsaCapsule	*capsule;
+
+	handler = handlers + *handlerIdx;
+	capsule = MTAKE(sizeof(IpplsaCapsule));
+	if (capsule == NULL)
+	{
+		putErrmsg("Can't create segment capsule.", NULL);
+		return -1;
+	}
+
+	capsule->segmentLength = segmentLength;
+	capsule->segment = MTAKE(segmentLength);
+	if (capsule->segment == NULL)
+	{
+		putErrmsg("Can't populate segment capsule.", NULL);
+		return -1;
+	}
+
+	memcpy(capsule->segment, segment, segmentLength);
+	if (lyst_insert_last(handler->segments, capsule) == NULL)
+	{
+		putErrmsg("Can't enqueue segment capsule.", NULL);
+		return -1;
+	}
+
+	sm_SemGive(handler->semaphore);
+
+	/*	Rotate to next handler for next segment.		*/
+
+	(*handlerIdx)++;
+	if (*handlerIdx >= IPPLSA_HANDLERS)
+	{
+		*handlerIdx = 0;
+	}
+
+	return 0;
+}
+
 void	*ipplsa_handle_datagrams(void *parm)
 {
 	/*	Main loop for UDP datagram reception and handling.	*/
 
 	ReceiverThreadParms	*rtp = (ReceiverThreadParms *) parm;
-	char			*procName = "ipplsi";
 	char			*buffer;
 	int			segmentLength;
 	char			*buffers;
@@ -26,6 +120,10 @@ void	*ipplsa_handle_datagrams(void *parm)
 	int			messageLength;
 	struct cmsghdr          *cmsgs;
 	struct cmsghdr          *cmsg;
+	IpplsaHandler		handlers[IPPLSA_HANDLERS];
+	IpplsaHandler		*handler;
+	int			handlerIdx;
+	char			threadName[32];
 	char			*segment;
 #ifdef LTPPARCEL
 	int			nSegs;
@@ -80,7 +178,8 @@ void	*ipplsa_handle_datagrams(void *parm)
 		putErrmsg("No space for cmsghdr array.", NULL);
 		ionKillMainThread(procName);
 		return NULL;
-	}
+	} 
+
 	memset(cmsgs, 0, CMSG_LEN(sizeof (int)) * MULTIRECV_BUFFER_COUNT);
 	cmsg = (struct cmsghdr *)cmsgs;
 	for (i = 0; i < MULTIRECV_BUFFER_COUNT; i++)
@@ -90,6 +189,42 @@ void	*ipplsa_handle_datagrams(void *parm)
 		msgs[i].msg_hdr.msg_iov = iovecs + i;
 		msgs[i].msg_hdr.msg_iovlen = 1;
 	}
+
+	/*	Initialize segment handlers, for concurrent handling
+	 *	of the segments of a given LTP block.			*/
+
+	for (i = 0, handler = handlers; i < IPPLSA_HANDLERS; i++, handler++)
+	{
+		isprintf(threadName, sizeof threadName, "ipplsa_handler_%d", i);
+		handler->segments = lyst_create_using(getIonMemoryMgr());
+		if (handler->segments == NULL)
+		{
+			MRELEASE(iovecs);
+			MRELEASE(buffers);
+			MRELEASE(msgs);
+			MRELEASE(cmsgs);
+			putErrmsg("No space for ipp handlers array.", NULL);
+			ionKillMainThread(procName);
+			return NULL;
+		}
+
+		handler->semaphore = sm_SemCreate(SM_NO_KEY, SM_SEM_FIFO);
+		sm_SemGive(handler->semaphore);
+		if (pthread_begin(&(handler->handlerThread), NULL,
+				handleSegments, handler, threadName))
+		{
+			MRELEASE(iovecs);
+			MRELEASE(buffers);
+			MRELEASE(msgs);
+			MRELEASE(cmsgs);
+			putSysErrmsg("ipplsi can't create handler thread",
+					threadName);
+			ionKillMainThread(procName);
+			return NULL;
+		}
+	}
+
+	handlerIdx = 0;
 
 	/*	Can now start receiving bundles.  On failure, take
 	 *	down the daemon.					*/
@@ -136,7 +271,6 @@ void	*ipplsa_handle_datagrams(void *parm)
 		segment = buffer;
 		for (i = 0; i < batchLength; i++)
 		{
-
 			/* The API is unpublished, but GRO returns a zero
 			 * segmentLength when only a single segment is
 			 * returned and non-zero for multiple. */
@@ -152,17 +286,22 @@ void	*ipplsa_handle_datagrams(void *parm)
 				segmentLength &= 0xffff; 
 				messageLength -= (nSegs * 2);
 				segment = buffer + (nSegs * 2);
-			} else {
+			}
+			else
+			{
 				csum = 0;
 				if (segmentLength == 0)
 					segmentLength = messageLength;
 			}
 #else /* LTPPARCEL */
 			if ((segmentLength = *((int *)CMSG_DATA(cmsg))) == 0)
+			{
 				segmentLength = messageLength;
+			}
 #endif /* LTPPARCEL */
 #ifdef LTPSTAT
-			if (segmentLength) {
+			if (segmentLength)
+			{
 #ifdef LTPSTAT_NOTDEF
 				char txt[500];
 
@@ -174,12 +313,12 @@ void	*ipplsa_handle_datagrams(void *parm)
 				rtp->recvGRO++;
 			}
 
-			if (messageLength >= 1200) {
+			if (messageLength >= 1200)
+			{
 				rtp->recvBigMsgs++;
 				rtp->recvBigBytes += messageLength;
 			}
 #endif /* LTPSTAT */
-
 			/* process non-final segments */
 			while (messageLength > segmentLength)
 			{
@@ -198,22 +337,22 @@ void	*ipplsa_handle_datagrams(void *parm)
 					if (chk != chk2)
 					{
 #ifdef LTPSTAT
-					char txt[500];
-					isprintf(txt, sizeof(txt),
-					"[i] ipplsi: bad checksum (1) (%d : \
-%x %x)",
-					segmentLength, chk, chk2);
-					writeMemo(txt);
+						char	txt[500];
+
+						isprintf(txt, sizeof(txt),
+								"[i] ipplsi: \
+bad checksum (1) (%d : %x %x)", segmentLength, chk, chk2);
+						writeMemo(txt);
 #endif /* LTPSTAT */
-					goto gro_dropseg;
+						goto gro_dropseg;
 					}
 				}
 #endif /* LTPPARCEL */
-				if (ltpHandleInboundSegment(segment,
-				    segmentLength) < 0)
+				if (encapsulateSegment(&handlerIdx, handlers,
+						segment, segmentLength) < 0)
 				{
-					putErrmsg("Can't handle inbound seg.",
-						NULL);
+					putErrmsg("Can't deliver inbound seg.",
+							NULL);
 					ionKillMainThread(procName);
 					rtp->running = 0;
 					goto taskyield;
@@ -252,19 +391,20 @@ void	*ipplsa_handle_datagrams(void *parm)
 				if (chk != *csum)
 				{
 #ifdef LTPSTAT
-				char txt[500];
-				isprintf(txt, sizeof(txt),
-				"[i] ipplsi: bad checksum (2) (%d : %x %x)",
-					messageLength, chk, *csum);
-				writeMemo(txt);
+					char	txt[500];
+
+					isprintf(txt, sizeof(txt),
+							"[i] ipplsi: \
+bad checksum (2) (%d : %x %x)", messageLength, chk, *csum);
+					writeMemo(txt);
 #endif /* LTPSTAT */
-				goto gro_dropseg2;
+					goto gro_dropseg2;
 				}
 			}
 #endif /* LTPPARCEL */
-
 			/* process message remainder */
-			if (ltpHandleInboundSegment(segment, messageLength) < 0)
+			if (encapsulateSegment(&handlerIdx, handlers, segment,
+					messageLength) < 0)
 			{
 				putErrmsg("Can't handle inbound seg.", NULL);
 				ionKillMainThread(procName);
@@ -275,7 +415,7 @@ void	*ipplsa_handle_datagrams(void *parm)
 			rtp->recvSegs++;
 #endif /* LTPSTAT */
 #ifdef LTPPARCEL
-			gro_dropseg2:
+		gro_dropseg2:
 #endif /* LTPPARCEL */
 			buffer += (IPPLSA_BUFSZ + 1);
 			segment = buffer;
@@ -316,6 +456,14 @@ void	*ipplsa_handle_datagrams(void *parm)
 #endif /* LTPSTAT */
 
 	/*	Free resources.						*/
+
+	for (i = 0, handler = handlers; i < IPPLSA_HANDLERS; i++, handler++)
+	{
+		sm_SemEnd(handler->semaphore);	/*	Stops thread.	*/
+		microsnooze(100000);
+		lyst_destroy(handler->segments);
+		sm_SemDelete(handler->semaphore);
+	}
 
 	return NULL;
 }
