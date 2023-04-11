@@ -9,6 +9,7 @@
 	Copyright (c) 2023, Boeing Corp.  ALL RIGHTS RESERVED.
 									*/
 #include "ipplsa.h"
+#include "llcv.h"
 
 #ifndef	IPPLSA_HANDLERS
 #define	IPPLSA_HANDLERS		4
@@ -18,7 +19,8 @@ typedef struct
 {
 	pthread_t		handlerThread;
 	Lyst			segments;
-	sm_SemId		semaphore;
+	struct llcv_str		segmentsLlcv;
+	Llcv			llcv;
 } IpplsaHandler;
 
 typedef struct
@@ -39,26 +41,38 @@ static void	*handleSegments(void *parm)
 
 	while (1)
 	{
-		sm_SemTake(handler->semaphore);
-		if (sm_SemEnded(handler->semaphore))
+		llcv_wait(handler->llcv, llcv_lyst_not_empty,
+				LLCV_BLOCKING);
+		while (lyst_length(handler->segments) > 0)
 		{
-			return NULL;
-		}
-
-		while ((elt = lyst_first(handler->segments)))
-		{
+			llcv_lock(handler->llcv);
+			elt = lyst_first(handler->segments);
 			capsule = lyst_data(elt);
+			lyst_delete(elt);
+			llcv_unlock(handler->llcv);
+			if (capsule->segment == NULL)
+			{
+				/*	Normal shutdown of thread.	*/
+
+				MRELEASE(capsule);
+				llcv_lock(handler->llcv);
+				lyst_destroy(handler->segments);
+				llcv_close(handler->llcv);
+				return NULL;
+			}
+
 			if (ltpHandleInboundSegment(capsule->segment,
 					capsule->segmentLength) < 0)
 			{
 				putErrmsg("Can't handle inbound seg.", NULL);
-				ionKillMainThread(procName);
+				llcv_lock(handler->llcv);
+				lyst_destroy(handler->segments);
+				llcv_close(handler->llcv);
 				return NULL;
 			}
 
 			MRELEASE(capsule->segment);
 			MRELEASE(capsule);
-			lyst_delete(elt);
 		}
 	}
 }
@@ -78,21 +92,32 @@ static int	encapsulateSegment(int *handlerIdx, IpplsaHandler *handlers,
 	}
 
 	capsule->segmentLength = segmentLength;
-	capsule->segment = MTAKE(segmentLength);
-	if (capsule->segment == NULL)
+	if (segmentLength == 0)		/*	Shutdown.		*/
 	{
-		putErrmsg("Can't populate segment capsule.", NULL);
-		return -1;
+		capsule->segment = NULL;
+	}
+	else
+	{
+		capsule->segment = MTAKE(segmentLength);
+		if (capsule->segment == NULL)
+		{
+			putErrmsg("Can't populate segment capsule.", NULL);
+			return -1;
+		}
+
+		memcpy(capsule->segment, segment, segmentLength);
 	}
 
-	memcpy(capsule->segment, segment, segmentLength);
+	llcv_lock(handler->llcv);
 	if (lyst_insert_last(handler->segments, capsule) == NULL)
 	{
+		llcv_unlock(handler->llcv);
 		putErrmsg("Can't enqueue segment capsule.", NULL);
 		return -1;
 	}
 
-	sm_SemGive(handler->semaphore);
+	llcv_signal_while_locked(handler->llcv, llcv_lyst_not_empty);
+	llcv_unlock(handler->llcv);
 
 	/*	Rotate to next handler for next segment.		*/
 
@@ -195,7 +220,7 @@ void	*ipplsa_handle_datagrams(void *parm)
 
 	for (i = 0, handler = handlers; i < IPPLSA_HANDLERS; i++, handler++)
 	{
-		isprintf(threadName, sizeof threadName, "ipplsa_handler_%d", i);
+		isprintf(threadName, sizeof threadName, "ipplsi_handler_%d", i);
 		handler->segments = lyst_create_using(getIonMemoryMgr());
 		if (handler->segments == NULL)
 		{
@@ -203,13 +228,24 @@ void	*ipplsa_handle_datagrams(void *parm)
 			MRELEASE(buffers);
 			MRELEASE(msgs);
 			MRELEASE(cmsgs);
-			putErrmsg("No space for ipp handlers array.", NULL);
+			putErrmsg("No space for ipp segments Lyst.", NULL);
 			ionKillMainThread(procName);
 			return NULL;
 		}
 
-		handler->semaphore = sm_SemCreate(SM_NO_KEY, SM_SEM_FIFO);
-		sm_SemGive(handler->semaphore);
+		handler->llcv = llcv_open(handler->segments,
+				&(handler->segmentsLlcv));
+		if (handler->llcv == NULL)
+		{
+			MRELEASE(iovecs);
+			MRELEASE(buffers);
+			MRELEASE(msgs);
+			MRELEASE(cmsgs);
+			putErrmsg("IPP can't create Llcv for handler.", NULL);
+			ionKillMainThread(procName);
+			return NULL;
+		}
+
 		if (pthread_begin(&(handler->handlerThread), NULL,
 				handleSegments, handler, threadName))
 		{
@@ -230,7 +266,7 @@ void	*ipplsa_handle_datagrams(void *parm)
 	 *	down the daemon.					*/
 
 	while (rtp->running)
-	{	
+	{
 		/* Re-init everything before each recvmmsg(). It would be
 		 * better if this could be done once at startup time, but
 		 * see above for reason. */
@@ -428,12 +464,21 @@ bad checksum (2) (%d : %x %x)", messageLength, chk, *csum);
 		sm_TaskYield();
 	}
 
+	/*	Free resources, shut down all segment handlers.		*/
+
 	MRELEASE(msgs);
 	MRELEASE(iovecs);
 	MRELEASE(buffers);
 	MRELEASE(cmsgs);
+	i = 0;
+	while (i < IPPLSA_HANDLERS)
+	{
+		oK(encapsulateSegment(&i, handlers, NULL, 0));
+		pthread_join(handlers[i].handlerThread, NULL);
+	}
+
 	writeErrmsgMemos();
-	writeMemo("[i] ipplsa receiver thread has ended.");
+	writeMemo("[i] ipplsi receiver thread has ended.");
 #ifdef LTPSTAT
 	{
 		char	txt[500];
@@ -454,16 +499,6 @@ bad checksum (2) (%d : %x %x)", messageLength, chk, *csum);
 		writeMemo(txt);
 	}
 #endif /* LTPSTAT */
-
-	/*	Free resources.						*/
-
-	for (i = 0, handler = handlers; i < IPPLSA_HANDLERS; i++, handler++)
-	{
-		sm_SemEnd(handler->semaphore);	/*	Stops thread.	*/
-		microsnooze(100000);
-		lyst_destroy(handler->segments);
-		sm_SemDelete(handler->semaphore);
-	}
 
 	return NULL;
 }
