@@ -159,7 +159,7 @@ void	*ipplsa_handle_datagrams(void *parm)
 
 	/*	Initialize recvmmsg buffers.				*/
 
-	buffers = MTAKE((IPPLSA_BUFSZ + 1)* MULTIRECV_BUFFER_COUNT);
+	buffers = MTAKE((IPPLSA_BUFSZ + 1) * MULTIRECV_BUFFER_COUNT);
 	if (buffers == NULL)
 	{
 		putErrmsg("No space for segment buffer array.", NULL);

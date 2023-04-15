@@ -23,6 +23,12 @@
 extern "C" {
 #endif
 
+#ifndef LTPGSO_LIMIT
+#define LTPGSO_LIMIT		(4)
+#endif
+
+#define	LTPSTAT
+
 #define IPPLSA_BUFSZ		((256 * 256) - 1)
 #define LtpIppDefaultPortNbr	1123
 

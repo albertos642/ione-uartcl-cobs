@@ -1,8 +1,8 @@
 /*
 	ipplso.c:	Output daemon for the LTP link service based
-			on GRO/GSO and IP parcels.  Dedicated to UDP
-			datagram transmission to a single remote LTP
-			engine.
+			on GRO/GSO and IP parcels.  Each ipplso
+			process is dedicated to UDP datagram
+			transmission to a single remote LTP engine.
 
 	Author: Fred Templin, Boeing Corp.
 
@@ -464,12 +464,12 @@ compatibility, but it is ignored.");
 #else /* MULTISEND_BATCH_LIMIT */
 	batchLimit = spanBuf.aggrSizeLimit / spanBuf.maxSegmentSize;
 #endif /* MULTISEND_BATCH_LIMIT */
-	if (batchLimit < 0)
+	if (batchLimit < 1)
 	{
 		batchLimit = 1;
 	}
 
-	if ((gsoLimit = LTPGSO_LIMIT) < 0)
+	if ((gsoLimit = LTPGSO_LIMIT) < 1)
 	{
 		gsoLimit = 1;
 	}
