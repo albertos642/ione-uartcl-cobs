@@ -16,15 +16,20 @@
 #include "ltpP.h"
 #include <pthread.h>
 
+#ifndef UDP_GRO
 #define	UDP_GRO			104
+#endif
+
+#ifndef UDP_SEGMENT
 #define	UDP_SEGMENT		103
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #ifndef LTPGSO_LIMIT
-#define LTPGSO_LIMIT		(4)
+#define LTPGSO_LIMIT		(16)
 #endif
 
 #define	LTPSTAT
@@ -115,9 +120,11 @@ out:
 	return result;
 }
 
-uint16_t in_csum(char *buf, int len) {
-	const unsigned char *buff = (unsigned char *)buf;
-	uint16_t result =(~do_csum(buff, len) & 0xffff);
+static inline uint16_t in_csum(char *buf, int len)
+{
+	const unsigned char	*buff = (unsigned char *)buf;
+	uint16_t		result =(~do_csum(buff, len) & 0xffff);
+
 	return (result);
 }
 
