@@ -169,19 +169,19 @@ typedef unsigned long long	uaddr;	/*	Pointer-sized integer.	*/
 #define	strtoaddr(x)		strtoull(x, NULL, 0)
 #define LARGE1			1ULL
 #else				/*	Not Windows.			*/
-typedef long			vast;
-typedef unsigned long		uvast;
-typedef long			saddr;	/*	Pointer-sized integer.	*/
-typedef unsigned long		uaddr;	/*	Pointer-sized integer.	*/
-#define	VAST_FIELDSPEC		"%ld"
-#define	UVAST_FIELDSPEC		"%lu"
-#define UVAST_HEX_FIELDSPEC	"%lx"
-#define	ADDR_FIELDSPEC		"%#lx"
-#define	ADDR_FIELDSPEC_INT	"%lu"
+typedef long long		vast;
+typedef unsigned long long	uvast;
+typedef long long		saddr;	/*	Pointer-sized integer.	*/
+typedef unsigned long long	uaddr;	/*	Pointer-sized integer.	*/
+#define	VAST_FIELDSPEC		"%lld"
+#define	UVAST_FIELDSPEC		"%llu"
+#define UVAST_HEX_FIELDSPEC	"%llx"
+#define	ADDR_FIELDSPEC		"%#llx"
+#define	ADDR_FIELDSPEC_INT	"%llu"
 #define ilseek(a, b, c)		lseek(a, b, c)
-#define	strtovast(x)		strtol(x, NULL, 0)
-#define	strtouvast(x)		strtoul(x, NULL, 0)
-#define	strtoaddr(x)		strtoul(x, NULL, 0)
+#define	strtovast(x)		strtoll(x, NULL, 0)
+#define	strtouvast(x)		strtoull(x, NULL, 0)
+#define	strtoaddr(x)		strtoull(x, NULL, 0)
 #define LARGE1			1UL
 #endif				/*	end #ifdef mingw || ION4WIN	*/
 #endif	/*	!LONG_LONG_OKAY						*/
