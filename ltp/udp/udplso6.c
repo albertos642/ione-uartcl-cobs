@@ -306,9 +306,9 @@ compatibility, but it is ignored.");
 	memset(&peerInetName, 0, sizeof peerInetName);
 	peerInetName->sin6_family = AF_INET6;
 	peerInetName->sin6_addr = in6addr_any;
-	peerInetName->sin6_flowinfo = 0;*/
+	peerInetName->sin6_flowinfo = 0;				*/
 
-	parseSocketSpecSix(endpointSpec, (struct sockaddr_in6 *) &peerInetName);
+	parseSocketSpecSix(endpointSpec, &peerInetName);
 	if (peerInetName.sin6_port == 0)
 	{
 		peerInetName.sin6_port = htons(LtpUdpDefaultPortNbr);

@@ -50,72 +50,7 @@ static void	shutDownLso()	/*	Commands LSO termination.	*/
 	sm_SemEnd(udplsoSemaphore(NULL));
 }
 
-/*	*	*	Main thread functions	*	*	*	*/
-
-#ifdef UDP_MULTISEND
-static int	sendBatch(int linkSocket, struct mmsghdr *msgs,
-			unsigned int batchLength)
-{
-	int	totalBytesSent = 0;
-	int	bytesSent;
-	int	i;
-
-	if (sendmmsg(linkSocket, msgs, batchLength, 0) < 0)
-	{
-		putSysErrmsg("Failed in sendmmsg", itoa(batchLength));
-		return -1;
-	}
-
-	for (i = 0; i < batchLength; i++)
-	{
-		bytesSent = msgs[i].msg_len;
-		if (bytesSent > 0)
-		{
-			totalBytesSent += (IPHDR_SIZE + bytesSent);
-		}
-	}
-
-	return totalBytesSent;
-}
-#else
-int	sendSegmentByUDP(int linkSocket, char *from, int length,
-		struct sockaddr_in *destAddr )
-{
-	int	bytesWritten;
-
-	while (1)	/*	Continue until not interrupted.		*/
-	{
-		bytesWritten = isendto(linkSocket, from, length, 0,
-				(struct sockaddr *) destAddr,
-				sizeof(struct sockaddr));
-		if (bytesWritten < 0)
-		{
-			if (errno == EINTR)	/*	Interrupted.	*/
-			{
-				continue;	/*	Retry.		*/
-			}
-
-			if (errno == ENETUNREACH)
-			{
-				return length;	/*	Just data loss.	*/
-			}
-
-			{
-				char			memoBuf[1000];
-				struct sockaddr_in	*saddr = destAddr;
-
-				isprintf(memoBuf, sizeof(memoBuf),
-					"udplso sendto() error, dest=[%s:%d], \
-nbytes=%d, rv=%d, errno=%d", (char *) inet_ntoa(saddr->sin_addr), 
-					ntohs(saddr->sin_port), 
-					length, bytesWritten, errno);
-				writeMemo(memoBuf);
-			}
-		}
-
-		return bytesWritten;
-	}
-}
+/*	*	*	Rate control functions	*	*	*	*/
 
 static unsigned long	getUsecTimestamp()
 {
@@ -200,6 +135,73 @@ static void	applyRateControl(RateControlState *rc, int bytesSent)
 	microsnooze(balanceDue);
 	rc->prevPaid = balanceDue;
 }
+
+/*	*	*	Main thread functions	*	*	*	*/
+
+#ifdef UDP_MULTISEND
+static int	sendBatch(int linkSocket, struct mmsghdr *msgs,
+			unsigned int batchLength)
+{
+	int	totalBytesSent = 0;
+	int	bytesSent;
+	int	i;
+
+	if (sendmmsg(linkSocket, msgs, batchLength, 0) < 0)
+	{
+		putSysErrmsg("Failed in sendmmsg", itoa(batchLength));
+		return -1;
+	}
+
+	for (i = 0; i < batchLength; i++)
+	{
+		bytesSent = msgs[i].msg_len;
+		if (bytesSent > 0)
+		{
+			totalBytesSent += (IPHDR_SIZE + bytesSent);
+		}
+	}
+
+	return totalBytesSent;
+}
+#else
+int	sendSegmentByUDP(int linkSocket, char *from, int length,
+		struct sockaddr_in *destAddr )
+{
+	int	bytesWritten;
+
+	while (1)	/*	Continue until not interrupted.		*/
+	{
+		bytesWritten = isendto(linkSocket, from, length, 0,
+				(struct sockaddr *) destAddr,
+				sizeof(struct sockaddr));
+		if (bytesWritten < 0)
+		{
+			if (errno == EINTR)	/*	Interrupted.	*/
+			{
+				continue;	/*	Retry.		*/
+			}
+
+			if (errno == ENETUNREACH)
+			{
+				return length;	/*	Just data loss.	*/
+			}
+
+			{
+				char			memoBuf[1000];
+				struct sockaddr_in	*saddr = destAddr;
+
+				isprintf(memoBuf, sizeof(memoBuf),
+					"udplso sendto() error, dest=[%s:%d], \
+nbytes=%d, rv=%d, errno=%d", (char *) inet_ntoa(saddr->sin_addr), 
+					ntohs(saddr->sin_port), 
+					length, bytesWritten, errno);
+				writeMemo(memoBuf);
+			}
+		}
+
+		return bytesWritten;
+	}
+}
 #endif
 
 #if defined (ION_LWT)
@@ -234,6 +236,7 @@ int	main(int argc, char *argv[])
 	int			bytesSent;
 	int			fd;
 	char			quit = '\0';
+	RateControlState	rc;
 #ifdef UDP_MULTISEND
 	Object			spanObj;
 	LtpSpan			spanBuf;
@@ -245,9 +248,8 @@ int	main(int argc, char *argv[])
 	struct mmsghdr		*msgs;
 	struct mmsghdr		*msg;
 	unsigned int		batchLength;
-#else
-	RateControlState	rc;
 #endif
+
 	if (txbps != 0 && remoteEngineId == 0)	/*	Now nominal.	*/
 	{
 		remoteEngineId = txbps;
@@ -396,18 +398,24 @@ compatibility, but it is ignored.");
 		writeMemo(memoBuf);
 	}
 
+	rc.startTimestamp = getUsecTimestamp();
+	rc.prevPaid = 0;
+	rc.remoteEngineId = remoteEngineId;
+	rc.neighbor = NULL;
 #ifdef UDP_MULTISEND
 	spanObj = sdr_list_data(sdr, vspan->spanElt);
 	sdr_read(sdr, (char *) &spanBuf, spanObj, sizeof(LtpSpan));
 
 	/*	For multi-send, we normally send about one LTP block
 	 *	per system call.  But this can be overridden.		*/
-
+#if 0
 #ifdef MULTISEND_BATCH_LIMIT
 	batchLimit = MULTISEND_BATCH_LIMIT;
 #else
 	batchLimit = spanBuf.aggrSizeLimit / spanBuf.maxSegmentSize;
 #endif
+#endif
+batchLimit = spanBuf.aggrSizeLimit / spanBuf.maxSegmentSize;
 	buffers = MTAKE(spanBuf.maxSegmentSize * batchLimit);
 	if (buffers == NULL)
 	{
@@ -465,6 +473,7 @@ segment batch.", NULL);
 
 					batchLength = 0;
 					buffer = buffers;
+					applyRateControl(&rc, bytesSent);
 
 					/*	Let other tasks run.	*/
 
@@ -522,6 +531,7 @@ segment batch.", NULL);
 
 			batchLength = 0;
 			buffer = buffers;
+			applyRateControl(&rc, bytesSent);
 
 			/*	Let other tasks run.			*/
 
@@ -533,10 +543,6 @@ segment batch.", NULL);
 	MRELEASE(iovecs);
 	MRELEASE(buffers);
 #else
-	rc.startTimestamp = getUsecTimestamp();
-	rc.prevPaid = 0;
-	rc.remoteEngineId = remoteEngineId;
-	rc.neighbor = NULL;
 	while (rtp.running && !(sm_SemEnded(vspan->segSemaphore)))
 	{
 		segmentLength = ltpDequeueOutboundSegment(vspan, &segment);

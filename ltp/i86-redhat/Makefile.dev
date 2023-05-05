@@ -3,6 +3,7 @@ INCL = ../include
 UTILS = ../utils
 DAEMON = ../daemon
 UDP = ../udp
+IPP = ../ipp
 DCCP = ../dccp
 SDA = ../sda
 TEST = ../test
@@ -21,9 +22,10 @@ LTPINCLS = \
 	$(API)/ltpP.h \
 	$(API)/ltpsec.h \
 	$(UDP)/udplsa.h \
+	$(IPP)/ipplsa.h \
 	$(DCCP)/dccplsa.h
 
-RUNTIMES = ltpadmin ltpsecadmin ltpclock ltpdeliv ltpmeter udplsi udplso udplsi6 udplso6 ltpdriver ltpcounter sdatest
+RUNTIMES = ltpadmin ltpsecadmin ltpclock ltpdeliv ltpmeter udplsi udplso udplsi6 udplso6 ltpdriver ltpcounter sdatest ipplsi ipplso
 #dccplsi dccplso
 
 ALL = check libltp.so $(RUNTIMES)
@@ -109,6 +111,20 @@ udplso6:	udplso6.o libltp.so libudplsa6.o
 		$(CC) -o udplso6 udplso6.o libudplsa6.o -L./lib -L$(ROOT)/lib -lltp -lici -lpthread -lm
 		cp udplso6 ./bin
 
+#	-	-	IPP executables	-	-	-	-	-
+
+libipplsa:	libipplsa.o libltp.so
+		$(CC) -o libipplsa libipplsa.o -L./lib -L$(ROOT)/lib -lltp -lici -lpthread -lm
+		cp libipplsa.o ./bin
+
+ipplsi:		ipplsi.o libltp.so libipplsa.o
+		$(CC) -o ipplsi ipplsi.o libipplsa.o -L./lib -L$(ROOT)/lib -lltp -lici -lpthread -lm
+		cp ipplsi ./bin
+
+ipplso:		ipplso.o libltp.so libipplsa.o
+		$(CC) -o ipplso ipplso.o libipplsa.o -L./lib -L$(ROOT)/lib -lltp -lici -lpthread -lm
+		cp ipplso ./bin
+
 #	-	-	DCCP executables-	-	-	-	-
 dccplsi:	dccplsi.o libltp.so
 		$(CC) -o dccplsi dccplsi.o -L./lib -L$(ROOT)/lib -lltp -lici -lpthread -lm
@@ -142,6 +158,9 @@ libltp.so:	libltp.o libltpP.o ltpsec.o ltpei.o auth.o libltpnm.o libsda.o
 		$(CC) -c $<
 
 %.o:		$(UDP)/%.c
+		$(CC) -c $<
+
+%.o:		$(IPP)/%.c
 		$(CC) -c $<
 
 %.o:		$(SDA)/%.c
