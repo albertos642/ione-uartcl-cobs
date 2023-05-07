@@ -11,13 +11,6 @@
 #ifndef _UDPLSA_H_
 #define _UDPLSA_H_
 
-#ifdef UDP_MULTISEND
-#define GNU_SOURCE
-#ifndef MULTIRECV_BUFFER_COUNT
-#define MULTIRECV_BUFFER_COUNT	16
-#endif
-#endif
-
 #include "ltpP.h"
 #include <pthread.h>
 

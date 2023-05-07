@@ -488,7 +488,7 @@ segment batch.", NULL);
 		iovec->iov_base = buffer;
 		iovec->iov_len = segmentLength;
 		msg = msgs + batchLength;
-		msg->msg_hdr.msg_name = (struct sockaddr *) peerInetName;
+		msg->msg_hdr.msg_name = (struct sockaddr *) &peerInetName;
 		msg->msg_hdr.msg_namelen = sizeof(struct sockaddr);
 		msg->msg_hdr.msg_iov = iovec;
 		msg->msg_hdr.msg_iovlen = 1;

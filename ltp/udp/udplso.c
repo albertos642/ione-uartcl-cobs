@@ -408,14 +408,11 @@ compatibility, but it is ignored.");
 
 	/*	For multi-send, we normally send about one LTP block
 	 *	per system call.  But this can be overridden.		*/
-#if 0
 #ifdef MULTISEND_BATCH_LIMIT
 	batchLimit = MULTISEND_BATCH_LIMIT;
 #else
 	batchLimit = spanBuf.aggrSizeLimit / spanBuf.maxSegmentSize;
 #endif
-#endif
-batchLimit = spanBuf.aggrSizeLimit / spanBuf.maxSegmentSize;
 	buffers = MTAKE(spanBuf.maxSegmentSize * batchLimit);
 	if (buffers == NULL)
 	{
