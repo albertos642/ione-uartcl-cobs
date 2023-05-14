@@ -76,13 +76,13 @@ static void	applyRateControl(RateControlState *rc, int bytesSent)
 	 *	are expressed in microseconds except the computed
 	 *	totalCostSecs of the transmission.			*/
 
-	unsigned int		totalPaid;	/*	Since last send.*/
+	unsigned long		totalPaid;	/*	Since last send.*/
 	float			timeCostPerByte;/*	In seconds.	*/
-	unsigned int		currentPaid;	/*	Sending seg.	*/
+	unsigned long		currentPaid;	/*	Sending seg.	*/
 	PsmAddress		nextElt;
 	float			totalCostSecs;	/*	For this seg.	*/
-	unsigned int		totalCost;	/*	Microseconds.	*/
-	unsigned int		balanceDue;	/*	Until next seg.	*/
+	unsigned long		totalCost;	/*	Microseconds.	*/
+	unsigned long		balanceDue;	/*	Until next seg.	*/
 
 	totalPaid = getUsecTimestamp() - rc->startTimestamp;
 

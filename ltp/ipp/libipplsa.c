@@ -31,105 +31,6 @@ typedef struct
 
 static char			*procName = "ipplsi";
 
-static void	*handleSegments(void *parm)
-{
-	/*	Main loop for UDP datagram reception and handling.	*/
-
-	IpplsaHandler	*handler = (IpplsaHandler *) parm;
-	LystElt		elt;
-	IpplsaCapsule	*capsule;
-
-	while (1)
-	{
-		llcv_wait(handler->llcv, llcv_lyst_not_empty,
-				LLCV_BLOCKING);
-		while (lyst_length(handler->segments) > 0)
-		{
-			llcv_lock(handler->llcv);
-			elt = lyst_first(handler->segments);
-			capsule = lyst_data(elt);
-			lyst_delete(elt);
-			llcv_unlock(handler->llcv);
-			if (capsule->segment == NULL)
-			{
-				/*	Normal shutdown of thread.	*/
-
-				MRELEASE(capsule);
-				llcv_lock(handler->llcv);
-				lyst_destroy(handler->segments);
-				llcv_close(handler->llcv);
-				return NULL;
-			}
-
-			if (ltpHandleInboundSegment(capsule->segment,
-					capsule->segmentLength) < 0)
-			{
-				putErrmsg("Can't handle inbound seg.", NULL);
-				llcv_lock(handler->llcv);
-				lyst_destroy(handler->segments);
-				llcv_close(handler->llcv);
-				return NULL;
-			}
-
-			MRELEASE(capsule->segment);
-			MRELEASE(capsule);
-		}
-	}
-}
-
-static int	encapsulateSegment(int *handlerIdx, IpplsaHandler *handlers,
-			char *segment, int segmentLength)
-{
-	IpplsaHandler	*handler;
-	IpplsaCapsule	*capsule;
-
-	handler = handlers + *handlerIdx;
-	capsule = MTAKE(sizeof(IpplsaCapsule));
-	if (capsule == NULL)
-	{
-		putErrmsg("Can't create segment capsule.", NULL);
-		return -1;
-	}
-
-	capsule->segmentLength = segmentLength;
-	if (segmentLength == 0)		/*	Shutdown.		*/
-	{
-		capsule->segment = NULL;
-	}
-	else
-	{
-		capsule->segment = MTAKE(segmentLength);
-		if (capsule->segment == NULL)
-		{
-			putErrmsg("Can't populate segment capsule.", NULL);
-			return -1;
-		}
-
-		memcpy(capsule->segment, segment, segmentLength);
-	}
-
-	llcv_lock(handler->llcv);
-	if (lyst_insert_last(handler->segments, capsule) == NULL)
-	{
-		llcv_unlock(handler->llcv);
-		putErrmsg("Can't enqueue segment capsule.", NULL);
-		return -1;
-	}
-
-	llcv_signal_while_locked(handler->llcv, llcv_lyst_not_empty);
-	llcv_unlock(handler->llcv);
-
-	/*	Rotate to next handler for next segment.		*/
-
-	(*handlerIdx)++;
-	if (*handlerIdx >= IPPLSA_HANDLERS)
-	{
-		*handlerIdx = 0;
-	}
-
-	return 0;
-}
-
 void	*ipplsa_handle_datagrams(void *parm)
 {
 	/*	Main loop for UDP datagram reception and handling.	*/
@@ -145,10 +46,6 @@ void	*ipplsa_handle_datagrams(void *parm)
 	int			messageLength;
 	struct cmsghdr          *cmsgs;
 	struct cmsghdr          *cmsg;
-	IpplsaHandler		handlers[IPPLSA_HANDLERS];
-	IpplsaHandler		*handler;
-	int			handlerIdx;
-	char			threadName[32];
 	char			*segment;
 #ifdef LTPPARCEL
 	int			nSegs;
@@ -215,53 +112,6 @@ void	*ipplsa_handle_datagrams(void *parm)
 		msgs[i].msg_hdr.msg_iovlen = 1;
 	}
 
-	/*	Initialize segment handlers, for concurrent handling
-	 *	of the segments of a given LTP block.			*/
-
-	for (i = 0, handler = handlers; i < IPPLSA_HANDLERS; i++, handler++)
-	{
-		isprintf(threadName, sizeof threadName, "ipplsi_handler_%d", i);
-		handler->segments = lyst_create_using(getIonMemoryMgr());
-		if (handler->segments == NULL)
-		{
-			MRELEASE(iovecs);
-			MRELEASE(buffers);
-			MRELEASE(msgs);
-			MRELEASE(cmsgs);
-			putErrmsg("No space for ipp segments Lyst.", NULL);
-			ionKillMainThread(procName);
-			return NULL;
-		}
-
-		handler->llcv = llcv_open(handler->segments,
-				&(handler->segmentsLlcv));
-		if (handler->llcv == NULL)
-		{
-			MRELEASE(iovecs);
-			MRELEASE(buffers);
-			MRELEASE(msgs);
-			MRELEASE(cmsgs);
-			putErrmsg("IPP can't create Llcv for handler.", NULL);
-			ionKillMainThread(procName);
-			return NULL;
-		}
-
-		if (pthread_begin(&(handler->handlerThread), NULL,
-				handleSegments, handler, threadName))
-		{
-			MRELEASE(iovecs);
-			MRELEASE(buffers);
-			MRELEASE(msgs);
-			MRELEASE(cmsgs);
-			putSysErrmsg("ipplsi can't create handler thread",
-					threadName);
-			ionKillMainThread(procName);
-			return NULL;
-		}
-	}
-
-	handlerIdx = 0;
-
 	/*	Can now start receiving bundles.  On failure, take
 	 *	down the daemon.					*/
 
@@ -284,8 +134,8 @@ void	*ipplsa_handle_datagrams(void *parm)
 			cmsg->cmsg_type = UDP_GRO;
 			msgs[i].msg_hdr.msg_control = (void *)cmsg;
 			msgs[i].msg_hdr.msg_controllen = cmsg->cmsg_len;
-			cmsg =
-			    (struct cmsghdr *)((void *)cmsg + cmsg->cmsg_len);
+			cmsg = (struct cmsghdr *)((void *) cmsg
+					+ cmsg->cmsg_len);
 		}
 
 		batchLength = recvmmsg(rtp->linkSocket, msgs,
@@ -327,10 +177,12 @@ void	*ipplsa_handle_datagrams(void *parm)
 			{
 				csum = 0;
 				if (segmentLength == 0)
+				{
 					segmentLength = messageLength;
+				}
 			}
 #else /* LTPPARCEL */
-			if ((segmentLength = *((int *)CMSG_DATA(cmsg))) == 0)
+			if ((segmentLength = *((int *) CMSG_DATA(cmsg))) == 0)
 			{
 				segmentLength = messageLength;
 			}
@@ -342,8 +194,8 @@ void	*ipplsa_handle_datagrams(void *parm)
 				char txt[500];
 
 				isprintf(txt, sizeof(txt),
-				    "[i] ipplsi got Parcel or GRO (%d / %d)",
-				    messageLength, segmentLength);
+					"[i] ipplsi got Parcel/GRO (%d / %d)",
+					messageLength, segmentLength);
 				writeMemo(txt);
 #endif /* LTPSTAT_NOTDEF */
 				rtp->recvGRO++;
@@ -384,10 +236,10 @@ bad checksum (1) (%d : %x %x)", segmentLength, chk, chk2);
 					}
 				}
 #endif /* LTPPARCEL */
-				if (encapsulateSegment(&handlerIdx, handlers,
-						segment, segmentLength) < 0)
+				if (ltpHandleInboundSegment(segment,
+						segmentLength) < 0)
 				{
-					putErrmsg("Can't deliver inbound seg.",
+					putErrmsg("Can't handle inbound seg.",
 							NULL);
 					ionKillMainThread(procName);
 					rtp->running = 0;
@@ -429,9 +281,8 @@ bad checksum (1) (%d : %x %x)", segmentLength, chk, chk2);
 #ifdef LTPSTAT
 					char	txt[500];
 
-					isprintf(txt, sizeof(txt),
-							"[i] ipplsi: \
-bad checksum (2) (%d : %x %x)", messageLength, chk, *csum);
+					isprintf(txt, sizeof(txt), "[i] \
+ipplsi: bad checksum (2) (%d : %x %x)", messageLength, chk, *csum);
 					writeMemo(txt);
 #endif /* LTPSTAT */
 					goto gro_dropseg2;
@@ -439,8 +290,8 @@ bad checksum (2) (%d : %x %x)", messageLength, chk, *csum);
 			}
 #endif /* LTPPARCEL */
 			/* process message remainder */
-			if (encapsulateSegment(&handlerIdx, handlers, segment,
-					messageLength) < 0)
+
+			if (ltpHandleInboundSegment(segment, segmentLength) < 0)
 			{
 				putErrmsg("Can't handle inbound seg.", NULL);
 				ionKillMainThread(procName);
@@ -470,13 +321,6 @@ bad checksum (2) (%d : %x %x)", messageLength, chk, *csum);
 	MRELEASE(iovecs);
 	MRELEASE(buffers);
 	MRELEASE(cmsgs);
-	i = 0;
-	while (i < IPPLSA_HANDLERS)
-	{
-		oK(encapsulateSegment(&i, handlers, NULL, 0));
-		pthread_join(handlers[i].handlerThread, NULL);
-	}
-
 	writeErrmsgMemos();
 	writeMemo("[i] ipplsi receiver thread has ended.");
 #ifdef LTPSTAT
