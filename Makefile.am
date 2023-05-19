@@ -3302,6 +3302,10 @@ bsspcflags = -I$(srcdir)/bssp/library -I$(srcdir)/bssp/include
 bsspbin = \
 	bsspadmin \
 	bsspclock \
+	tcpbsi6 \
+	tcpbso6 \
+	udpbsi6 \
+	udpbso6 \
 	tcpbsi \
 	tcpbso \
 	udpbsi \
@@ -3379,6 +3383,14 @@ udpbso_SOURCES = bssp/udp/udpbso.c
 udpbso_LDADD = libbssp.la libici.la -lm $(bplib) $(PTHREAD_LIBS)
 udpbso_CFLAGS = $(bsspcflags) $(AM_CFLAGS)
 
+udpbsi6_SOURCES = bssp/udp/udpbsi6.c
+udpbsi6_LDADD = libbssp.la libici.la -lm $(bplib) $(PTHREAD_LIBS)
+udpbsi6_CFLAGS = $(bsspcflags) $(AM_CFLAGS)
+
+udpbso6_SOURCES = bssp/udp/udpbso6.c
+udpbso6_LDADD = libbssp.la libici.la -lm $(bplib) $(PTHREAD_LIBS)
+udpbso6_CFLAGS = $(bsspcflags) $(AM_CFLAGS)
+
 # --- TCP Executables --- #
 
 tcpbsi_SOURCES = bssp/tcp/tcpbsi.c
@@ -3388,6 +3400,14 @@ tcpbsi_CFLAGS = $(bsspcflags) $(AM_CFLAGS)
 tcpbso_SOURCES = bssp/tcp/tcpbso.c
 tcpbso_LDADD = libbssp.la libtcpbsa.la libici.la -lm $(bplib) $(PTHREAD_LIBS)
 tcpbso_CFLAGS = $(bsspcflags) $(AM_CFLAGS)
+
+tcpbsi6_SOURCES = bssp/tcp/tcpbsi6.c
+tcpbsi6_LDADD = libbssp.la libici.la -lm $(bplib) $(PTHREAD_LIBS)
+tcpbsi6_CFLAGS = $(bsspcflags) $(AM_CFLAGS)
+
+tcpbso6_SOURCES = bssp/tcp/tcpbso6.c
+tcpbso6_LDADD = libbssp.la libtcpbsa.la libici.la -lm $(bplib) $(PTHREAD_LIBS)
+tcpbso6_CFLAGS = $(bsspcflags) $(AM_CFLAGS)
 
 ##############
 #
