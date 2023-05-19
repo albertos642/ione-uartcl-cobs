@@ -1,16 +1,29 @@
 /*
- *	tcpbsi.c:	BSSP TCP-based link service daemon.
+ *	tcpbsi6.c:	IPv6 BSSP TCP-based link service daemon.
  *
- *	Authors: Sotirios-Angelos Lenas, SPICE
- *		 Scott Burleigh, JPL
  *
- *	Copyright (c) 2013, California Institute of Technology.
- *	Copyright (c) 2013, Space Internetworking Center,
- *	Democritus University of Thrace.
- *	
- *	All rights reserved. U.S. Government and E.U. Sponsorship acknowledged.
+ *      Author:  Scott Mitchell Johnson
+ *      Based on tcpbsi.c by:
+ *               Sotirios-Angelos Lenas, SPICE
+ *               Scott Burleigh, JPL
  *
+ *      Copyright (c) 2023, Spacely Packets, LLC.
+ *      This program is free software; you can redistribute it and/or modify
+ *      it under the terms of the GNU General Public License as published by
+ *      the Free Software Foundation; either version 2 of the License, or
+ *      (at your option) any later version.
+ *
+ *      This program is distributed in the hope that it will be useful,
+ *      but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *      GNU General Public License for more details.
+
+ *      You should have received a copy of the GNU General Public License
+ *      along with this program; if not, write to the Free Software
+ *      Foundation, Inc., at:
+ *              51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
+
 #include "tcpbsa.h"
 
 static void	interruptThread(int signum)
