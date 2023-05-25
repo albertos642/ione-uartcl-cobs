@@ -25,6 +25,10 @@
  */
 
 #include "tcpbsa.h"
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
 static void	interruptThread(int signum)
 {
@@ -117,7 +121,7 @@ static void	*receiveBlocks(void *parm)
 	 *	connection, terminating when connection is lost.	*/
 
 	ReceiverThreadParms	*parms = (ReceiverThreadParms *) parm;
-	char			*procName = "tcpbsi";
+	char			*procName = "tcpbsi6";
 	int			threadRunning = 1;
 	char			*buffer;
 	int			blockLength;
@@ -125,7 +129,7 @@ static void	*receiveBlocks(void *parm)
 	buffer = MTAKE(TCPBSA_BUFSZ);
 	if (buffer == NULL)
 	{
-		putErrmsg("tcpbsi can't get TCP buffer.", NULL);
+		putErrmsg("tcpbsi6 can't get TCP buffer.", NULL);
 		ionKillMainThread(procName);
 		terminateReceiverThread(parms);
 		return NULL;
@@ -153,7 +157,7 @@ static void	*receiveBlocks(void *parm)
 
 		if (bsspHandleInboundBlock(buffer, blockLength) < 0)
 		{
-			putErrmsg("tcpbsi can't handle inbound block.", NULL);
+			putErrmsg("tcpbsi6 can't handle inbound block.", NULL);
 			ionKillMainThread(procName);
 			threadRunning = 0;
 			continue;
@@ -311,7 +315,7 @@ static void	*spawnReceivers(void *parm)
 /*	*	*	Main thread functions	*	*	*	*/
 
 #if defined (ION_LWT)
-int	tcpbsi(saddr a1, saddr a2, saddr a3, saddr a4, saddr a5,
+int	tcpbsi6(saddr a1, saddr a2, saddr a3, saddr a4, saddr a5,
 		saddr a6, saddr a7, saddr a8, saddr a9, saddr a10)
 {
 	char	*socketSpec = (char *) a1;
@@ -383,9 +387,9 @@ int	main(int argc, char *argv[])
 
 	nameLength = sizeof(hostNbr);
 	if (reUseAddress(atp.bsiSocket)
-	|| bind(atp.bsiSocket, (struct sockaddr *) &(atp.socketName), nameLength) < 0
+	|| bind(atp.bsiSocket, (struct sockaddr *) &hostNbr, nameLength) < 0
 	|| listen(atp.bsiSocket, 5) < 0
-	|| getsockname(atp.bsiSocket, (struct sockaddr *) &(atp.socketName), &nameLength) < 0)
+	|| getsockname(atp.bsiSocket, (struct sockaddr *) &hostNbr, &nameLength) < 0)
 	{
 		closesocket(atp.bsiSocket);
 		putSysErrmsg("RL-BSI can't initialize socket", NULL);
@@ -433,7 +437,7 @@ int	main(int argc, char *argv[])
 
 		isprintf(txt, sizeof(txt),
 			"[i] tcpbsi6 is running, spec=[%s:%d].",
-			socketSpec , ntohs(atp.inetName->sin6_port));
+			socketSpec , ntohs(hostNbr.sin6_port));
 		writeMemo(txt);
 	}
 

@@ -39,9 +39,13 @@ extern int	tcpDelayEnabled;
 extern int	tcpDelayNsecPerByte;
 
 extern int	connectToBSI(struct sockaddr *sn, int *sock);
+extern int	connectToBSI6(struct sockaddr_in6 *sn, int *sock);
 extern int	sendBytesByTCP(int *blockSocket, char *from, int length,
 			struct sockaddr *sn);
 extern int	sendBlockByTCP(struct sockaddr *socketName,
+			int *blockSocket, int blockLength,
+			char *block);
+extern int	sendBlockByTCP6(struct sockaddr_in6 *socketName,
 			int *blockSocket, int blockLength,
 			char *block);
 

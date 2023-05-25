@@ -67,7 +67,7 @@ typedef struct
 {
 	int		*bsoRunning;
 	pthread_mutex_t	*mutex;
-	struct sockaddr	*socketName;
+	struct sockaddr_in6	*socketName;
 	int		*flowSocket;
 } KeepaliveThreadParms;
 
@@ -96,7 +96,7 @@ static void	*sendKeepalives(void *parm)
 
 		count = 0;
 		pthread_mutex_lock(parms->mutex);
-		bytesSent = sendBlockByTCP(parms->socketName,
+		bytesSent = sendBlockByTCP6(parms->socketName,
 				parms->flowSocket, 0, NULL);
 		pthread_mutex_unlock(parms->mutex);
 		if (bytesSent < 0)
@@ -126,7 +126,6 @@ int	main(int argc, char *argv[])
 	Sdr			sdr;
 	BsspVspan		*vspan;
 	PsmAddress		vspanElt;
-	struct sockaddr         socketName;
 	struct sockaddr_in6	inetName;
 	int			running = 1;
 	pthread_mutex_t		mutex;
@@ -174,7 +173,7 @@ engine number>");
 
 	if (parseSocketSpecSix(flowName, &inetName) != 0)
 	{
-	    putErrmsg("TCPBSO6 can't get IP/port for host.", flowName);
+	    putErrmsg("tcpbso6 can't get IP/port for host.", flowName);
 		return -1;
 	}
 
@@ -197,11 +196,11 @@ engine number>");
 	parms.bsoRunning = &running;
 	pthread_mutex_init(&mutex, NULL);
 	parms.mutex = &mutex;
-	parms.socketName = &socketName;
+	parms.socketName = &inetName;
 	parms.flowSocket = &flowSocket;
-	if (pthread_begin(&keepaliveThread, NULL, sendKeepalives, &parms, "tcpbso_keepalive"))
+	if (pthread_begin(&keepaliveThread, NULL, sendKeepalives, &parms, "tcpbso6_keepalive"))
 	{
-		putSysErrmsg("tcpbso can't create keepalive thread", NULL);
+		putSysErrmsg("tcpbso6 can't create keepalive thread", NULL);
 		pthread_mutex_destroy(&mutex);
 		return 1;
 	}
@@ -242,7 +241,7 @@ engine number>");
 		else
 		{
 			pthread_mutex_lock(&mutex);
-			bytesSent = sendBlockByTCP(&socketName, &flowSocket,
+			bytesSent = sendBlockByTCP6(&inetName, &flowSocket,
 					blockLength, block);
 			pthread_mutex_unlock(&mutex);
 			if (bytesSent < blockLength)	/*	Stop BSO.*/
@@ -266,6 +265,6 @@ engine number>");
 
 	pthread_mutex_destroy(&mutex);
 	writeErrmsgMemos();
-	writeMemo("[i] tcpbso has ended.");
+	writeMemo("[i] tcpbso6 has ended.");
 	return 0;
 }

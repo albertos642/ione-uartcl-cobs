@@ -24,12 +24,14 @@
  */
 
 #include "udpbsa.h"
-
-#if defined(linux)
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <netdb.h>
+
+
+
+#if defined(linux)
 
 #define IPHDR_SIZE	(sizeof(struct iphdr) + sizeof(struct udphdr))
 
@@ -168,8 +170,7 @@ int	sendBlockByUDP(int linkSocket, char *from, int length,
 				char	dAddr;
 
 				isprintf(memoBuf, sizeof(memoBuf),
-					"udpbso6 sendto() error, dest=[%s:%d], \
-nbytes=%d, rv=%d, errno=%d", inet_ntop(AF_INET6, saddr, &dAddr, sizeof(dAddr)), 
+					"udpbso6 sendto() error, dest=[%s:%d], nbytes=%d, rv=%d, errno=%d", inet_ntop(AF_INET6, saddr, &dAddr, sizeof(dAddr)), 
 					ntohs(saddr->sin6_port), 
 					length, bytesWritten, errno);
 				writeMemo(memoBuf);
@@ -189,7 +190,7 @@ static unsigned long	getUsecTimestamp()
 }
 
 #if defined (ION_LWT)
-int	udpbso(saddr a1, saddr a2, saddr a3, saddr a4, saddr a5,
+int	udpbso6(saddr a1, saddr a2, saddr a3, saddr a4, saddr a5,
 	       saddr a6, saddr a7, saddr a8, saddr a9, saddr a10)
 {
 	char		*endpointSpec = (char *) a1;
@@ -205,9 +206,8 @@ int	main(int argc, char *argv[])
 	Sdr			sdr;
 	BsspVspan		*vspan;
 	PsmAddress		vspanElt;
- 	struct sockaddr         ownSockName;
-	struct sockaddr_in6	*ownInetName = 0;
-	struct sockaddr_in6	*peerInetName = 0;
+	struct sockaddr_in6	ownInetName;
+	struct sockaddr_in6	peerInetName;
 	socklen_t		nameLength;
 	ReceiverThreadParms	rtp;
 	pthread_t		receiverThread;
@@ -246,7 +246,7 @@ int	main(int argc, char *argv[])
 
 	if (txbps != 0)
 	{
-		PUTS("NOTE: udpbso now gets its transmission data rate from \
+		PUTS("NOTE: udpbso6 now gets its transmission data rate from \
 the contact plan.  txbps is still accepted on the command line, for backward \
 compatibility, but it is ignored.");
 	}
@@ -284,10 +284,10 @@ compatibility, but it is ignored.");
 	/*	All command-line arguments are now validated.  First
 	 *	get peer's socket address.				*/
 
-	parseSocketSpecSix(endpointSpec, (struct sockaddr_in6 *) peerInetName);
-	if (peerInetName->sin6_port == 0)
+	parseSocketSpecSix(endpointSpec, &peerInetName);
+	if (peerInetName.sin6_port == 0)
 	{
-		peerInetName->sin6_port = htons(BsspUdpDefaultPortNbr);
+		peerInetName.sin6_port = htons(BsspUdpDefaultPortNbr);
 	}
 
 
@@ -295,10 +295,10 @@ compatibility, but it is ignored.");
 	 *	responds to the link service output socket rather
 	 *	than to the advertised link service input socket.	*/
 
-        ownInetName->sin6_family = AF_INET6;
-        ownInetName->sin6_addr = in6addr_any;
-        ownInetName->sin6_port = htons(0);
-        ownInetName->sin6_flowinfo = 0;
+        ownInetName.sin6_family = AF_INET6;
+        ownInetName.sin6_addr = in6addr_any;
+        ownInetName.sin6_port = htons(0);
+        ownInetName.sin6_flowinfo = 0;
 
 	/*	This socket needs to be bound to the local socket
 	 *	address (just as in udpbsi), so that the udpbso
@@ -320,10 +320,10 @@ compatibility, but it is ignored.");
 	 *	send a 1-byte datagram to that address to shut down
 	 *	the datagram handling thread.				*/
 
-	nameLength = sizeof(ownInetName);
+	nameLength = sizeof(struct sockaddr_in6);
 	if (reUseAddress(rtp.linkSocket)
-	|| bind(rtp.linkSocket, (struct sockaddr *) &ownSockName, nameLength) < 0
-	|| getsockname(rtp.linkSocket, (struct sockaddr *) &ownSockName, &nameLength) < 0)
+	|| bind(rtp.linkSocket, (struct sockaddr *) &ownInetName, nameLength) < 0
+	|| getsockname(rtp.linkSocket, (struct sockaddr *) &ownInetName, &nameLength) < 0)
 	{
 		closesocket(rtp.linkSocket);
 		putSysErrmsg("BE-BSO can't bind UDP socket", NULL);
@@ -352,9 +352,7 @@ compatibility, but it is ignored.");
 		char	memoBuf[1024];
 
 		isprintf(memoBuf, sizeof(memoBuf),
-			"[i] udpbso6 is running, spec=[%s:%d], txbps=%d \
-(0=unlimited), rengine=%d.", endpointSpec,
-			ntohs(peerInetName->sin6_port), txbps, (int) remoteEngineId);
+			"[i] udpbso6 is running, spec=[%s:%d], txbps=%d (0=unlimited), rengine=%d.", endpointSpec, ntohs(peerInetName.sin6_port), txbps, (int) remoteEngineId);
 		writeMemo(memoBuf);
 	}
 
@@ -383,7 +381,7 @@ compatibility, but it is ignored.");
 		}
 
 		bytesSent = sendBlockByUDP(rtp.linkSocket, block, blockLength,
-				peerInetName);
+				&peerInetName);
 		if (bytesSent < blockLength)
 		{
 			rtp.running = 0;	/*	Terminate BSO.	*/
@@ -458,7 +456,7 @@ compatibility, but it is ignored.");
 	fd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
 	if (fd >= 0)
 	{
-		if (isendto(fd, &quit, 1, 0, (struct sockaddr *) &ownSockName,
+		if (isendto(fd, &quit, 1, 0, (struct sockaddr *) &ownInetName,
 				sizeof(struct sockaddr_in6)) == 1)
 		{
 			pthread_join(receiverThread, NULL);
