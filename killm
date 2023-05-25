@@ -131,6 +131,8 @@ KILLPROCESSLIST="acsadmin lt-acsadmin \
 	tcp2file lt-tcp2file \
 	tcpbsi lt-tcpbsi \
 	tcpbso lt-tcpbso \
+	tcpbsi6 lt-tcpbsi6 \
+	tcpbso6 lt-tcpbso6 \
 	tcpcli lt-tcpcli \
 	tcpclo lt-tcpclo \
 	tcpcli6 lt-tcpcli6 \
@@ -146,6 +148,8 @@ KILLPROCESSLIST="acsadmin lt-acsadmin \
 	udplso lt-udplso \
 	udplsi6 lt-udplsi6 \
 	udplso6 lt-udplso6 \
+	udpbsi6 lt-udpbsi6 \
+	udpbso6 lt-udpbso6 \
 	uartcli lt-uartcli \
 	uartclo lt-uartclo \
 	"

@@ -3313,7 +3313,8 @@ bsspbin = \
 
 bssplib = \
 	libbssp.la \
-	libtcpbsa.la
+	libtcpbsa.la \
+	libtcpbsa6.la
 
 bsspinclude = \
 	bssp/include/bssp.h
@@ -3361,6 +3362,11 @@ libtcpbsa_la_CFLAGS = $(bsspcflags) $(AM_CFLAGS)
 libtcpbsa_la_LDFLAGS = $(ION_LINK_FLAGS)
 libtcpbsa_la_LIBADD = libici.la -lm $(PTHREAD_LIBS)
 
+libtcpbsa6_la_SOURCES = bssp/tcp/libtcpbsa6.c
+libtcpbsa6_la_CFLAGS = $(bsspcflags) $(AM_CFLAGS)
+libtcpbsa6_la_LDFLAGS = $(ION_LINK_FLAGS)
+libtcpbsa6_la_LIBADD = libici.la -lm $(PTHREAD_LIBS)
+
 # --- Daemon Executables --- #
 
 bsspclock_SOURCES = bssp/daemon/bsspclock.c
@@ -3406,7 +3412,7 @@ tcpbsi6_LDADD = libbssp.la libici.la -lm $(bplib) $(PTHREAD_LIBS)
 tcpbsi6_CFLAGS = $(bsspcflags) $(AM_CFLAGS)
 
 tcpbso6_SOURCES = bssp/tcp/tcpbso6.c
-tcpbso6_LDADD = libbssp.la libtcpbsa.la libici.la -lm $(bplib) $(PTHREAD_LIBS)
+tcpbso6_LDADD = libbssp.la libtcpbsa6.la libici.la -lm $(bplib) $(PTHREAD_LIBS)
 tcpbso6_CFLAGS = $(bsspcflags) $(AM_CFLAGS)
 
 ##############
