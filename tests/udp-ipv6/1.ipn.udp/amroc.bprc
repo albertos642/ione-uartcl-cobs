@@ -1,0 +1,11 @@
+1
+a scheme ipn 'ipnfw' 'ipnadminep'
+a endpoint ipn:1.0 q
+a endpoint ipn:1.1 q
+a endpoint ipn:1.2 q
+a protocol udp 1400 100
+a induct udp ::1!4555 udpcli6
+a outduct udp ::1 udpclo6
+r 'ipnadmin amroc.ipnrc'
+w 1
+s

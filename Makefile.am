@@ -25,6 +25,7 @@ AM_CFLAGS += \
 	-I$(srcdir)/bssp/include \
 	-DSBSP \
 	-I$(srcdir)/ams/include \
+	-I$(srcdir)/nm/
 	-I$(srcdir)/cfdp/include
 
 if SOLARIS_STUDIO_CC
@@ -1845,6 +1846,8 @@ bpbin = \
 	ltpclo \
 	stcpcli \
 	stcpclo \
+	stcpcli6 \
+	stcpclo6 \
 	tcpcli \
 	tcpclo \
 	tcpcli6 \
@@ -1876,6 +1879,7 @@ bplib = \
 	libstcpcla.la \
 	libudpcla.la \
 	libudpcla6.la \
+	libstcpcla6.la \
 	libuartcla.la
 
 bpinclude = \
@@ -1970,6 +1974,8 @@ bpextra = \
 	bpv7/doc/pod1/ltpclo.pod \
 	bpv7/doc/pod1/stcpcli.pod \
 	bpv7/doc/pod1/stcpclo.pod \
+	bpv7/doc/pod1/stcpcli6.pod \
+	bpv7/doc/pod1/stcpclo6.pod \
 	bpv7/doc/pod1/tcpcli.pod \
 	bpv7/doc/pod1/tcpclo.pod \
 	bpv7/doc/pod1/tcpcli6.pod \
@@ -2070,6 +2076,8 @@ bpmans = \
 	$(top_builddir)/bpv7/doc/ltpclo.1 \
 	$(top_builddir)/bpv7/doc/stcpcli.1 \
 	$(top_builddir)/bpv7/doc/stcpclo.1 \
+	$(top_builddir)/bpv7/doc/stcpcli6.1 \
+	$(top_builddir)/bpv7/doc/stcpclo6.1 \
 	$(top_builddir)/bpv7/doc/tcpcli.1 \
 	$(top_builddir)/bpv7/doc/tcpclo6.1 \
 	$(top_builddir)/bpv7/doc/tcpcli6.1 \
@@ -2292,6 +2300,10 @@ libstcpcla_la_SOURCES = bpv7/stcp/libstcpcla.c
 libstcpcla_la_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 libstcpcla_la_LIBADD = libbp.la libici.la
 
+libstcpcla6_la_SOURCES = bpv7/stcp/libstcpcla6.c
+libstcpcla6_la_CFLAGS = $(bpcflags) $(AM_CFLAGS)
+libstcpcla6_la_LIBADD = libbp.la libici.la
+
 libudpcla_la_SOURCES = bpv7/udp/libudpcla.c
 libudpcla_la_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 libudpcla_la_LIBADD = libbp.la libici.la
@@ -2446,6 +2458,14 @@ stcpcli_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 stcpclo_SOURCES = bpv7/stcp/stcpclo.c
 stcpclo_LDADD = libici.la $(bplib) $(PTHREAD_LIBS)
 stcpclo_CFLAGS = $(bpcflags) $(AM_CFLAGS)
+
+stcpcli6_SOURCES = bpv7/stcp/stcpcli6.c
+stcpcli6_LDADD = libici.la $(bplib) $(PTHREAD_LIBS)
+stcpcli6_CFLAGS = $(bpcflags) $(AM_CFLAGS)
+
+stcpclo6_SOURCES = bpv7/stcp/stcpclo6.c
+stcpclo6_LDADD = libici.la $(bplib) $(PTHREAD_LIBS)
+stcpclo6_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 
 # --- UDP Executables --- #
 
