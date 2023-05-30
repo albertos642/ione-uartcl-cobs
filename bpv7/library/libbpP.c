@@ -11644,7 +11644,7 @@ static int	decodeHeader(Sdr sdr, ZcoReader *reader, unsigned char *buffer,
 	/*	Skip over bundle array tag.				*/
 
 	arrayLength = 0;
-	if (cbor_decode_array_open(&arrayLength, &cursor, &unparsedBytes) < 0)
+	if (cbor_decode_array_open(&arrayLength, &cursor, &unparsedBytes) < 1)
 	{
 		return -1;
 	}
@@ -11652,21 +11652,21 @@ static int	decodeHeader(Sdr sdr, ZcoReader *reader, unsigned char *buffer,
 	/*	Skip over primary block array tag.			*/
 
 	arrayLength = 0;
-	if (cbor_decode_array_open(&arrayLength, &cursor, &unparsedBytes) < 0)
+	if (cbor_decode_array_open(&arrayLength, &cursor, &unparsedBytes) < 1)
 	{
 		return -1;
 	}
 
 	/*	Skip over version number.				*/
 
-	if (cbor_decode_integer(&uvtemp, CborAny, &cursor, &unparsedBytes) < 0)
+	if (cbor_decode_integer(&uvtemp, CborAny, &cursor, &unparsedBytes) < 1)
 	{
 		return -1;
 	}
 
 	/*	Parse out the bundle processing flags.			*/
 
-	if (cbor_decode_integer(&uvtemp, CborAny, &cursor, &unparsedBytes) < 0)
+	if (cbor_decode_integer(&uvtemp, CborAny, &cursor, &unparsedBytes) < 1)
 	{
 		return -1;
 	}
@@ -11675,7 +11675,7 @@ static int	decodeHeader(Sdr sdr, ZcoReader *reader, unsigned char *buffer,
 
 	/*	Parse out the CRC type.					*/
 
-	if (cbor_decode_integer(&uvtemp, CborAny, &cursor, &unparsedBytes) < 0)
+	if (cbor_decode_integer(&uvtemp, CborAny, &cursor, &unparsedBytes) < 1)
 	{
 		return -1;
 	}
@@ -11706,14 +11706,14 @@ static int	decodeHeader(Sdr sdr, ZcoReader *reader, unsigned char *buffer,
 	/*	Skip over creation timestamp array tag.			*/
 
 	arrayLength = 2;
-	if (cbor_decode_array_open(&arrayLength, &cursor, &unparsedBytes) < 0)
+	if (cbor_decode_array_open(&arrayLength, &cursor, &unparsedBytes) < 1)
 	{
 		return -1;
 	}
 
 	/*	Get creation timestamp milliseconds.			*/
 
-	if (cbor_decode_integer(&uvtemp, CborAny, &cursor, &unparsedBytes) < 0)
+	if (cbor_decode_integer(&uvtemp, CborAny, &cursor, &unparsedBytes) < 1)
 	{
 		return -1;
 	}
@@ -11722,7 +11722,7 @@ static int	decodeHeader(Sdr sdr, ZcoReader *reader, unsigned char *buffer,
 
 	/*	Get creation timestamp count.				*/
 
-	if (cbor_decode_integer(&uvtemp, CborAny, &cursor, &unparsedBytes) < 0)
+	if (cbor_decode_integer(&uvtemp, CborAny, &cursor, &unparsedBytes) < 1)
 	{
 		return -1;
 	}
@@ -11731,7 +11731,7 @@ static int	decodeHeader(Sdr sdr, ZcoReader *reader, unsigned char *buffer,
 
 	/*	Skip over lifetime.					*/
 
-	if (cbor_decode_integer(&uvtemp, CborAny, &cursor, &unparsedBytes) < 0)
+	if (cbor_decode_integer(&uvtemp, CborAny, &cursor, &unparsedBytes) < 1)
 	{
 		return -1;
 	}
@@ -11755,7 +11755,7 @@ static int	decodeHeader(Sdr sdr, ZcoReader *reader, unsigned char *buffer,
 	 *	payload length is known and the fragmentary bundle
 	 *	can be retrieved.					*/
 
-	if (cbor_decode_integer(&uvtemp, CborAny, &cursor, &unparsedBytes) < 0)
+	if (cbor_decode_integer(&uvtemp, CborAny, &cursor, &unparsedBytes) < 1)
 	{
 		return -1;
 	}
@@ -11764,7 +11764,7 @@ static int	decodeHeader(Sdr sdr, ZcoReader *reader, unsigned char *buffer,
 
 	/*	Get total ADU length, cues serialized bundle retrieval.	*/
 
-	if (cbor_decode_integer(&uvtemp, CborAny, &cursor, &unparsedBytes) < 0)
+	if (cbor_decode_integer(&uvtemp, CborAny, &cursor, &unparsedBytes) < 1)
 	{
 		return -1;
 	}
@@ -11828,7 +11828,7 @@ static int	decodeHeader(Sdr sdr, ZcoReader *reader, unsigned char *buffer,
 
 		arrayLength = 0;
 		if (cbor_decode_array_open(&arrayLength, &cursor,
-				&unparsedBytes) < 0)
+				&unparsedBytes) < 1)
 		{
 			return -1;
 		}
@@ -11836,7 +11836,7 @@ static int	decodeHeader(Sdr sdr, ZcoReader *reader, unsigned char *buffer,
 		/*	Extract blockType.				*/
 
 		if (cbor_decode_integer(&uvtemp, CborAny, &cursor,
-				&unparsedBytes) < 0)
+				&unparsedBytes) < 1)
 		{
 			return -1;
 		}
@@ -11846,7 +11846,7 @@ static int	decodeHeader(Sdr sdr, ZcoReader *reader, unsigned char *buffer,
 		/*	Skip over block number.				*/
 
 		if (cbor_decode_integer(&uvtemp, CborAny, &cursor,
-				&unparsedBytes) < 0)
+				&unparsedBytes) < 1)
 		{
 			return -1;
 		}
@@ -11854,7 +11854,7 @@ static int	decodeHeader(Sdr sdr, ZcoReader *reader, unsigned char *buffer,
 		/*	Skip over block processing flags.		*/
 
 		if (cbor_decode_integer(&uvtemp, CborAny, &cursor,
-				&unparsedBytes) < 0)
+				&unparsedBytes) < 1)
 		{
 			return -1;
 		}
@@ -11862,7 +11862,7 @@ static int	decodeHeader(Sdr sdr, ZcoReader *reader, unsigned char *buffer,
 		/*	Parse out the CRC type.				*/
 
 		if (cbor_decode_integer(&uvtemp, CborAny, &cursor,
-				&unparsedBytes) < 0)
+				&unparsedBytes) < 1)
 		{
 			return -1;
 		}
@@ -11873,7 +11873,7 @@ static int	decodeHeader(Sdr sdr, ZcoReader *reader, unsigned char *buffer,
 
 		uvtemp = (uvast) -1;
 		if (cbor_decode_byte_string(NULL, &uvtemp, &cursor,
-				&unparsedBytes) < 0)
+				&unparsedBytes) < 1)
 		{
 			return -1;
 		}

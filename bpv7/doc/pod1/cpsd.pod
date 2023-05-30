@@ -23,6 +23,10 @@ B<cpsd> is spawned automatically by B<bpadmin> in response to the 's' (START)
 command that starts operation of the Bundle Protocol, and it is terminated by
 B<bpadmin> in response to an 'x' (STOP) command.
 
+Note that in order for cpsd to operate, ION must be built with multicast
+enabled and both the "imc" scheme and the "imc:0.1" endpoint must be defined
+in the configuration of the node.
+
 =head1 EXIT STATUS
 
 =over 4
