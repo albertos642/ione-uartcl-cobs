@@ -53,7 +53,8 @@ int	connectToBSI6(struct sockaddr_in6 *sn, int *sock)
 		return -1;
 	}
 
-	if (connect(*sock, (struct sockaddr *) sn, sizeof(struct sockaddr_in6)) < 0)
+	if (connect(*sock, (struct sockaddr *) sn, sizeof(struct sockaddr_in6))
+			< 0)
 	{
 		closesocket(*sock);
 		*sock = -1;

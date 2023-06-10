@@ -415,7 +415,8 @@ int	main(int argc, char *argv[])
 	/*	Start the access thread.				*/
 
 	atp.running = 1;
-	if (pthread_begin(&accessThread, NULL, spawnReceivers, &atp, "tcpbsi_access"))
+	if (pthread_begin(&accessThread, NULL, spawnReceivers, &atp,
+			"tcpbsi_access"))
 	{
 		closesocket(atp.bsiSocket);
 		putSysErrmsg("tcpbsi can't create access thread", NULL);

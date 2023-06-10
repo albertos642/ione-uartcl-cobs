@@ -19,9 +19,9 @@ LTPINCLS = \
 	$(UDP)/udpbsa.h \
 	$(TCP)/tcpbsa.h
 
-RUNTIMES = bsspadmin bsspclock udpbso udpbsi tcpbso tcpbsi
+RUNTIMES = bsspadmin bsspclock udpbso udpbsi udpbso6 udpbsi6 tcpbso tcpbsi tcpbso6 tcpbsi6
 
-ALL = check libbsspP.so libbssp.so libtcpbsa.so $(RUNTIMES)
+ALL = check libbsspP.so libbssp.so libtcpbsa.so libtcpbsa6.so $(RUNTIMES)
 
 all:		$(ALL)
 
@@ -62,14 +62,31 @@ udpbso:		udpbso.o libbsspP.so
 		$(CC) -o udpbso udpbso.o -L./lib -L$(ROOT)/lib -lbsspP -lici -lpthread -lm
 		cp udpbso ./bin
 
+udpbsi6:	udpbsi6.o libbsspP.so
+		$(CC) -o udpbsi6 udpbsi6.o -L./lib -L$(ROOT)/lib -lbsspP -lici -lpthread -lm
+		cp udpbsi6 ./bin
+
+udpbso6:	udpbso6.o libbsspP.so
+		$(CC) -o udpbso6 udpbso6.o -L./lib -L$(ROOT)/lib -lbsspP -lici -lpthread -lm
+		cp udpbso6 ./bin
+
 #	-	-	TCP executables-	-	-	-	-
-tcpbsi:		tcpbsi.o libbsspP.so
+
+tcpbsi:		tcpbsi.o libbsspP.so libtcpbsa.so
 		$(CC) -o tcpbsi tcpbsi.o -L./lib -L$(ROOT)/lib -ltcpbsa -lbsspP -lici -lpthread -lm
 		cp tcpbsi ./bin
 
-tcpbso:		tcpbso.o libbsspP.so
+tcpbso:		tcpbso.o libbsspP.so libtcpbsa.so
 		$(CC) -o tcpbso tcpbso.o -L./lib -L$(ROOT)/lib -ltcpbsa -lbsspP -lici -lpthread -lm
 		cp tcpbso ./bin
+
+tcpbsi6:	tcpbsi6.o libbsspP.so libtcpbsa6.so
+		$(CC) -o tcpbsi6 tcpbsi6.o -L./lib -L$(ROOT)/lib -ltcpbsa6 -lbsspP -lici -lpthread -lm
+		cp tcpbsi6 ./bin
+
+tcpbso6:	tcpbso6.o libbsspP.so libtcpbsa6.so
+		$(CC) -o tcpbso6 tcpbso6.o -L./lib -L$(ROOT)/lib -ltcpbsa6 -lbsspP -lici -lpthread -lm
+		cp tcpbso6 ./bin
 
 #	-	-	Libraries	-	-	-	-	-
 
@@ -84,6 +101,10 @@ libbssp.so:	libbssp.o
 libtcpbsa.so:	libtcpbsa.o
 		$(LD) -o libtcpbsa.so libtcpbsa.o
 		cp libtcpbsa.so ./lib
+
+libtcpbsa6.so:	libtcpbsa6.o
+		$(LD) -o libtcpbsa6.so libtcpbsa6.o
+		cp libtcpbsa6.so ./lib
 
 #	-	-	Object modules	-	-	-	-	-
 

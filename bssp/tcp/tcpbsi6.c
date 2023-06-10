@@ -333,7 +333,7 @@ int	main(int argc, char *argv[])
 	socklen_t		nameLength;
 //	char			*tcpDelayString; // Temporarily commented out to fix linking errors with tcpDelayEnable in ion-3.3.0
 	pthread_t		accessThread;
-	int			fd;
+	int			fd = -1;
 
 	if (socketSpec == NULL)
 	{
@@ -422,7 +422,8 @@ int	main(int argc, char *argv[])
 	/*	Start the access thread.				*/
 
 	atp.running = 1;
-	if (pthread_begin(&accessThread, NULL, spawnReceivers, &atp, "tcpbsi6_access"))
+	if (pthread_begin(&accessThread, NULL, spawnReceivers, &atp,
+				"tcpbsi6_access"))
 	{
 		closesocket(atp.bsiSocket);
 		putSysErrmsg("tcpbsi6 can't create access thread", NULL);
@@ -452,14 +453,21 @@ int	main(int argc, char *argv[])
 	fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
 	if (fd >= 0)
 	{
-		oK(connect(fd, &(atp.socketName), sizeof(struct sockaddr_in6)));
+		if (connect(fd, (struct sockaddr *) (&(atp.inetName)),
+				sizeof(struct sockaddr_in6)) < 0)
+		{
+			putSysErrmsg("Can't connect to shut down thread.",
+					NULL);
+		}
+		else
+		{
+			/*	Immediately discard connected socket.	*/
 
-		/*	Immediately discard the connected socket.	*/
-
-		closesocket(fd);
+			closesocket(fd);
+			pthread_join(accessThread, NULL);
+		}
 	}
 
-	pthread_join(accessThread, NULL);
 	writeErrmsgMemos();
 	writeMemo("[i] tcpbsi has ended.");
 	ionDetach();
