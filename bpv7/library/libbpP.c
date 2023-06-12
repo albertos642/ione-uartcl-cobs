@@ -3593,8 +3593,16 @@ static int	addEndpoint_IMC(VScheme *vscheme, char *eid)
 
 	CHKERR(parseEidString(eid, &metaEid, &vscheme, &elt));
 	petition.groupNbr = metaEid.elementNbr;
-	if (petition.groupNbr == 0)	/*	Pan-regional dispatch.	*/
+	if (petition.groupNbr == 0)
 	{
+		/*	No need to send petition for this multicast
+		 *	group Join: by virtue of being added to
+		 *	the region - by addition of its Registration
+		 *	contact to the region's contact plan and
+		 *	multicast propagation of that contact plan
+		 *	change by cpsd - the node is automatically
+		 *	a member of the IMC admin multicast group.	*/
+
 		return 0;
 	}
 

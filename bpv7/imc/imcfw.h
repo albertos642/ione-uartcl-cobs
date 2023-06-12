@@ -63,6 +63,9 @@ extern int		imcSendDispatch(char *destEid, uint32_t toRegion,
 extern int		imcSendPetition(ImcPetition *petition,
 				uint32_t toRegion);
 
+extern int		imcUpdateGroup(uvast groupNbr, uvast nodeNbr,
+				int isMember);
+
 extern int		imcGroupMember(uvast groupNbr);
 
 /*	For inter-regional multicast, the original (intra-regional)
