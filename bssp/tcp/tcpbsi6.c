@@ -453,23 +453,15 @@ int	main(int argc, char *argv[])
 	fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
 	if (fd >= 0)
 	{
-		if (connect(fd, (struct sockaddr *) (&(atp.inetName)),
-				sizeof(struct sockaddr_in6)) < 0)
-		{
-			putSysErrmsg("Can't connect to shut down thread.",
-					NULL);
-		}
-		else
-		{
-			/*	Immediately discard connected socket.	*/
+		oK(connect(fd, (struct sockaddr *) &(atp.inetName), sizeof(struct sockaddr_in6)));
+		/*      Immediately discard the connected socket.       */
 
-			closesocket(fd);
-			pthread_join(accessThread, NULL);
-		}
+                closesocket(fd);
+		pthread_join(accessThread, NULL);
 	}
 
 	writeErrmsgMemos();
-	writeMemo("[i] tcpbsi has ended.");
+	writeMemo("[i] tcpbsi6 has ended.");
 	ionDetach();
 	return 0;
 }
