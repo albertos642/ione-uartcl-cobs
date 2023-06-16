@@ -457,8 +457,10 @@ int	main(int argc, char *argv[])
 		/*      Immediately discard the connected socket.       */
 
                 closesocket(fd);
-		pthread_join(accessThread, NULL);
 	}
+
+	pthread_join(accessThread, NULL);
+
 
 	writeErrmsgMemos();
 	writeMemo("[i] tcpbsi6 has ended.");
