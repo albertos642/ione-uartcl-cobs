@@ -1,14 +1,24 @@
 # shell script to get node running
 #!/bin/bash
-ionadmin	amroc.ionrc
+ionadmin	amroc.ionrc 
+echo "a" > 1.log
+sleep 1
 
-ionadmin	../global.ionrc &
+ionadmin 	../global.ionrc & 
+echo "b" >> 1.log
+sleep 1
 
-ionsecadmin	amroc.ionsecrc &
+ionsecadmin 	amroc.ionsecrc &
+echo "c" >> 1.log
+sleep 1
 
 owltsim		amroc.owltsim &
+sleep 1
 
 bsspadmin	amroc.bssprc &
+echo "bssp" >> 1.log
+sleep 3
 
-bpadmin		amroc.bprc &
-
+bpadmin	amroc.bprc &
+echo "bp" >> 1.log
+sleep 5
