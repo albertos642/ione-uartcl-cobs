@@ -210,7 +210,8 @@ static int	handleIrfMessage(IonDB *iondb, BpDelivery *dlv)
 			return 0;
 		}
 
-		if (lyst_insert_last(passageways, (void *) (uintptr_t)uvtemp) == NULL)
+		if (lyst_insert_last(passageways, (void *) (uintptr_t) uvtemp)
+				== NULL)
 		{
 			putErrmsg("Can't insert passageway into lyst.", NULL);
 			lyst_destroy(passageways);

@@ -1058,7 +1058,7 @@ writeMemoNote("Number of group members in region", itoa(lyst_length(members)));
 	for (destinationElt = lyst_first(members); destinationElt;
 			destinationElt = lyst_next(destinationElt))
 	{
-		nodeNbr = (uvast) (uintptr_t)lyst_data(destinationElt);
+		nodeNbr = (uvast) (uintptr_t) lyst_data(destinationElt);
 		if (sdr_list_insert_last(sdr, newBundle.destinations, nodeNbr)
 				== 0)
 		{
