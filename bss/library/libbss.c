@@ -39,12 +39,12 @@ void	bssStop()
 	}
 	else
 	{
-		PUTS("No active thread detected");
+		putErrmsg("No active thread detected", NULL);
 		fflush(stdout);
 		return;
 	}
 
-	PUTS("BSS receiving thread has been stopped");
+	writeMemo("[i] BSS receiving thread has been stopped");
 	fflush(stdout);
 }
 
@@ -66,18 +66,18 @@ void	bssClose()
 	}
 	else
 	{
-		PUTS("No BSS database RONLY files are opened");
+		writeMemo("[i] No BSS database RONLY files are opened");
 		fflush(stdout);
 		return;
 	}
 
-	PUTS("BSS database RONLY files were successfully closed");
+	writeMemo("[i] BSS database RONLY files were successfully closed");
 	fflush(stdout);
 }
 
 void	bssExit()
 {
-	PUTS("BSS is exiting...");
+	writeMemo("[i] BSS is exiting...");
 	fflush(stdout);
 	bssStop();
 	bssClose();
@@ -113,8 +113,8 @@ int	bssOpen(char* bssName, char* path)
 	}
 	else
 	{
-		PUTS("An active playback session was detected.  If you \
-wish to initiate a new one, please first close the active playback session.");
+		writeMemo("[?] An active playback session was detected.  To \
+initiate a new one, please first close the active playback session.");
 		fflush(stdout);
 		ionDetach();
 		return -2;
@@ -139,7 +139,7 @@ int	bssStart(char* bssName, char* path, char* eid, char* buffer,
 	CHKERR(buffer); 
 	CHKERR(bufLength > 0); 
 	CHKERR(display);
-	
+
 	/*
 	 *  This function loads BSS receiver's database with       
 	 *  read/write access rights that are necessary for the     
@@ -165,7 +165,7 @@ int	bssStart(char* bssName, char* path, char* eid, char* buffer,
 	}
 	else	/*	Receiver thread is active, real-time running.	*/
 	{
-		PUTS("Please terminate the already active real-time \
+		writeMemo("[?] Please terminate the already active real-time \
 session in order to initiate a new one.");
 		fflush(stdout);
 		ionDetach();
@@ -214,8 +214,8 @@ int	bssRun(char* bssName, char* path, char* eid, char* buffer,
 	}
 	else
 	{
-		PUTS("A real-time and/or a playback session is/are already \
-active.  Please terminate them in order to initiate a new one.");
+		writeMemo("[?] A real-time session and/or a playback session \
+is/are already active.  Please terminate them in order to initiate a new one.");
 		fflush(stdout);
 		return -1;
 	}
@@ -288,13 +288,14 @@ long	 bssSeek(bssNav *nav, time_t time, time_t *curTime,
 	
 	if (_lockMutex(1) == -1)	/*	Protecting transaction.	*/
 	{
+		writeMemo("[?] BSS can't lock bss mutex.");
 		return -1;
 	}
 
 	findIndexRow(time, &position);
 	if (position == -1)
 	{
-		PUTS("Cannot seek to the specified time. No match was found");
+		writeMemo("[?] BSS can't seek to the specified time.");
 		fflush(stdout);
 		oK(_lockMutex(0));
 		return -1;
@@ -303,6 +304,7 @@ long	 bssSeek(bssNav *nav, time_t time, time_t *curTime,
 	lstEntryOffset = index->rows[position].firstEntryOffset;
 	if (getLstEntry(_lstFile(0,0), &entry, lstEntryOffset) == -1)
 	{
+		writeMemo("[?] BSS can't get lst entry.");
 		oK(_lockMutex(0));
 		return -1;
 	}

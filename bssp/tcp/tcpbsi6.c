@@ -1,22 +1,39 @@
 /*
- *	tcpbsi.c:	BSSP TCP-based link service daemon.
+ *	tcpbsi6.c:	IPv6 BSSP TCP-based link service daemon.
  *
- *	Authors: Sotirios-Angelos Lenas, SPICE
- *		 Scott Burleigh, JPL
  *
- *	Copyright (c) 2013, California Institute of Technology.
- *	Copyright (c) 2013, Space Internetworking Center,
- *	Democritus University of Thrace.
- *	
- *	All rights reserved. U.S. Government and E.U. Sponsorship acknowledged.
+ *      Author:  Scott Mitchell Johnson
+ *      Based on tcpbsi.c by:
+ *               Sotirios-Angelos Lenas, SPICE
+ *               Scott Burleigh, JPL
  *
+ *      Copyright (c) 2023, Spacely Packets, LLC.
+ *      This program is free software; you can redistribute it and/or modify
+ *      it under the terms of the GNU General Public License as published by
+ *      the Free Software Foundation; either version 2 of the License, or
+ *      (at your option) any later version.
+ *
+ *      This program is distributed in the hope that it will be useful,
+ *      but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *      GNU General Public License for more details.
+
+ *      You should have received a copy of the GNU General Public License
+ *      along with this program; if not, write to the Free Software
+ *      Foundation, Inc., at:
+ *              51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
+
 #include "tcpbsa.h"
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
 static void	interruptThread(int signum)
 {
 	isignal(SIGTERM, interruptThread);
-	ionKillMainThread("tcpbsi");
+	ionKillMainThread("tcpbsi6");
 }
 
 /*	*	*	Receiver thread functions	*	*	*/
@@ -33,7 +50,7 @@ typedef struct
 static void	terminateReceiverThread(ReceiverThreadParms *parms)
 {
 	writeErrmsgMemos();
-	writeMemo("[i] tcpbsi receiver thread stopping.");
+	writeMemo("[i] tcpbsi6 receiver thread stopping.");
 	pthread_mutex_lock(parms->mutex);
 	if (parms->blockSocket != -1)
 	{
@@ -74,7 +91,7 @@ static int	receiveBlockByTCP(int *bsiSocket, char *buffer)
 		blockLength = ntohl(preamble);
 		if (blockLength > TCPBSA_BUFSZ)
 		{
-			writeMemoNote("[?] tcpbsi block length > buffer size",
+			writeMemoNote("[?] tcpbsi6 block length > buffer size",
 					utoa(blockLength));
 			blockLength = 0;	/*	Ignore.		*/
 		}
@@ -104,7 +121,7 @@ static void	*receiveBlocks(void *parm)
 	 *	connection, terminating when connection is lost.	*/
 
 	ReceiverThreadParms	*parms = (ReceiverThreadParms *) parm;
-	char			*procName = "tcpbsi";
+	char			*procName = "tcpbsi6";
 	int			threadRunning = 1;
 	char			*buffer;
 	int			blockLength;
@@ -112,7 +129,7 @@ static void	*receiveBlocks(void *parm)
 	buffer = MTAKE(TCPBSA_BUFSZ);
 	if (buffer == NULL)
 	{
-		putErrmsg("tcpbsi can't get TCP buffer.", NULL);
+		putErrmsg("tcpbsi6 can't get TCP buffer.", NULL);
 		ionKillMainThread(procName);
 		terminateReceiverThread(parms);
 		return NULL;
@@ -140,7 +157,7 @@ static void	*receiveBlocks(void *parm)
 
 		if (bsspHandleInboundBlock(buffer, blockLength) < 0)
 		{
-			putErrmsg("tcpbsi can't handle inbound block.", NULL);
+			putErrmsg("tcpbsi6 can't handle inbound block.", NULL);
 			ionKillMainThread(procName);
 			threadRunning = 0;
 			continue;
@@ -163,7 +180,7 @@ static void	*receiveBlocks(void *parm)
 typedef struct
 {
 	struct sockaddr		socketName;
-	struct sockaddr_in	*inetName;
+	struct sockaddr_in6	*inetName;
 	int			bsiSocket;
 	int			running;
 } AccessThreadParms;
@@ -174,7 +191,7 @@ static void	*spawnReceivers(void *parm)
 	 *	creation of receivers to service those connections.	*/
 
 	AccessThreadParms	*atp = (AccessThreadParms *) parm;
-	char			*procName = "tcpbsi";
+	char			*procName = "tcpbsi6";
 	pthread_mutex_t		mutex;
 	Lyst			threads;
 	int			newSocket;
@@ -189,7 +206,7 @@ static void	*spawnReceivers(void *parm)
 	threads = lyst_create_using(getIonMemoryMgr());
 	if (threads == NULL)
 	{
-		putErrmsg("tcpbsi can't create threads list.", NULL);
+		putErrmsg("tcpbsi6 can't create threads list.", NULL);
 		ionKillMainThread(procName);
 		pthread_mutex_destroy(&mutex);
 		return NULL;
@@ -200,12 +217,12 @@ static void	*spawnReceivers(void *parm)
 
 	while (atp->running)
 	{
-		nameLength = sizeof(struct sockaddr);
+		nameLength = sizeof(struct sockaddr_in6);
 		newSocket = accept(atp->bsiSocket, &bsoSocketName,
 				&nameLength);
 		if (newSocket < 0)
 		{
-			putSysErrmsg("tcpbsi accept() failed", NULL);
+			putSysErrmsg("tcpbsi6 accept() failed", NULL);
 			ionKillMainThread(procName);
 			atp->running = 0;
 			continue;
@@ -221,7 +238,7 @@ static void	*spawnReceivers(void *parm)
 				MTAKE(sizeof(ReceiverThreadParms));
 		if (parms == NULL)
 		{
-			putErrmsg("tcpbsi can't allocate for thread.", NULL);
+			putErrmsg("tcpbsi6 can't allocate for thread.", NULL);
 			closesocket(newSocket);
 			ionKillMainThread(procName);
 			atp->running = 0;
@@ -233,7 +250,7 @@ static void	*spawnReceivers(void *parm)
 		pthread_mutex_unlock(&mutex);
 		if (parms->elt == NULL)
 		{
-			putErrmsg("tcpbsi can't allocate for thread.", NULL);
+			putErrmsg("tcpbsi6 can't allocate for thread.", NULL);
 			MRELEASE(parms);
 			closesocket(newSocket);
 			ionKillMainThread(procName);
@@ -245,9 +262,9 @@ static void	*spawnReceivers(void *parm)
 		parms->blockSocket = newSocket;
 		parms->running = &(atp->running);
 		if (pthread_begin(&(parms->thread), NULL, receiveBlocks,
-					parms, "tcpbsi_receiver"))
+					parms, "tcpbsi6_receiver"))
 		{
-			putSysErrmsg("tcpbsi can't create new thread", NULL);
+			putSysErrmsg("tcpbsi6 can't create new thread", NULL);
 			MRELEASE(parms);
 			closesocket(newSocket);
 			ionKillMainThread(procName);
@@ -290,7 +307,7 @@ static void	*spawnReceivers(void *parm)
 
 	lyst_destroy(threads);
 	writeErrmsgMemos();
-	writeMemo("[i] tcpbsi access thread has ended.");
+	writeMemo("[i] tcpbsi6 access thread has ended.");
 	pthread_mutex_destroy(&mutex);
 	return NULL;
 }
@@ -298,7 +315,7 @@ static void	*spawnReceivers(void *parm)
 /*	*	*	Main thread functions	*	*	*	*/
 
 #if defined (ION_LWT)
-int	tcpbsi(saddr a1, saddr a2, saddr a3, saddr a4, saddr a5,
+int	tcpbsi6(saddr a1, saddr a2, saddr a3, saddr a4, saddr a5,
 		saddr a6, saddr a7, saddr a8, saddr a9, saddr a10)
 {
 	char	*socketSpec = (char *) a1;
@@ -311,29 +328,27 @@ int	main(int argc, char *argv[])
 	char			rlBsiCmd[256];
 	BsspVseat		*vseat;
 	PsmAddress		vseatElt;
-	char			*hostName;
-	unsigned short		portNbr;
-	unsigned int		hostNbr;
+	struct sockaddr_in6	hostNbr;
 	AccessThreadParms	atp;
 	socklen_t		nameLength;
 //	char			*tcpDelayString; // Temporarily commented out to fix linking errors with tcpDelayEnable in ion-3.3.0
 	pthread_t		accessThread;
-	int			fd;
+	int			fd = -1;
 
 	if (socketSpec == NULL)
 	{
-		PUTS("Usage: tcpbsi <local host name>[:<port number>]");
+		PUTS("Usage: tcpbsi6 <local host name>[:<port number>]");
 		return 0;
 	}
 
 	if (bsspInit(0) < 0)
 	{
-		putErrmsg("tcpbsi can't initialize BSSP.", NULL);
+		putErrmsg("tcpbsi6 can't initialize BSSP.", NULL);
 		return 1;
 	}
 
 	sdr = getIonsdr();
-	isprintf(rlBsiCmd, sizeof rlBsiCmd, "tcpbsi %s", socketSpec);
+	isprintf(rlBsiCmd, sizeof rlBsiCmd, "tcpbsi6 %s", socketSpec);
 	CHKERR(sdr_begin_xn(sdr));
 	findBsspSeat(NULL, rlBsiCmd, &vseat, &vseatElt);
 	sdr_exit_xn(sdr);
@@ -352,37 +367,29 @@ int	main(int argc, char *argv[])
 
 	/*	All command-line arguments are now validated.		*/
 
-	hostName = socketSpec;
-	if (parseSocketSpec(socketSpec, &portNbr, &hostNbr) != 0)
+	if (parseSocketSpecSix(socketSpec, &hostNbr) != 0)
 	{
-		putErrmsg("RL-BSI can't get IP/port for host.", hostName);
+		putErrmsg("RL-BSI can't get IP/port for host.", socketSpec);
 		return -1;
 	}
 
-	if (portNbr == 0)
+	if (hostNbr.sin6_port == 0)
 	{
-		portNbr = bsspTcpDefaultPortNbr;
+		hostNbr.sin6_port = htons(bsspTcpDefaultPortNbr);
 	}
 
-	portNbr = htons(portNbr);
-	hostNbr = htonl(hostNbr);
-	memset((char *) &(atp.socketName), 0, sizeof(struct sockaddr));
-	atp.inetName = (struct sockaddr_in *) &(atp.socketName);
-	atp.inetName->sin_family = AF_INET;
-	atp.inetName->sin_port = portNbr;
-	memcpy((char *) &(atp.inetName->sin_addr.s_addr), (char *) &hostNbr, 4);
-	atp.bsiSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	atp.bsiSocket = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
 	if (atp.bsiSocket < 0)
 	{
 		putSysErrmsg("RL-BSI can't open TCP socket", NULL);
 		return 1;
 	}
 
-	nameLength = sizeof(struct sockaddr);
+	nameLength = sizeof(hostNbr);
 	if (reUseAddress(atp.bsiSocket)
-	|| bind(atp.bsiSocket, &(atp.socketName), nameLength) < 0
+	|| bind(atp.bsiSocket, (struct sockaddr *) &hostNbr, nameLength) < 0
 	|| listen(atp.bsiSocket, 5) < 0
-	|| getsockname(atp.bsiSocket, &(atp.socketName), &nameLength) < 0)
+	|| getsockname(atp.bsiSocket, (struct sockaddr *) &hostNbr, &nameLength) < 0)
 	{
 		closesocket(atp.bsiSocket);
 		putSysErrmsg("RL-BSI can't initialize socket", NULL);
@@ -409,17 +416,17 @@ int	main(int argc, char *argv[])
 
 	/*	Set up signal handling: SIGTERM is shutdown signal.	*/
 
-	ionNoteMainThread("tcpbsi");
+	ionNoteMainThread("tcpbsi6");
 	isignal(SIGTERM, interruptThread);
 
 	/*	Start the access thread.				*/
 
 	atp.running = 1;
 	if (pthread_begin(&accessThread, NULL, spawnReceivers, &atp,
-			"tcpbsi_access"))
+				"tcpbsi6_access"))
 	{
 		closesocket(atp.bsiSocket);
-		putSysErrmsg("tcpbsi can't create access thread", NULL);
+		putSysErrmsg("tcpbsi6 can't create access thread", NULL);
 		return 1;
 	}
 
@@ -430,8 +437,8 @@ int	main(int argc, char *argv[])
 		char	txt[500];
 
 		isprintf(txt, sizeof(txt),
-			"[i] tcpbsi is running, spec=[%s:%d].", 
-			inet_ntoa(atp.inetName->sin_addr), ntohs(portNbr));
+			"[i] tcpbsi6 is running, spec=[%s:%d].",
+			socketSpec , ntohs(hostNbr.sin6_port));
 		writeMemo(txt);
 	}
 
@@ -443,17 +450,24 @@ int	main(int argc, char *argv[])
 
 	/*	Wake up the access thread by connecting to it.		*/
 
-	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
 	if (fd >= 0)
 	{
-		oK(connect(fd, &(atp.socketName), sizeof(struct sockaddr)));
+		if (connect(fd, (struct sockaddr *) (&(atp.inetName)),
+				sizeof(struct sockaddr_in6)) < 0)
+		{
+			putSysErrmsg("Can't connect to shut down thread.",
+					NULL);
+		}
+		else
+		{
+			/*	Immediately discard connected socket.	*/
 
-		/*	Immediately discard the connected socket.	*/
-
-		closesocket(fd);
+			closesocket(fd);
+			pthread_join(accessThread, NULL);
+		}
 	}
 
-	pthread_join(accessThread, NULL);
 	writeErrmsgMemos();
 	writeMemo("[i] tcpbsi has ended.");
 	ionDetach();

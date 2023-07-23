@@ -1,0 +1,352 @@
+IPv6 in ION - Integration Notes.
+Scott Johnson 
+Spacely Packets, LLC
+March 2nd, 2023
+
+Note: two unrelated patches were included in the ipv6-ion feature branch 
+of the fork of ION-DTN that this package was assembled in.  These 
+patched uninitialized variable bugs in two memory handling systems, and 
+were required for proper compilation and testing of the integration 
+process in my development/staging environment.  They locally initialize 
+the necessary variables in ici/library/memmgr.c and ici/sdr/sdrxn.c.
+
+INTRODUCTION
+
+The purpose of this guide is to introduce the reader to the 
+functionality enabled with inclusion of ici/library/libipv6.c and the 
+associated IPv6 enabled convergence layer adapters (CLAs) in ION-DTN.  
+Also treated will be the design decisions and methodology of 
+integration into the existing codebase.  Finally, an appendix of 
+configuration examples provides the reader with the possible run control 
+syntaxes for successful operation of the new CLAs.
+
+COMPILATION OF MODULES
+
+Firstly, to enable compilation of the IPv6 speaking components, one must 
+compile in this fashion:
+
+autoreconf -f -i
+./configure --enable-ipv6
+make
+sudo make install or su followed by make install if sudo is not available
+sudo ldconfig or su - followed by ldconfig
+
+This will link the IPv6 library functions in, build the IPv6-enabled 
+binaries, install all required components in /usr/local, and reload the 
+dynamic linker to include the new libraries.
+
+PURPOSE
+
+These additions allow the same level of BP operation over an IPv6 
+network as the existing IPv4 LTP/UDP, TCP, UDP, and STCP CLAs allow over an 
+IPv4 network. In short, any node can be configured with inducts and 
+outducts that accept and transmit bundles inside IPv6 packets using 
+these CLAs.
+
+METHODS OF IMPLEMENTATION-LIBRARY
+
+A discrete library was created specifically for IPv6 related functions 
+at:
+ 
+ici/library/libipv6.c  
+
+It is suggested that any subsequent additions 
+of similar library functions, when not specific to a particular 
+convergence layer adapter, be added to libipv6.c.  The associated 
+variable and function declarations were placed in:
+ 
+ici/include/platform.h
+
+The same suggestion holds true for future additions regarding the 
+headers; that they be placed in platform.h.
+
+The new library includes the IPv6 enabled configuration parsing 
+function, parseSocketSpecSix, and the IPv6 analogue of itcp_connect, 
+itcp_connect6, for socket creation by IPv6 enabled CLAs.  Of these two, 
+only parseSocketSpecSix is notably different in functionality that its 
+IPv4 counterpart. 
+
+The function parseSocketSpec, in: 
+
+ici/library/platform.c
+
+performs the task of passing address and port number parsed from input 
+to the calling function in two separate pointers, *ipAddress and 
+*portNbr.  The calling daemon then populates the socket structure with 
+the pointed to values, and binds the socket for use.  In comparison,
+in parseSocketSpec6, socket structure population was moved out of the CLAs 
+into the parsing function.  A pointer to this struct is then 
+passed to the calling daemon, which uses the struct's values directly to 
+bind the socket for use.  More information can be found by issuing the 
+command 'man libipv6' to view the man page.
+
+METHODS OF IMPLEMENTATION-DAEMONS
+
+Dedicated IPv6 daemons, associated cla-local library functions and 
+header files, where necessary, were written based on existing IPv4 
+versions of the CLAs.  For example, the ltpcla produces udplsi and 
+udplso binaries, which are configured in the runcontrol file for IPv4 
+only operation.  There are now additional udplsi6 and udplso6 binaries, 
+also configured in the runcontrol file for IPv6 only operation.  
+ 
+This method, with dedicated daemons handling sockaddr_in and 
+sockaddr_in6 sockets, was chosen because it gives more flexibility in 
+deployment and control over addressing interfaces and adapters 
+discretely in comparison to the integrated dual-stack method using 
+struct sockaddr_storage. A contributing factor in this design decision 
+was complexity of retrofitting existing daemons to dual-stack operation, 
+and the performance of the resultant code; regex is great for 
+determining address type but we take a performance hit with that method.  
+The discrete stacks approach also prevents accidentally opening an IPv6 
+socket on a link-local or dynamically provisioned address on an network 
+interface; one must actively configure ION to speak IPv6 in several 
+ways. Finally, this allowed minimal intrusion into existing, working 
+code; the IPv4 versions of the daemons and parsing functions are 
+unchanged.
+
+EXECUTABLES, TESTS, AND DOCUMENTATION
+
+Included in this release are discrete IPv6 LTP/UDP, TCP, and UDP CLAs. 
+Man pages for all components are produced, and tests ltp-ipv6, 
+tcpcl-ipv6, and udp-ipv6 in included the tests directory. 
+
+GENERAL AND CLA SPECIFIC CONFIGURATION
+
+It is notable that when defining non-standard ports on IPv6 daemons, the 
+address/port delimiter is not ':', as in the IPv4 versions.  The colon 
+':' is an intergal part of an IPv6 address, and thus '!' was chosen as a 
+replacement for runcontrol file syntax purposes.  As such the proper way 
+to denote an IPv6 address/port number pair when configuring BP and LTP 
+daemons in ION is as follows (arbitrarily specifying port 8085):
+
+(ltp)
+a span 268435460 32 32 1200 10000 1 'udplso6 2602:fdf2:fab::1!8085'
+a span 268435460 32 32 1200 10000 1 'udplso6 www.foo.com!8085'
+a seat 'udplsi6 2602:fdf2:fab::64!8085'
+(bp)
+a outduct udp 2602:fdf2:bee:feed::3!8085 udpclo6 0
+a induct udp 2602:fdf2:fab::64!8085 udpcli6
+a induct tcp 2602:fdf2:fab::64!8085 tcpcli6
+
+If no port number is specified, the default port for the service will be 
+assigned; 1113 for ltp and 4556 for udp or tcp.  Given the nature of 
+IPv6 routing and address allocation, it should be more practical to 
+assign multiple IPv6 addresses to a given interface, using the default 
+port to open the socket on discrete interfaces, as opposed to opening 
+non-standard ports on a single IPv4 address.
+
+LTP/UDP
+
+The ltp components are found in
+
+ltp/udp
+
+and include source files: 'libudplsa6.c, udplsi6.c and udplso6.c'
+which produce binary daemons udplsi6 and udplso6 when compiled.
+Configuration syntax (CLA specific only) is as follows:
+
+## begin ltpadmin
+
+a span 268435458 32 32 1200 10000 1 'udplso6 2602:fdf2:fab::64'
+a span 268435460 32 32 1200 10000 1 'udplso6 2602:fdf2:fab::1'
+a seat 'udplsi6 2602:fdf2:fab::64'
+
+## end ltpadmin
+## begin bpadmin
+
+a protocol ltp 1400 100
+
+a induct ltp 268435458 ltpcli
+a outduct ltp 268435458 ltpclo
+a outduct ltp 268435460 ltpclo
+
+## end bpadmin
+## begin ipnadmin
+
+a plan 268435458 ltp/268435458
+a plan 268435460 ltp/268435460
+
+## end ipnadmin
+
+UDP
+
+The udp components are found in 
+
+bpv7/udp
+
+and include source files:  'libudpcla6.c, udpcla6.h, udpcli6.c and udpclo6.c'
+which produce binary daemons udpcli6 and udpclo6 when compiled.
+Configuration syntax (CLA specific only) is as follows:
+
+## begin bpadmin
+a protocol udp 1400 100
+
+a induct udp 2602:fdf2:fab::64 udpcli6
+a outduct udp 2602:fdf2:fab::64 udpclo6 0
+a outduct udp 2602:fdf2:bee:feed::3 udpclo6 0
+
+## end bpadmin
+## begin ipnadmin
+
+a plan 268435457 udp/2602:fdf2:bee:feed::3
+a plan 268435456 udp/2602:fdf2:fab::64
+
+## end ipnadmin
+
+TCP
+
+The tcp components are found in
+
+bpv7/tcp
+
+and include source files:  'tcpcli6.c  tcpclo6.c'
+which produce binary daemons tcpcli6 and tcpclo6 when compiles.
+Configuration syntax (CLA specific only) is as follows:
+
+## begin bpadmin
+a protocol tcp 1400 100
+
+a induct tcp 2602:fdf2:fab::64 tcpcli6
+a outduct tcp 2602:fdf2:bee:feed::2 tcpclo6
+
+## end bpadmin
+## begin ipnadmin
+
+a plan 268435462 tcp/2602:fdf2:fab::64
+a plan 268435463 tcp/2602:fdf2:bee:feed::2
+
+## end ipnadmin
+
+STCP
+
+The STCP components are found in
+
+bpv7/stcp
+
+and include source files:  'stcpcli6.c, stcpclo6.c, and libstcpcla6.c'
+which produce binary daemons stcpcli6 and stcpclo6 when compiles.
+Configuration syntax (CLA specific only) is as follows:
+
+## begin bpadmin
+a protocol stcp 1400 100
+
+a induct stcp 2602:fdf2:fab::64 stcpcli6
+a outduct stcp 2602:fdf2:bee:feed::2 stcpclo6
+
+## end bpadmin
+## begin ipnadmin
+
+a plan 268435462 stcp/2602:fdf2:fab::64
+a plan 268435463 stcp/2602:fdf2:bee:feed::2
+
+## end ipnadmin
+
+APPENDIX:  FULL CONFIGURATION EXAMPLE
+This is a working configuration from spacelypackets.com, used in the 
+demonstration performed at the DTNWG at IETF 115.
+
+## begin ionadmin
+
+1 268435458 ionconfig ''
+
+s
+
+a contact +1 +36000000 268435456 268435456 100000000
+a contact +1 +36000000 268435456 268435457 100000000
+a contact +1 +36000000 268435457 268435456 100000000
+
+a contact +1 +36000000 268435458 268435458 100000000
+a contact +1 +36000000 268435458 268435459 100000000
+a contact +1 +36000000 268435459 268435458 100000000
+a contact +1 +36000000 268435458 268435460 100000000
+a contact +1 +36000000 268435460 268435458 100000000
+a contact +1 +36000000 268435458 268435461 100000000
+a contact +1 +36000000 268435461 268435458 100000000
+
+a contact +1 +36000000 268435462 268435462 100000000
+a contact +1 +36000000 268435463 268435462 100000000
+a contact +1 +36000000 268435462 268435463 100000000
+
+a range +1 +36000000 268435456 268435456 1
+a range +1 +36000000 268435457 268435456 1
+a range +1 +36000000 268435456 268435457 1
+
+a range +1 +36000000 268435458 268435458 1
+a range +1 +36000000 268435459 268435458 1
+a range +1 +36000000 268435458 268435459 1
+a range +1 +36000000 268435460 268435458 1
+a range +1 +36000000 268435458 268435460 1
+a range +1 +36000000 268435461 268435458 1
+a range +1 +36000000 268435458 268435461 1
+
+a range +1 +36000000 268435462 268435462 1
+a range +1 +36000000 268435462 268435463 1
+a range +1 +36000000 268435463 268435462 1
+
+
+m production 100000
+m consumption 100000
+
+## end ionadmin
+## begin ionsecadmin
+
+1
+
+## end ionsecadmin
+## begin ltpadmin
+
+1 256
+
+a span 268435458 32 32 1200 10000 1 'udplso6 2602:fdf2:fab::64'
+a span 268435460 32 32 1200 10000 1 'udplso6 2602:fdf2:fab::1'
+a span 268435461 32 32 1200 10000 1 'udplso6 2602:fdf2:bee:feed::abcd'
+a seat 'udplsi6 2602:fdf2:fab::64'
+
+s
+
+## end ltpadmin
+## begin bpadmin
+
+1
+a scheme ipn 'ipnfw' 'ipnadminep'
+a endpoint ipn:268435456.0 q
+a endpoint ipn:268435456.1 q
+a endpoint ipn:268435456.2 q
+a endpoint ipn:268435458.0 q
+a endpoint ipn:268435458.1 q
+a endpoint ipn:268435458.2 q
+a endpoint ipn:268435462.0 q
+a endpoint ipn:268435462.1 q
+a endpoint ipn:268435462.2 q
+
+a protocol ltp 1400 100
+
+a induct ltp 268435458 ltpcli
+a outduct ltp 268435458 ltpclo
+a outduct ltp 268435460 ltpclo
+a outduct ltp 268435461 ltpclo
+
+a protocol udp 1400 100
+a induct udp 2602:fdf2:fab::64 udpcli6
+a outduct udp 2602:fdf2:fab::64 udpclo6 0
+a outduct udp 2602:fdf2:bee:feed::3 udpclo6 0
+
+a protocol tcp 1400 100
+a induct tcp 2602:fdf2:fab::64 tcpcli6
+a outduct tcp 2602:fdf2:bee:feed::2 tcpclo6
+
+s
+
+## end bpadmin
+## begin ipnadmin
+
+a plan 268435457 udp/2602:fdf2:bee:feed::3
+a plan 268435456 udp/2602:fdf2:fab::64
+a plan 268435458 ltp/268435458
+a plan 268435460 ltp/268435460
+a plan 268435461 ltp/268435461
+a plan 268435462 tcp/2602:fdf2:fab::64
+a plan 268435463 tcp/2602:fdf2:bee:feed::2
+
+## end ipnadmin
+

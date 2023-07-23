@@ -200,6 +200,7 @@ database name> <path for BSS database files> <own endpoint ID>");
 		return 1;
 	}
 
+	snooze(5);
 	while (1)
 	{
 		snooze(5);
