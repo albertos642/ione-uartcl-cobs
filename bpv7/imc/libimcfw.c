@@ -388,6 +388,28 @@ writeMemoNote("Sending petition for group", itoa(petition->groupNbr));
 		return -1;
 	}
 
+	/*	Apply petition to local multicast group database.	*/
+
+	if (petition->groupNbr != 0)
+	{
+		/*	Note: petition to Join multicast group 0 is
+		 *	only to be multicast to all other nodes in
+		 *	the region, as it asks each node to send a
+		 *	group membership briefing.  Clearly a node
+		 *	will never ask itself for such a briefing.
+		 *	Also clearly, no petition to Leave multicast
+		 *	group zero makes any sense.  So applying a
+		 *	petition for group zero to the node's own
+		 *	multicast group database is excluded.		*/
+
+		if (imcUpdateGroup(petition->groupNbr, getOwnNodeNbr(),
+			petition->isMember) < 0)
+		{
+			putErrmsg("Can't apply petition to database.", NULL);
+			return -1;
+		}
+	}
+
 	/*	Use buffer to serialize petition message.		*/
 
 	cursor = buffer;
@@ -416,6 +438,444 @@ writeMemoNote("Sending petition for group", itoa(petition->groupNbr));
 	}
 
 	return result;
+}
+
+static int	briefNewNode(uvast nodeNbr)
+{
+	Sdr		sdr = getIonsdr();
+	ImcDB		*imcConstants = getImcConstants();
+	char		ownEid[32];
+	MetaEid		sourceMetaEid;
+	VScheme		*vscheme;
+	PsmAddress	vschemeElt;
+	char		destEid[32];
+	Lyst		ownGroups;
+	Object		elt;
+	Object		groupAddr;
+	ImcGroup	group;
+	int		bufsize;
+	unsigned char	*buffer;
+	unsigned char	*cursor;
+	uvast		uvtemp;
+	LystElt		elt2;
+	uvast		groupNbr;
+	int		aduLength;
+	Object		aduObj;
+	Object		aduZco;
+
+	isprintf(ownEid, sizeof(ownEid), "ipn:" UVAST_FIELDSPEC ".0",
+			getOwnNodeNbr());
+	oK(parseEidString(ownEid, &sourceMetaEid, &vscheme, &vschemeElt));
+	isprintf(destEid, sizeof(destEid), "ipn:" UVAST_FIELDSPEC ".0",
+			nodeNbr);
+	ownGroups = lyst_create_using(getIonMemoryMgr());
+	if (ownGroups == NULL)
+	{
+		putErrmsg("Can't compile groups list for briefing.", NULL);
+		return -1;
+	}
+
+	for (elt = sdr_list_first(sdr, imcConstants->groups); elt;
+			elt = sdr_list_next(sdr, elt))
+	{
+		groupAddr = sdr_list_data(sdr, elt);
+		sdr_read(sdr, (char *) &group, groupAddr, sizeof(ImcGroup));
+		if (group.isMember)
+		{
+			if (lyst_insert_last(ownGroups, (void *)
+					((uaddr) group.groupNbr)) == NULL)
+			{
+				sdr_exit_xn(sdr);
+				lyst_destroy(ownGroups);
+				putErrmsg("Can't add group to list.", NULL);
+				return -1;
+			}
+		}
+	}
+
+	/*	Create buffer for serializing briefing message.		*/
+
+	bufsize = 1	/*	admin record array (2 items)		*/
+		+ 9	/*	admin record type, an integer		*/
+		+ 9	/*	group number array (N items)		*/
+		+ (lyst_length(ownGroups) * 9);
+	buffer = MTAKE(bufsize);
+	if (buffer == NULL)
+	{
+		lyst_destroy(ownGroups);
+		putErrmsg("Can't allocate buffer for briefing.", NULL);
+		return -1;
+	}
+
+	cursor = buffer;
+
+	/*	Sending an admin record, an array of 2 items.		*/
+
+	uvtemp = 2;
+	oK(cbor_encode_array_open(uvtemp, &cursor));
+
+	/*	First item of admin record is record type code.		*/
+
+	uvtemp = BP_MULTICAST_BRIEFING;
+	oK(cbor_encode_integer(uvtemp, &cursor));
+
+	/*	Second item of admin record is content, the 
+	 *	briefing message, which is a definite-length array.	*/
+
+	uvtemp = lyst_length(ownGroups);
+	oK(cbor_encode_array_open(uvtemp, &cursor));
+
+	/*	Groups in ownGroups list are the elements of the array.	*/
+
+	for (elt2 = lyst_first(ownGroups); elt2; elt2 = lyst_next(elt2))
+	{
+		groupNbr = (uaddr) lyst_data(elt2);
+		oK(cbor_encode_integer(groupNbr, &cursor));
+	}
+
+	lyst_destroy(ownGroups);
+
+	/*	Now wrap the record buffer in a ZCO and send it to
+	 *	the destination node.					*/
+
+	aduLength = cursor - buffer;
+	aduObj = sdr_malloc(sdr, aduLength);
+	if (aduObj == 0)
+	{
+		putErrmsg("Can't create briefing message.", NULL);
+		return -1;
+	}
+
+	sdr_write(sdr, aduObj, (char *) buffer, aduLength);
+	MRELEASE(buffer);
+	aduZco = ionCreateZco(ZcoSdrSource, aduObj, 0, aduLength,
+			BP_STD_PRIORITY, 0, ZcoOutbound, NULL);
+	if (aduZco == 0 || aduZco == (Object) ERROR)
+	{
+		putErrmsg("Failed creating saga message ZCO.", NULL);
+		return 0;
+	}
+
+#if IMCDEBUG
+writeMemo("Sending briefing.");
+#endif
+	/*	Note that ttl must be expressed in milliseconds for
+	 *	BP processing.  The hard-coded TTL here is 1 minute.	*/
+
+	if (bpSend(&sourceMetaEid, destEid, NULL, 60000, BP_STD_PRIORITY,
+			NoCustodyRequested, 0, 0, NULL, aduZco, NULL,
+			BP_MULTICAST_BRIEFING) <= 0)
+	{
+		writeMemo("[?] Unable to send IMC briefing message.");
+	}
+
+	return 0;
+}
+
+int	imcUpdateGroup(uvast groupNbr, uvast nodeNbr, int isMember)
+{
+	Sdr		sdr = getIonsdr();
+	uvast		ownNodeNbr = getOwnNodeNbr();
+	ImcGroup	group;
+	Object		groupAddr;
+	Object		groupElt;
+	Object		elt;
+	uvast		memberNodeNbr;
+	char		destinationEid[32];
+	VScheme		*vscheme;
+	PsmAddress	vschemeElt;
+	MetaEid		metaEid;
+	VEndpoint	*vpoint;
+	PsmAddress	vpointElt;
+	Object		iondbObj;
+	IonDB		iondb;
+	int		sourceRegionIdx;
+	uint32_t	sourceRegionNbr;
+	uint32_t	destinationRegionNbr;
+	ImcPetition	petition;
+
+	oK(sdr_begin_xn(sdr));
+	imcFindGroup(groupNbr, &groupAddr, &groupElt);
+#if IMCDEBUG
+writeMemoNote("Seeking multicast group for group", itoa(groupNbr));
+#endif
+	if (groupElt == 0)	/*	No such group; couldn't add it.	*/
+	{
+#if IMCDEBUG
+writeMemo("Group not found, failed to add it.");
+#endif
+		if (isMember)	/*	(Else nothing to do.)		*/
+		{
+			putErrmsg("[?] Can't handle IMC Join petition",
+					itoa(groupNbr));
+		}
+
+		/*	Nothing to propagate even if node is a
+		 *	passageway.  Can't Join the group, and
+		 *	since the group is unknown the passageway
+		 *	cannot be an "ex officio" member of that
+		 *	group and thus cannot be Leaving in the
+		 *	other region.					*/
+
+		sdr_cancel_xn(sdr);	/*	System failure.		*/
+		return -1;
+	}
+
+	/*	The multicast group is known, though possibly empty.	*/
+
+	sdr_stage(sdr, (char *) &group, groupAddr, sizeof(ImcGroup));
+	if (isMember)		/*	Node is joining the group.	*/
+	{
+#if IMCDEBUG
+writeMemoNote("Node asking to Join this group", itoa(nodeNbr));
+#endif
+		for (elt = sdr_list_first(sdr, group.members); elt;
+				elt = sdr_list_next(sdr, elt))
+		{
+			memberNodeNbr = sdr_list_data(sdr, elt);
+#if IMCDEBUG
+writeMemoNote("Existing group member", itoa(nodeNbr));
+writeMemoNote("New group member", itoa(nodeNbr));
+#endif
+			if (memberNodeNbr < nodeNbr)
+			{
+				continue;
+			}
+
+			if (memberNodeNbr == nodeNbr)
+			{
+#if IMCDEBUG
+writeMemo("Ignoring redundant Join.");
+#endif
+			/*	Again nothing to propagate even if
+			 *	node is a passageway.  Since the
+			 *	source node is already a member of
+			 *	the group, the passageway's "ex
+			 *	officio" membership in the group
+			 *	has already been announced in the
+			 *	other region.				*/
+
+				oK(sdr_end_xn(sdr));
+				return 0;
+			}
+
+			break;	/*	New member node not in list.	*/
+		}
+
+		/*	Must add new member of group at this point.	*/
+#if IMCDEBUG
+writeMemoNote("Adding node", itoa(nodeNbr));
+writeMemoNote("...to group", itoa(groupNbr));
+#endif
+		if (elt)
+		{
+			oK(sdr_list_insert_before(sdr, elt, nodeNbr));
+		}
+		else
+		{
+			oK(sdr_list_insert_last(sdr, group.members, nodeNbr));
+		}
+
+		if (nodeNbr == ownNodeNbr)
+		{
+			/*	Set group's "isMember" flag only if
+			 *	the node is actually registered in this
+			 *	multicast group.  (This will not be
+			 *	the case if node is an IRR passageway
+			 *	that is only joining the multicast
+			 *	group "ex officio".)  So see if group
+			 *	is one of the node's own endpoints.	*/
+
+			isprintf(destinationEid, sizeof destinationEid,
+					"imc:" UVAST_FIELDSPEC ".0", groupNbr);
+			oK(parseEidString(destinationEid, &metaEid, &vscheme,
+					&vschemeElt));
+			findEndpoint("imc", &metaEid, NULL, &vpoint,
+					&vpointElt);
+			if (vpointElt)	/*	Group endpoint found.	*/
+			{
+				group.isMember = 1;
+			}
+		}
+		else	/*	Need to send briefing to new member?	*/
+		{
+			if (groupNbr == 0)
+			{
+#if IMCDEBUG
+writeMemoNote("Must send a briefing to node", itoa(nodeNbr));
+#endif
+				/*	This node is subscribing to
+				 *	the IMC petitions group, i.e.,
+				 *	it is a node that is newly
+				 *	announcing itself to the
+				 *	multicast community.  So it
+			 	*	doesn't know about any other
+				*	nodes' subscriptions.  So we
+				*	must send this node a briefing.	*/
+
+				if (briefNewNode(nodeNbr) < 0)
+				{
+					putErrmsg("Failed briefing new node.",
+							NULL);
+					sdr_cancel_xn(sdr);
+					return -1;
+				}
+			}
+		}
+
+		/*	Any scheduled deletion of the group is now
+		 *	canceled.					*/
+
+		group.secUntilDelete = -1;
+	}
+	else	/*	Node is leaving the group.			*/
+	{
+#if IMCDEBUG
+writeMemoNote("Node asking to Leave this group", itoa(nodeNbr));
+#endif
+		for (elt = sdr_list_first(sdr, group.members); elt;
+				elt = sdr_list_next(sdr, elt))
+		{
+			memberNodeNbr = sdr_list_data(sdr, elt);
+			if (memberNodeNbr < nodeNbr)
+			{
+				continue;
+			}
+
+			break;
+		}
+
+		/*	Have either located this group member or
+		 *	reached a point where it is known that the
+		 *	node is not a member of the group.		*/
+
+		if (elt && memberNodeNbr == nodeNbr)
+		{
+#if IMCDEBUG
+writeMemoNote("Removing member from group", itoa(nodeNbr));
+#endif
+			sdr_list_delete(sdr, elt, NULL, NULL);
+			if (nodeNbr == ownNodeNbr)
+			{
+				group.isMember = 0;
+			}
+
+			/*	If group now has no members in any
+			 *	region that the node knows about,
+			 *	schedule deletion of the group at
+			 *	this node.				*/
+
+			if (sdr_list_length(sdr, group.members) == 0)
+			{
+#if IMCDEBUG
+writeMemo("Flagging group for deletion.");
+#endif
+				group.secUntilDelete = 15;
+			}
+		}
+		else
+		{
+#if IMCDEBUG
+writeMemoNote("Ignoring redundant Leave", itoa(nodeNbr));
+#endif
+			/*	Again nothing to propagate even if
+			 *	node is a passageway.  Since the
+			 *	source node is already missing from
+			 *	the group, the passageway's "ex
+			 *	officio" withdrawal from the group
+			 *	has already been announced in the
+			 *	other region.				*/
+
+			oK(sdr_end_xn(sdr));
+			return 0;
+		}
+	}
+
+	/*	If the local node is a passageway, propagate petition
+	 *	as needed.						*/
+
+	iondbObj = getIonDbObject();
+	sdr_read(sdr, (char *) &iondb, iondbObj, sizeof(IonDB));
+	if (iondb.regions[1].regionNbr != 0)
+	{
+#if IMCDEBUG
+writeMemo("Passageway may need to propagate petition.");
+#endif
+		/*	Node is a passageway between its home region
+		 *	and the immediate encompassing region.		*/
+
+		sourceRegionIdx = ionRegionOf(nodeNbr, ownNodeNbr,
+				&sourceRegionNbr);
+#if IMCDEBUG
+writeMemoNote("New member node nbr", itoa(nodeNbr));
+#endif
+		if (sourceRegionIdx < 0)
+		{
+			putErrmsg("IMC system error.", NULL);
+			sdr_cancel_xn(sdr);
+			return -1;
+		}
+
+#if IMCDEBUG
+writeMemoNote("New member node's region idx", itoa(sourceRegionIdx));
+#endif
+		destinationRegionNbr =
+				iondb.regions[1 - sourceRegionIdx].regionNbr;
+#if IMCDEBUG
+writeMemoNote("Potential propagation destination region",
+itoa(destinationRegionNbr));
+#endif
+		petition.groupNbr = groupNbr;
+		petition.isMember = isMember;
+		if (isMember == 1)			/*	Join	*/
+		{
+			group.count[sourceRegionIdx] += 1;
+			if (group.count[sourceRegionIdx] == 1)
+			{
+#if IMCDEBUG
+writeMemo("Must propagate.");
+#endif
+				if (imcSendPetition(&petition,
+						destinationRegionNbr) < 0)
+				{
+					putErrmsg("Join propagation failed.",
+							NULL);
+					sdr_cancel_xn(sdr);
+					return -1;
+				}
+			}
+#if IMCDEBUG
+else writeMemo("No need to propagate Join.");
+#endif
+		}
+		else					/*	Leave	*/
+		{
+			group.count[sourceRegionIdx] -= 1;
+			if (group.count[sourceRegionIdx] == 0)
+			{
+				if (imcSendPetition(&petition,
+						destinationRegionNbr) < 0)
+				{
+					putErrmsg("Leave propagation failed.",
+							NULL);
+					sdr_cancel_xn(sdr);
+					return -1;
+				}
+			}
+#if IMCDEBUG
+else writeMemo("No need to propagate Leave.");
+#endif
+		}
+	}
+
+	sdr_write(sdr, groupAddr, (char *) &group, sizeof(ImcGroup));
+	if (sdr_end_xn(sdr) < 0)
+	{
+		putErrmsg("Failed updating multicast database.", NULL);
+		return -1;
+	}
+
+	return 0;
 }
 
 int	imcGroupMember(uvast groupNbr)
@@ -552,7 +1012,8 @@ writeMemoNote("In imcReplicate, group member not in rolodex", itoa(nodeNbr));
 
 		/*	Found one.					*/
 
-		if (lyst_insert_last(members, (void *) (uintptr_t)nodeNbr) == NULL)
+		if (lyst_insert_last(members, (void *) (uintptr_t) nodeNbr)
+				== NULL)
 		{
 			lyst_destroy(members);
 			putErrmsg("Can't insert member into lyst.",
@@ -596,7 +1057,7 @@ writeMemoNote("Number of group members in region", itoa(lyst_length(members)));
 	for (destinationElt = lyst_first(members); destinationElt;
 			destinationElt = lyst_next(destinationElt))
 	{
-		nodeNbr = (uvast) (uintptr_t)lyst_data(destinationElt);
+		nodeNbr = (uvast) (uintptr_t) lyst_data(destinationElt);
 		if (sdr_list_insert_last(sdr, newBundle.destinations, nodeNbr)
 				== 0)
 		{

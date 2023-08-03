@@ -411,7 +411,7 @@ int	main(int argc, char *argv[])
 	findScheme("imc", &vscheme, &velt);
 	if (velt == 0)
 	{
-		writeMemo("[i] Not configured for multicast; cpsd stopping.");
+		writeMemo("[i] Not configured for multicast, cpsd stopping.");
 		return 1;
 	}
 
@@ -420,8 +420,11 @@ int	main(int argc, char *argv[])
 	restoreEidString(&meid);
 	if (velt == 0)
 	{
-		writeMemo("[i] Not configured for CP sync; cpsd stopping.");
-		return 1;
+		if (addEndpoint(cpsEid, EnqueueBundle, NULL) < 1)
+		{
+			writeMemo("[?] Can't add CPS EID, cpsd stopping.");
+			return 1;
+		}
 	}
 
 	if (imcInit() < 0)

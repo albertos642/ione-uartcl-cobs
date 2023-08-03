@@ -40,7 +40,7 @@ static void	shutDown()	/*	Commands tcarecv termination.	*/
 	TcarecvState	*state;
 
 	isignal(SIGTERM, shutDown);
-	writeMemo("TCA receiver daemon interrupted.");
+	writeMemo("[i] TCA receiver daemon interrupted.");
 	state = _tcarecvState(NULL);
 	bp_interrupt(state->sap);
 	state->running = 0;

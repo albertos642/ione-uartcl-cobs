@@ -40,6 +40,7 @@ int	main(int argc, char *argv[])
 	socklen_t		nameLength;
 	pthread_t		receiverThread;
 	int			fd;
+	int			i;
 	char			quit = '\0';
 
 	/*	Note that ltpadmin must be run before the first
@@ -151,24 +152,36 @@ int	main(int argc, char *argv[])
 	fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (fd >= 0)
 	{
-#if 0
-		if (isendto(fd, &quit, 1, 0, &ownSockName,
-				sizeof(struct sockaddr)) == 1)
+		for (i = 0; i < 3; i++)	/*	Try this 3 times.	*/
 		{
-			pthread_join(receiverThread, NULL);
-		}
-#endif
-		/*	Still don't know why the original code
-		 *	sometimes fails to stop the thread, but this
-		 *	workaround prevents hanging on shutdown.	*/
+			oK(isendto(fd, &quit, 1, 0, &ownSockName,
+					sizeof(struct sockaddr)));
 
-		oK(isendto(fd, &quit, 1, 0, &ownSockName,
-				sizeof(struct sockaddr)));
-		microsnooze(10000);
+			/*	Maybe UDP delivered this byte to
+			 *	the thread's socket for a clean
+			 *	shutdown; maybe not.  Give it time.	*/
+
+			microsnooze(250000);
+
+			/*	Now test to see if the thread is
+			 *	still running.				*/
+
+			if (pthread_kill(receiverThread, SIGCONT) != 0)
+			{
+				/*	We are presuming that this
+				 *	means the thread no longer
+				 *	exists, suggesting that it
+				 *	self-terminated cleanly.  So
+				 *	we now go ahead and terminate
+				 *	the main task.			*/
+				break;
+			}
+		}
+
 		closesocket(fd);
 	}
 
-	pthread_detach(receiverThread);	/*	Part of workaround.	*/
+	pthread_detach(receiverThread);	/*	Not pthread_join.	*/
 	closesocket(rtp.linkSocket);
 	writeErrmsgMemos();
 	writeMemo("[i] udplsi has ended.");

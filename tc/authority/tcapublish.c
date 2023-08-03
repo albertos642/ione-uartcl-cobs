@@ -45,7 +45,7 @@ static void	shutDown()	/*	Commands tcapublish shutdown.	*/
 	TcaPublishState	*state;
 
 	isignal(SIGTERM, shutDown);
-	writeMemo("tcapublish: TCA publisher daemon interrupted.");
+	writeMemo("[i] tcapublish: TCA publisher daemon interrupted.");
 	state = _tcapublishState(NULL);
 	bp_interrupt(state->recvSAP);
 	state->running = 0;
@@ -150,8 +150,8 @@ writeMemo(msgBuffer);
 
 	if (!auth.inService)
 	{
-		isprintf(msgBuffer, sizeof msgBuffer, "tcapublish: Bulletin \
-from out-of-svc authority: '%s'.", src);
+		isprintf(msgBuffer, sizeof msgBuffer, "[?] tcapublish: \
+Bulletin from out-of-svc authority: '%s'.", src);
 		writeMemo(msgBuffer);
 		return 0;
 	}
@@ -161,7 +161,7 @@ from out-of-svc authority: '%s'.", src);
 	bulletinLength = zco_source_data_length(sdr, adu);
 	if (bulletinLength < 4)
 	{
-		isprintf(msgBuffer, sizeof msgBuffer, "tcapublish: TCA \
+		isprintf(msgBuffer, sizeof msgBuffer, "[?] tcapublish: TCA \
 bulletin ID missing: %d.", bulletinLength);
 		writeMemo(msgBuffer);
 		return 0;
@@ -175,7 +175,7 @@ bulletin ID missing: %d.", bulletinLength);
 	{
 		writeTimestampUTC(bulletinId, timestamp1);
 		writeTimestampUTC(db->currentCompilationTime, timestamp2);
-		isprintf(msgBuffer, sizeof msgBuffer, "tcapublish: TCA \
+		isprintf(msgBuffer, sizeof msgBuffer, "[?] tcapublish: TCA \
 bulletin ID incorrect: '%s', s/b '%s'.", timestamp1, timestamp2);
 		writeMemo(msgBuffer);
 		return 0;
@@ -212,7 +212,8 @@ bulletin ID incorrect: '%s', s/b '%s'.", timestamp1, timestamp2);
 				&datLength, datValue);
 		if (recordLength == 0)
 		{
-			writeMemo("tcapublish: Malformed proposed bulletin.");
+			writeMemo("[?] tcapublish: Malformed proposed \
+bulletin.");
 			MRELEASE(acknowledged);
 			return 0;
 		}
@@ -225,7 +226,7 @@ writeMemoNote("tcapublish: Got record for node", itoa(nodeNbr));
 		if (nodeNbr < priorNodeNbr
 		|| (nodeNbr == priorNodeNbr && (effectiveTime < priorEffTime)))
 		{
-			isprintf(msgBuffer, sizeof msgBuffer, "tcapublish: \
+			isprintf(msgBuffer, sizeof msgBuffer, "[?] tcapublish: \
 Malformed bulletin (order): '%s'.", src);
 			writeMemo(msgBuffer);
 			MRELEASE(acknowledged);
@@ -404,8 +405,8 @@ int	n;
 
 	isprintf(destEid, 32, "imc:%d.0", db->blocksGroupNbr);
 	fec_x = auths = sdr_list_length(sdr, db->authorities);
-	writeMemo("tcapublish: ---Consensus bulletin report---");
-	writeMemo("tcapublish: Authorities:");
+	writeMemo("[i] tcapublish: ---Consensus bulletin report---");
+	writeMemo("[i] tcapublish: Authorities:");
 	for (elt = sdr_list_first(sdr, db->authorities), i = 0; elt;
 			elt = sdr_list_next(sdr, elt), i++)
 	{
@@ -422,7 +423,7 @@ int	n;
 
 	if (fec_x == auths)
 	{
-		isprintf(msgbuf, sizeof msgbuf, "tcapublish: Can't send \
+		isprintf(msgbuf, sizeof msgbuf, "[?] tcapublish: Can't send \
 bulletin: not a declared authority -- " UVAST_FIELDSPEC, getOwnNodeNbr());
 		writeMemo(msgbuf);
 		return 0;
@@ -439,7 +440,7 @@ bulletin: not a declared authority -- " UVAST_FIELDSPEC, getOwnNodeNbr());
 	|| secondaryBlocks == NULL
 	|| sharenums == NULL)
 	{
-		writeMemo("tcapublish: Can't allocate arrays for bulletin \
+		writeMemo("[?] tcapublish: Can't allocate arrays for bulletin \
 publication.");
 		return -1;
 	}
@@ -486,7 +487,7 @@ writeMemo("tcapublish: No records to publish.");
 		return -1;
 	}
 
-	writeMemo("tcapublish: No consensus on these records...");
+	writeMemo("[i] tcapublish: No consensus on these records...");
 	cursor = bulletin;
 	bytesRemaining = buflen;
 	for (elt = sdr_list_first(sdr, db->pendingRecords); elt; elt = nextElt)
@@ -582,7 +583,7 @@ writeMemo(msgbuf);
 		sdr_list_delete(sdr, elt, NULL, NULL);
 	}
 
-	writeMemo("tcapublish: ...consensus reached on all other records.");
+	writeMemo("[i] tcapublish: ...consensus reached on all other records.");
 #if TC_DEBUG
 for (byte = bulletin, n = 0; n < bulletinLen; byte++, n++)
 {
@@ -594,10 +595,10 @@ isprintf(msgbuf, sizeof msgbuf, "tcapublish: Bulletin '%s'", bytes);
 writeMemo(msgbuf);
 #endif
 	MRELEASE(acknowledged);
-	isprintf(msgbuf, sizeof msgbuf, "tcapublish: Number of records in \
+	isprintf(msgbuf, sizeof msgbuf, "[i] tcapublish: Number of records in \
 consensus: %d", recCount);
 	writeMemo(msgbuf);
-	writeMemo("tcapublish: ---End of consensus bulletin report---");
+	writeMemo("[?] tcapublish: ---End of consensus bulletin report---");
 	if (recCount == 0)
 	{
 		MRELEASE(bulletin);
@@ -838,7 +839,7 @@ int	main(int argc, char *argv[])
 				- currentTime;
 		if (interval <= 0)
 		{
-#ifdef TC_DEBUG
+#if TC_DEBUG
 writeMemo("tcapublish: consensus grace period has ended.");
 #endif
 			CHKZERO(sdr_begin_xn(sdr));

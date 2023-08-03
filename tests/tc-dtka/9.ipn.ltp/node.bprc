@@ -6,12 +6,7 @@ a outduct ltp 6 ltpclo
 a scheme ipn 'ipnfw' 'ipnadminep'
 a endpoint ipn:9.1 x
 a endpoint ipn:9.2 x
-#a endpoint ipn:9.201 x
-#a endpoint ipn:9.202 x
-#a endpoint ipn:9.203 x
 a scheme imc 'imcfw' 'imcadminep'
-a endpoint imc:201.0 x
-a endpoint imc:202.0 x
 a endpoint imc:203.0 x
 r 'ipnadmin node.ipnrc'
 w 1

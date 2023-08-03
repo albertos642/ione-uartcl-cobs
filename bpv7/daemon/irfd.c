@@ -210,7 +210,8 @@ static int	handleIrfMessage(IonDB *iondb, BpDelivery *dlv)
 			return 0;
 		}
 
-		if (lyst_insert_last(passageways, (void *) (uintptr_t)uvtemp) == NULL)
+		if (lyst_insert_last(passageways, (void *) (uintptr_t) uvtemp)
+				== NULL)
 		{
 			putErrmsg("Can't insert passageway into lyst.", NULL);
 			lyst_destroy(passageways);
@@ -445,7 +446,7 @@ int	main(int argc, char *argv[])
 	restoreEidString(&meid);
 	if (velt == 0)
 	{
-		writeMemoNote("[i] Not configured for IRF; irfd stopping",
+		writeMemoNote("[i] Not configured for IRF, irfd stopping",
 				notificationsEid);
 		return 1;
 	}

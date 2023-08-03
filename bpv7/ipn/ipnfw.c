@@ -322,7 +322,7 @@ static int 	tryIRF(Bundle *bundle, Object bundleObj, IonNode *terminusNode)
 	while (lyst_length(nominees) > 0)
 	{
 		elt = lyst_first(nominees);
-		pwyNodeNbr = (uvast) (uintptr_t)lyst_data(elt);
+		pwyNodeNbr = (uvast) (uintptr_t) lyst_data(elt);
 		lyst_delete(elt);
 		isprintf(eid, sizeof eid, "ipn:" UVAST_FIELDSPEC ".0",
 				pwyNodeNbr);
