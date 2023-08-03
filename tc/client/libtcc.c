@@ -53,7 +53,7 @@ int	tcc_getBulletin(int blocksGroupNbr, char **bulletinContent,
 		if (sm_SemEnded(vdb->contentSemaphore))
 		{
 			writeMemo("[i] TCC stop has been signaled.");
-			return -1;
+			return 0;
 		}
 
 		CHKERR(sdr_begin_xn(sdr));
@@ -67,7 +67,7 @@ int	tcc_getBulletin(int blocksGroupNbr, char **bulletinContent,
 	{
 		sdr_cancel_xn(sdr);
 		putErrmsg("Can't allocate buffer for bulletin content.", NULL);
-		return-1;
+		return -1;
 	}
 
 	*length = content.length;

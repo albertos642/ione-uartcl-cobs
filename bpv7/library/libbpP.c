@@ -3593,6 +3593,7 @@ static int	addEndpoint_IMC(VScheme *vscheme, char *eid)
 
 	CHKERR(parseEidString(eid, &metaEid, &vscheme, &elt));
 	petition.groupNbr = metaEid.elementNbr;
+	restoreEidString(&metaEid);
 	if (petition.groupNbr == 0)
 	{
 		/*	No need to send petition for this multicast
@@ -3608,7 +3609,6 @@ static int	addEndpoint_IMC(VScheme *vscheme, char *eid)
 
 	petition.isMember = 1;
 	result = imcSendPetition(&petition, 0);
-	restoreEidString(&metaEid);
 	return result;
 }
 

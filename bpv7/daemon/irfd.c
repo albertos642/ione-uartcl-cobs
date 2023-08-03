@@ -446,7 +446,7 @@ int	main(int argc, char *argv[])
 	restoreEidString(&meid);
 	if (velt == 0)
 	{
-		writeMemoNote("[i] Not configured for IRF; irfd stopping",
+		writeMemoNote("[i] Not configured for IRF, irfd stopping",
 				notificationsEid);
 		return 1;
 	}

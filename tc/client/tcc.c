@@ -44,7 +44,7 @@ static void	shutDown()	/*	Commands tcc termination.	*/
 	TccState	*state;
 
 	isignal(SIGTERM, shutDown);
-	writeMemo("TC client daemon interrupted.");
+	writeMemo("[i] TC client daemon interrupted.");
 	state = _tccState(NULL);
 	bp_interrupt(state->sap);
 	state->running = 0;
@@ -191,7 +191,7 @@ static void	snap(TccDB *db, TccBulletin *bulletin,
 	char		*blk;
 	int		j;
 
-	writeMemoNote("tcc: Blocks from bulletin at", itoa(time(NULL)));
+	writeMemoNote("[i] tcc: Blocks from bulletin at", itoa(time(NULL)));
 	printf("\ntcc: Blocks from bulletin at %lu:\n", time(NULL));
 	for (i = 0; i < db->fec_M; i++)
 	{

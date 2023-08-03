@@ -55,7 +55,7 @@ static int	handlePetition(BpDelivery *dlv, unsigned char *cursor,
 #if IMCDEBUG
 writeMemoNote("Handling petition of Boolean value", itoa(petition.isMember));
 writeMemoNote("...from node", itoa(petitioner));
-writeMemoNote("...at node", itoa(ownNodeNbr));
+writeMemoNote("...at node", itoa(getOwnNodeNbr()));
 #endif
 	if (imcUpdateGroup(petition.groupNbr, petitioner, petition.isMember)
 			< 0)

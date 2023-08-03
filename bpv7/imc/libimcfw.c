@@ -687,8 +687,7 @@ writeMemoNote("...to group", itoa(groupNbr));
 			 *	is one of the node's own endpoints.	*/
 
 			isprintf(destinationEid, sizeof destinationEid,
-					"imc:" UVAST_FIELDSPEC ".0",
-					petition.groupNbr);
+					"imc:" UVAST_FIELDSPEC ".0", groupNbr);
 			oK(parseEidString(destinationEid, &metaEid, &vscheme,
 					&vschemeElt));
 			findEndpoint("imc", &metaEid, NULL, &vpoint,
