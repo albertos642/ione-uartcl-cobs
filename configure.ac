@@ -130,6 +130,10 @@ case $host_os in
 				echo "Unknown LONG_BIT value for linux aarch64 build."
 				exit 1
 			fi
+		elif test $host_cpu = "riscv64"; then
+			AC_DEFINE([linux],[1],[Build 64-bit Linux specific platform code.])
+			AM_CFLAGS="$AM_CFLAGS -Dlinux -DSPACE_ORDER=3 -fno-strict-aliasing"
+			echo "Build 64-bit Linux specific platform code."
 		else
 			AC_DEFINE([linux],[1],[Build 32-bit Linux specific platform code.])
 			AM_CFLAGS="$AM_CFLAGS -Dlinux -fno-strict-aliasing"
