@@ -37,7 +37,9 @@ enum	addressType
 {
 	UNICAST,
 	MULTICAST,
-	BROADCAST
+	BROADCAST,
+	UNICAST6,
+	MULTICAST6
 };
 
 void		switchEcho(int tokenCount, char **tokens);

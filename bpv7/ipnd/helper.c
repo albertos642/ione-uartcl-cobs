@@ -18,6 +18,7 @@
 #include "helper.h"
 #include "bpa.h"
 #include "ipndP.h"
+#include <string.h>
 
 static int	toBinary(const char *string, char *buf)
 {
@@ -148,12 +149,26 @@ int	hasAnActiveConnection(char *eid, int period)
 /**
  * Gets address type.
  * @param  ip Ip of address to determine type.
- * @return    Address type: UNICAST, BROADCAST, MULTICAST
+ * @return    Address type: UNICAST, BROADCAST, MULTICAST, UNICAST6, MULTICAST6
  *            -1 on unsupported address.
  */
 int	getIpv4AddressType(const char *ip)
 {
 	unsigned char	binaryAddr[4];
+
+	/* determine if address is IPv6*/
+	if (strstr(ip, ":") != NULL)
+	{ 
+	/* look for multicast prefix */
+		if (strncmp(ip, "ff0", 3) == 0)
+		{ 
+			return MULTICAST6;
+		}
+		else
+		{
+			return UNICAST6;
+		}
+	}
 
 	/* Convert address to binary */
 	if (!toBinary(ip, (char *) binaryAddr))
