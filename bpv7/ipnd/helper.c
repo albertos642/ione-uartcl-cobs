@@ -221,7 +221,7 @@ NetAddress	*findAddr(const char *ip, Lyst addresses)
 	for (i = 0; i < lyst_length(addresses); i++)
 	{
 		addr = (NetAddress *) lyst_data(addrElt);
-		if (strncasecmp(addr->ip, ip, INET_ADDRSTRLEN) == 0)
+		if (strncasecmp(addr->ip, ip, INET6_ADDRSTRLEN) == 0)
 		{
 			break;
 		}
@@ -251,7 +251,7 @@ int	compareIpndNeighbor(void *data1, void *data2)
 	IpndNeighbor	*nb2 = data2;
 	int		addrCmp;
 
-	addrCmp = strncasecmp(nb1->addr.ip, nb2->addr.ip, INET_ADDRSTRLEN);
+	addrCmp = strncasecmp(nb1->addr.ip, nb2->addr.ip, INET6_ADDRSTRLEN);
 	if (addrCmp == 0)
 	{
 		if (nb1->addr.port == nb2->addr.port)
@@ -288,7 +288,7 @@ LystElt	findIpndNeighbor(const char *ip, const int port, Lyst neighbors)
 		return NULL;
 	}
 
-	istrcpy(nb.addr.ip, ip, INET_ADDRSTRLEN);
+	istrcpy(nb.addr.ip, ip, INET6_ADDRSTRLEN);
 	nb.addr.port = port;
 	return lyst_search(lyst_first(neighbors), (void *) &nb);
 }
@@ -339,7 +339,7 @@ LystElt	findDestinationByAddr(NetAddress *addr, Lyst destinations)
 	for (i = 0; i < lyst_length(destinations); i++)
 	{
 		dest = (Destination *) lyst_data(destinationElt);
-		if (strncasecmp(dest->addr.ip, addr->ip, INET_ADDRSTRLEN) == 0
+		if (strncasecmp(dest->addr.ip, addr->ip, INET6_ADDRSTRLEN) == 0
 		&& dest->addr.port == addr->port)
 		{
 			break;
@@ -599,12 +599,37 @@ int	stringIP4ToFixed32Bytes(char *str, char *buf, int maxLen)
  */
 int	stringIP6ToBytesBytes(char *str, char *buf, int maxLen)
 {
-	/*	No portable support for IPV6 at this time.		*/
+	struct 	in6_addr addr;
+	int 	i;
+	/*uvast	*hold = 0;
+	uvast addrStorage;*/
 
 	if (maxLen < 1 + 16) return -1;
-	buf[0] = 16;
-	memset(buf + 1, 0, 16);
-	return 17;
+	inet_pton(AF_INET6, str, &addr);
+	
+	for (i = 0; i < 16; i++)
+	{
+		memcpy ( &buf[i], &addr.s6_addr[i], 1);
+	}
+	
+	/*memcpy (&addrStorage, &buf, 16);
+	static Sdnv     sdnvTmp;
+
+	len = (strlen(str) + 1) / 2;
+        encodeSdnv(&sdnvTmp, addrStorage);
+        if (sdnvTmp.length + len > maxLen) return -1;
+
+        memcpy(buf, sdnvTmp.text, sdnvTmp.length);*/
+
+	
+
+	/*memcpy (&buf[16],  '\0', 1);*/
+
+	putSysErrmsg("show me the buf!", (char *) buf);
+	return 16;
+
+
+
 }
 
 /* Change IPND protocol bytes into human readable string
@@ -826,11 +851,11 @@ int	bytesIP6ToBytesString(unsigned char *data, char *buf, int maxLen)
 
 	if (data[0] != 16)
 	{
-		return bytesToBytesString(data, buf, maxLen);
+		inet_ntop(AF_INET6, (struct in6_addr *) data, buf, INET6_ADDRSTRLEN);
 	}
 
-	/*	No portable support for IPV6 at this time.		*/
+	/*	No portable support for IPV6 at this time.		
 
-	memset(buf, 0, maxLen);
-	return 1 + 16;
+	memset(buf, 0, maxLen);*/
+	return 16;
 }

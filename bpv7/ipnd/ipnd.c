@@ -318,10 +318,10 @@ static int	addDestination(char *ip)
 	}
 
 	dest = (Destination *) MTAKE(sizeof(Destination));
-	istrcpy(dest->addr.ip, ip, INET_ADDRSTRLEN);
+	istrcpy(dest->addr.ip, ip, INET6_ADDRSTRLEN);
 	dest->addr.port = ctx->port;
 	*dest->eid = '\0';
-	dest->announcePeriod = ctx->announcePeriods[addressType];
+	dest->announcePeriod = ctx->announcePeriods[1];
 	dest->nextAnnounceTimestamp = time(NULL);
 	dest->fixed = 1;
 
@@ -366,7 +366,7 @@ static int	addListen(char *address)
 	}
 
 	newlistenAddress = (NetAddress *)MTAKE(sizeof(NetAddress));
-	istrcpy(newlistenAddress->ip, address, INET_ADDRSTRLEN);
+	istrcpy(newlistenAddress->ip, address, INET6_ADDRSTRLEN);
 	newlistenAddress->port = ctx->port;
 
 	lyst_insert(ctx->listenAddresses, newlistenAddress);
@@ -587,7 +587,6 @@ static int constructServiceDefinition(IpndTag *tags, IpndTagChild *child,
 		*dataLen += ret;
 		return ret + 1;
 	}
-
 	/* constructed type */
 
 	LystElt	cur, next;
@@ -667,9 +666,9 @@ static int	addService(int tokenCount, char** tokens)
 	IPNDCtx		*ctx = getIPNDCtx();
 	int		i, id, curId;
 	char		*pFrom, *pTo;
-	IpndTagChild	*tagChild = 0;
+	IpndTagChild	*tagChild = {0};
 	LystElt		cur, next;
-
+	/*char		*delimiter;*/
 	CHKCTX(ctx);
 
 	/* first token contains service name */
@@ -687,80 +686,179 @@ static int	addService(int tokenCount, char** tokens)
 		putErrmsg("Unknown service %s.", tokens[0]);
 		return -1;
 	}
-
-	/* rest of tokens contain "child1name1:child1name2:child1value" */
-	for (i = 1; i < tokenCount; i++)
+	i = 1;
+	/*parse ip address string from token[1]*/
+	while (i == 1)
 	{
-		if ((pTo = strchr(tokens[i], ':')) != NULL)
-		{
-			curId = id;
-			pFrom = tokens[i];
-			/* go down tag tree to find the leaf to set value */
-			do
-			{
-				*pTo = '\0';
-				for (cur = lyst_first
-						(ctx->tags[curId].children);
-						cur != NULL; cur = next)
-				{
+        	if ((pTo = strchr(tokens[1], '.')) != NULL)
+                {
+                	putErrmsg("IPv4 Beacon %s", tokens[1]);
+                	if ((pTo = strchr(tokens[i], ':')) != NULL)
+                        {
+                                curId = id;
+                                pFrom = tokens[i];
+                                /* go down tag tree to find the leaf to set value */
+                                do
+                                {
+                                        *pTo = '\0';
+                                        for (cur = lyst_first
+                                                        (ctx->tags[curId].children);
+                                                        cur != NULL; cur = next)
+                                        {
+                                                next = lyst_next(cur);
+                                                tagChild = (IpndTagChild *)
+                                                        lyst_data(cur);
+                                                if (strncmp(pFrom, tagChild->name,
+                                                        IPND_MAX_TAG_NAME_LENGTH) == 0)
+                                                {
+                                                        break;
+                                                }
+                                        }
+
+                                        *pTo = ':';
+                                        if (cur == NULL)
+                                        {
+                                                /* this is not child name */
+                                                if (curId == id)
+                                                {
+                                                        /* still at top level */
+
+                                                        putErrmsg("Bad param name %s.",
+                                                                        pFrom);
+                                                        return -1;
+                                                }
+
+                                                // it can be param value with ':' in it
+                                                break;
+                                        }
+
+                                        pFrom = pTo + 1;
+                                        curId = tagChild->tag->number;
+                                } while ((pTo = strchr(pFrom, ':')) != NULL);
+
+                                /* we need to go further down the tree of
+                                * single children                               */
+
+                                while (lyst_length(ctx->tags[curId].children) == 1)
+                                {
+                                        tagChild = lyst_data
+                                                (lyst_first(ctx->tags[curId].children));
+                                        curId = tagChild->tag->number;
+                                }
+
+                                if (lyst_length(ctx->tags[curId].children) != 0)
+                                {
+                                        putErrmsg("Param %s has more than one child.",
+                                                        ctx->tags[curId].name);
+                                        return -1;
+                                }
+
+                                /* we have tagChild to set its string value
+                                 * pFrom contains that value from config line */
+                                tagChild->strVal = pFrom;
+                        }
+                }
+		else if ((pTo = strchr(tokens[i], '.')) == NULL)
+                {
+                        if ((pTo = strchr(tokens[i], ':')) != NULL)
+                        {
+                                        curId = id;
+                                        pFrom = tokens[i];
+                                        *pTo = '\0';
+                                        cur = lyst_first (ctx->tags[curId].children);
 					next = lyst_next(cur);
-					tagChild = (IpndTagChild *)
-						lyst_data(cur);
-					if (strncmp(pFrom, tagChild->name,
-						IPND_MAX_TAG_NAME_LENGTH) == 0)
-					{
-						break;
-					}
-				}
+                                        tagChild = (IpndTagChild *) lyst_data(cur);
+                                        pFrom = pTo + 1;
+					curId = tagChild->tag->number;
 
-				*pTo = ':';
-				if (cur == NULL)
-				{
-					/* this is not child name */
-					if (curId == id)
-					{
-						/* still at top level */
+                                        while (lyst_length(ctx->tags[curId].children) == 1)
+                                        {
+                                                tagChild = lyst_data
+                                                  (lyst_first(ctx->tags[curId].children));
+                                                  curId = tagChild->tag->number;
+                                        }
 
-						putErrmsg("Bad param name %s.",
-								pFrom);
-						return -1;
-					}
-
-					// it can be param value with ':' in it
-					break;
-				}
-
-				pFrom = pTo + 1;
-				curId = tagChild->tag->number;
-			} while ((pTo = strchr(pFrom, ':')) != NULL);
-
-			/* we need to go further down the tree of
-			 * single children				*/
-
-			while (lyst_length(ctx->tags[curId].children) == 1)
-			{
-				tagChild = lyst_data
-					(lyst_first(ctx->tags[curId].children));
-				curId = tagChild->tag->number;
+                        		putErrmsg("IPv6 Address in pFrom", pFrom); 
+                                        tagChild->strVal = pFrom;
+                                        putErrmsg("IPv6 Address", tagChild->strVal); 
 			}
 
-			if (lyst_length(ctx->tags[curId].children) != 0)
-			{
-				putErrmsg("Param %s has more than one child.",
-						ctx->tags[curId].name);
-				return -1;
-			}
 
-			/* we have tagChild to set its string value
-			 * pFrom contains that value from config line */
-			tagChild->strVal = pFrom;
-		}
+                }
 		else
-		{
-			putErrmsg("Wrong param format %s.", tokens[i]);
-			return -1;
-		}
-	}
+                {
+                        putErrmsg("Wrong param format %s.", tokens[i]);
+                        return -1;
+                }
+	i++;
+        }
+	 /* rest of tokens contain "child1name1:child1name2:child1value" */
+        for (i = 2; i < tokenCount; i++)
+        {
+		if ((pTo = strchr(tokens[i], ':')) != NULL)
+                {
+                	curId = id;
+                        pFrom = tokens[i];
+                        /* go down tag tree to find the leaf to set value */
+                        do
+                        {
+                        	*pTo = '\0';
+                                for (cur = lyst_first
+                                                  (ctx->tags[curId].children);
+                                                  cur != NULL; cur = next)
+                                {
+                                	next = lyst_next(cur);
+                                        tagChild = (IpndTagChild *)
+                                                lyst_data(cur);
+                                        if (strncmp(pFrom, tagChild->name,
+                                                IPND_MAX_TAG_NAME_LENGTH) == 0)
+                                        	{
+                                                        break;
+                                                }
+                                }
+
+                                *pTo = ':';
+                                if (cur == NULL)
+                                {
+                                	/* this is not child name */
+                                        if (curId == id)
+                                        {
+                                        	/* still at top level */
+                                                putErrmsg("Bad param name %s.",
+                                                                  pFrom);
+                                                return -1;
+                                        }
+
+                                        // it can be param value with ':' in it
+                                        break;
+                                }
+
+                                pFrom = pTo + 1;
+                                curId = tagChild->tag->number;
+                         } while ((pTo = strchr(pFrom, ':')) != NULL);
+
+                         /* we need to go further down the tree of
+                         * single children                               */
+
+                         while (lyst_length(ctx->tags[curId].children) == 1)
+                         {
+                         	tagChild = lyst_data
+                                        (lyst_first(ctx->tags[curId].children));
+                                        curId = tagChild->tag->number;
+                         }
+
+                         if (lyst_length(ctx->tags[curId].children) != 0)
+                         {
+                                 putErrmsg("Param %s has more than one child.",
+                                                 ctx->tags[curId].name);
+                                 return -1;
+                         }
+
+                         /* we have tagChild to set its string value
+                         * pFrom contains that value from config line */
+                         tagChild->strVal = pFrom;
+                }
+        }
 
 	/* service is parsed out, the tagChild->strVals are filled out
 	 * now we need to create service definition, i.e. bytes */

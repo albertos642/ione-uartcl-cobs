@@ -28,7 +28,7 @@ extern "C" {
 /* Network address. */
 typedef struct
 {
-	char ip[INET_ADDRSTRLEN];
+	char ip[INET6_ADDRSTRLEN];
 	int port;
 } NetAddress;
 
