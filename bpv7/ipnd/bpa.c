@@ -47,12 +47,12 @@ static int	setUpSendingSocket(const int multicastTTL,
 	int	multicastTTLSockOption;
 #endif
 	int	broadcastDiscoverySockOption;
-	int	addressType = UNICAST6;
+	int	addressType;
 	int	on = 1;
-/*	NetAddress *destAddr = 0;
+	NetAddress *destAddr = 0;
 
-		destAddr = (NetAddress *) lyst_data(lyst_first(destinations));
-	addressType = getIpv4AddressType(destAddr->ip);*/
+	destAddr = (NetAddress *) lyst_data(lyst_first(destinations));
+	addressType = getIpv4AddressType(destAddr->ip);
 
 
 
@@ -117,7 +117,7 @@ static int	setUpSendingSocket(const int multicastTTL,
 	
 	}
 	else
-
+	{
 	/* Initialize sending socket */
 	sendSocket = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sendSocket < 0)
@@ -168,6 +168,7 @@ sending option", NULL);
 	}
 
 	return sendSocket;
+	}
 }
 
 /**
@@ -184,7 +185,7 @@ static int	sendBeacon(Beacon *beacon, Destination *dest, int socket)
 	unsigned char	*rawBeacon = NULL;
 	struct		sockaddr_in dest_addr;
 	struct		sockaddr_in6 dest6_addr;
-	int		addressType = UNICAST6;
+	int		addressType;
 	struct 		in6_addr addrBuffer;
 
 
@@ -197,9 +198,9 @@ static int	sendBeacon(Beacon *beacon, Destination *dest, int socket)
 		return -1;
 	}
 
-	/* determine IP version of destination address */
+	/* determine IP version of destination address*/
 
-/*	addressType = getIpv4AddressType(dest->addr.ip);*/
+	addressType = getIpv4AddressType(dest->addr.ip);
 	if (addressType == UNICAST6)
 	{
 		/* send beacon via IPv6 */
@@ -545,7 +546,7 @@ static int	*setUpListenSockets(Lyst listenAddresses,
 	NetAddress		*listenAddr;
 	struct sockaddr_in	listenAddrStruct;
 	struct sockaddr_in6	listenAddrStruct6;
-	int             	addressType = UNICAST6;
+	int             	addressType;
 	int			on = 1;
 	/* Set up unicast listen sockets */
 	numListenAddrs = lyst_length(listenAddresses);
@@ -563,7 +564,8 @@ static int	*setUpListenSockets(Lyst listenAddresses,
 		listenAddr = (NetAddress *) lyst_data(listenAddrElt);
 		memset(&listenAddrStruct, 0, sizeof(listenAddrStruct));
 		listenSocket = -1;
-		/*addressType = getIpv4AddressType(listenAddr->ip);*/
+		/*determine address version*/
+		addressType = getIpv4AddressType(listenAddr->ip);
 
 		if (addressType == UNICAST6)
         	{
@@ -834,9 +836,8 @@ void	*receiveBeacons(void *attr)
 	fd_set			readListenSocketsSet;
 	struct sockaddr_in	srcAddr;
 	struct sockaddr_in6	srcAddr6;
-	/*struct in6_addr		srcNumber;*/
-	/*int 			sin6_len;*/
-	int			addrVersion = UNICAST6;
+	int			addrVersion;
+	char 			*aV;
 	int			srcAddrLen;
 	char			srcAddrStr[INET6_ADDRSTRLEN];
 	int			srcAddrType;
@@ -853,8 +854,6 @@ void	*receiveBeacons(void *attr)
 	LystElt			nbElt;
 	int			newNb;
 	Destination		*newDest;
-	/*	char			*serv = 0;
-	size_t			servlen = 0;*/
 
 	CHKNULL(ctx);
 
@@ -917,8 +916,9 @@ configured. IPND will not receive any beacon.");
 				continue;
 
 			recevingSocket = i;
-			/*determine ip verson
-			addrVersion = getIpv4AddressType(srcAddrStr);*/
+			/*determine ip verson*/
+			aV = (char *) lyst_data(lyst_first(ctx->listenAddresses));
+			addrVersion = getIpv4AddressType(aV);
 
 			if (addrVersion == UNICAST6)
 			{
@@ -939,14 +939,9 @@ data.", NULL);
                                 }
 			
                         timeOfReception = time(NULL);
-                        /*sin6_len = (socklen_t *) sizeof(INET6_ADDRSTRLEN);*/
 
 			inet_ntop(AF_INET6, &srcAddr6.sin6_addr, srcAddrStr, srcAddrLen);
-			/*getnameinfo((struct sockaddr *) &srcAddr6, srcAddrLen, srcAddrStr, sin6_len, serv, servlen, NI_NUMERICHOST | NI_NUMERICSERV); */
-			isprintf(buffer, sizeof buffer, "source address %s", srcAddrStr);
-			printText(buffer);
-			/*memcpy(&srcNumber, &srcAddr6.sin6_addr.s6_addr, sin6_len);*/
-			/*bytesToBytesString(srcAddr6.sin6_addr.s6_addr, srcAddrStr, sizeof(srcAddr6.sin6_addr.s6_addr));*/
+
 			/* We don't consider sender port. */
                         lockResource(&ctx->configurationLock);
                         srcAddrPort = ctx->port;
