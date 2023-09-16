@@ -601,32 +601,23 @@ int	stringIP6ToBytesBytes(char *str, char *buf, int maxLen)
 {
 	struct 	in6_addr addr;
 	int 	i;
-	/*uvast	*hold = 0;
-	uvast addrStorage;*/
 
 	if (maxLen < 1 + 16) return -1;
 	inet_pton(AF_INET6, str, &addr);
 	
+	memset (&buf[0], 16, 1);	
 	for (i = 0; i < 16; i++)
 	{
-		memcpy ( &buf[i], &addr.s6_addr[i], 1);
+		memcpy (&buf[i + 1], &addr.s6_addr[i], 1);
 	}
 	
-	/*memcpy (&addrStorage, &buf, 16);
-	static Sdnv     sdnvTmp;
-
-	len = (strlen(str) + 1) / 2;
-        encodeSdnv(&sdnvTmp, addrStorage);
-        if (sdnvTmp.length + len > maxLen) return -1;
-
-        memcpy(buf, sdnvTmp.text, sdnvTmp.length);*/
 
 	
 
 	/*memcpy (&buf[16],  '\0', 1);*/
 
-	putSysErrmsg("show me the buf!", (char *) buf);
-	return 16;
+	putSysErrmsg("show me the buf!", (char *) &buf);
+	return 17;
 
 
 
@@ -848,14 +839,19 @@ int	bytesIP4ToFixed32String(unsigned char *data, char *buf, int maxLen)
 int	bytesIP6ToBytesString(unsigned char *data, char *buf, int maxLen)
 {
 	/* IP6 is encoded as byte array	*/
+	
+	struct in6_addr  addr;
+	int i;
 
-	if (data[0] != 16)
-	{
-		inet_ntop(AF_INET6, (struct in6_addr *) data, buf, INET6_ADDRSTRLEN);
-	}
+	for (i = 0; i < 16; i++)
+        {
+                memcpy(&addr.s6_addr[i], &data[i + 1], 1);
+        }
+	
+	inet_ntop(AF_INET6, &addr, buf, INET6_ADDRSTRLEN);
 
 	/*	No portable support for IPV6 at this time.		
 
 	memset(buf, 0, maxLen);*/
-	return 16;
+	return 17;
 }
