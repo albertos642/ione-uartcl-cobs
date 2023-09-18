@@ -604,23 +604,13 @@ int	stringIP6ToBytesBytes(char *str, char *buf, int maxLen)
 
 	if (maxLen < 1 + 16) return -1;
 	inet_pton(AF_INET6, str, &addr);
-	
-	memset (&buf[0], 16, 1);	
+	memset (&buf[0], 16, 1);
 	for (i = 0; i < 16; i++)
 	{
 		memcpy (&buf[i + 1], &addr.s6_addr[i], 1);
 	}
-	
 
-	
-
-	/*memcpy (&buf[16],  '\0', 1);*/
-
-	putSysErrmsg("show me the buf!", (char *) &buf);
 	return 17;
-
-
-
 }
 
 /* Change IPND protocol bytes into human readable string
@@ -849,9 +839,5 @@ int	bytesIP6ToBytesString(unsigned char *data, char *buf, int maxLen)
         }
 	
 	inet_ntop(AF_INET6, &addr, buf, INET6_ADDRSTRLEN);
-
-	/*	No portable support for IPV6 at this time.		
-
-	memset(buf, 0, maxLen);*/
 	return 17;
 }

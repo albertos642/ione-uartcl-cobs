@@ -692,7 +692,6 @@ static int	addService(int tokenCount, char** tokens)
 	{
         	if ((pTo = strchr(tokens[1], '.')) != NULL)
                 {
-                	putErrmsg("IPv4 Beacon %s", tokens[1]);
                 	if ((pTo = strchr(tokens[i], ':')) != NULL)
                         {
                                 curId = id;
@@ -778,9 +777,7 @@ static int	addService(int tokenCount, char** tokens)
                                                   curId = tagChild->tag->number;
                                         }
 
-                        		putErrmsg("IPv6 Address in pFrom", pFrom); 
                                         tagChild->strVal = pFrom;
-                                        putErrmsg("IPv6 Address", tagChild->strVal); 
 			}
 
 

@@ -23,8 +23,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
-/*#include "lyst.h"
-#include "lystP.h"*/
 
 /**
  * Sets up sending sockets.
@@ -34,7 +32,7 @@
  * @return     Socket on success, -1 on error.
  */
 static int	setUpSendingSocket(const int multicastTTL,
-		const int enabledBroadcastSending, Lyst destinations)
+		const int enabledBroadcastSending, Lyst listenAddresses)
 {
 	/* Sets up sending sockets */
 
@@ -49,15 +47,14 @@ static int	setUpSendingSocket(const int multicastTTL,
 	int	broadcastDiscoverySockOption;
 	int	addressType;
 	int	on = 1;
-	NetAddress *destAddr = 0;
 
-	destAddr = (NetAddress *) lyst_data(lyst_first(destinations));
-	addressType = getIpv4AddressType(destAddr->ip);
+	char *destAddr = 0;
 
-
+	destAddr = (char *) lyst_data(lyst_first(listenAddresses));
+	addressType = getIpv4AddressType(destAddr);
 
 	if (addressType == UNICAST6)
-	{	
+	{
 		 /* Initialize sending socket */
 	        sendSocket = socket(AF_INET6, SOCK_DGRAM, 0);
         	if (sendSocket < 0)
@@ -112,9 +109,9 @@ static int	setUpSendingSocket(const int multicastTTL,
                 	putSysErrmsg("send-thread: Can't set multicast TTL option \
 			for beacon sending socket.", NULL);
         	}
-	
+
 	return sendSocket;
-	
+
 	}
 	else
 	{
@@ -209,8 +206,6 @@ static int	sendBeacon(Beacon *beacon, Destination *dest, int socket)
 		dest6_addr.sin6_flowinfo = 0;
 		inet_pton(AF_INET6, dest->addr.ip, &addrBuffer);
 		dest6_addr.sin6_addr =  addrBuffer;
-		isprintf(buffer, sizeof buffer, "destination ip: %s", dest->addr.ip);
-		printText(buffer);
                 if (isendto(socket, (char *) rawBeacon,
                         rawBeaconLength, 0, (struct sockaddr *) &dest6_addr,
                         sizeof(dest6_addr)) != rawBeaconLength)
@@ -231,7 +226,7 @@ static int	sendBeacon(Beacon *beacon, Destination *dest, int socket)
 		dest_addr.sin_port = htons(dest->addr.port);
 
 		if (isendto(socket, (char *) rawBeacon,
-			rawBeaconLength, 0, (struct sockaddr *)&dest_addr,
+			rawBeaconLength, 0, (struct sockaddr *) &dest_addr,
 			sizeof(dest_addr)) != rawBeaconLength)
 		{
 			isprintf(buffer, sizeof buffer, "send-thread: Error sending \
@@ -286,7 +281,7 @@ void	*sendBeacons(void *attr)
 
 	lockResource(&ctx->configurationLock);
 	sendSocket = setUpSendingSocket(ctx->multicastTTL,
-			ctx->enabledBroadcastSending, ctx->destinations);
+			ctx->enabledBroadcastSending, ctx->listenAddresses);
 	unlockResource(&ctx->configurationLock);
 
 	if (sendSocket < 0)
@@ -579,7 +574,7 @@ static int	*setUpListenSockets(Lyst listenAddresses,
                 	}
 			if (setsockopt(listenSocket, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on)) < 0)
                 		{
-                         		putSysErrmsg("send-thread: socket option foul, 5 yard penalty",
+                         		putSysErrmsg("receive-thread: socket option foul, 5 yard penalty",
                                 	NULL);
                         	continue;
                 	}
@@ -706,7 +701,11 @@ static void	bp_discover_contact(char acquired, IPNDCtx *ctx, char *eid)
 	/* find CLA-TCP-v4 (64) service, as only that is supported */
 	char			claProtocol[] = "tcp";
 	char			socketSpec[40];
+	char			socketSpecPort[6];	
 	char			buffer[256];
+	struct 			in6_addr  addr;
+        int 			i;
+
 	LystElt			cur, next, curN, nextN;
 	ServiceDefinition	*def;
 	IpndNeighbor		*nb;
@@ -780,10 +779,21 @@ static void	bp_discover_contact(char acquired, IPNDCtx *ctx, char *eid)
 
 					break;
 				}
-				else if (def->number == 66)
+				if (def->number == 66)
 				{
-					
-
+					for (i = 3; i < 19; i++)
+				        {
+               					memcpy(&addr.s6_addr[i - 3], &def->data[i], 1);
+        				}
+					inet_ntop(AF_INET6, &addr, socketSpec, INET6_ADDRSTRLEN);
+					isprintf(socketSpecPort, sizeof socketSpecPort,
+					"!%d",
+					((unsigned char) def->data[20])
+						* 256 +
+					(unsigned char) def->data[21]);
+					strcat(socketSpec, socketSpecPort);
+					putErrmsg("the string:", socketSpec);
+					break;
 				}
 			}
 		}
