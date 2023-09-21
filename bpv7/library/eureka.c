@@ -376,7 +376,7 @@ static int	discoveryAcquired(char *socketSpec, char *discoveryEid,
 		{
 		portNumber = BpTcpDefaultPortNbr;
 		inductDaemon = "tcpcli6";
-		outductDaemon = "";
+		outductDaemon = "tcpclo6";
 		maxPayloadLength = 0;
 		}
 	}

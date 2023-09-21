@@ -198,6 +198,7 @@ static int	sendBeacon(Beacon *beacon, Destination *dest, int socket)
 	/* determine IP version of destination address*/
 
 	addressType = getIpv4AddressType(dest->addr.ip);
+
 	if (addressType == UNICAST6)
 	{
 		/* send beacon via IPv6 */
@@ -208,7 +209,7 @@ static int	sendBeacon(Beacon *beacon, Destination *dest, int socket)
 		dest6_addr.sin6_addr =  addrBuffer;
                 if (isendto(socket, (char *) rawBeacon,
                         rawBeaconLength, 0, (struct sockaddr *) &dest6_addr,
-                        sizeof(dest6_addr)) != rawBeaconLength)
+                        sizeof(struct sockaddr_in6)) != rawBeaconLength)
                 {
                         isprintf(buffer, sizeof buffer, "send-thread: Error sending \
                         beacon (%dB) to %s:%d.", rawBeaconLength, dest->addr.ip, dest->addr.port);
@@ -698,13 +699,13 @@ static int	*setUpListenSockets(Lyst listenAddresses,
  */
 static void	bp_discover_contact(char acquired, IPNDCtx *ctx, char *eid)
 {
-	/* find CLA-TCP-v4 (64) service, as only that is supported */
+	/* find CLA-TCP-v4 (64) or CLA-TCP-v6 (66) service */
 	char			claProtocol[] = "tcp";
 	char			socketSpec[40];
 	char			socketSpecPort[6];	
 	char			buffer[256];
 	struct 			in6_addr  addr;
-        int 			i;
+        int 			i = 3;
 
 	LystElt			cur, next, curN, nextN;
 	ServiceDefinition	*def;
@@ -779,20 +780,22 @@ static void	bp_discover_contact(char acquired, IPNDCtx *ctx, char *eid)
 
 					break;
 				}
+		
 				if (def->number == 66)
 				{
-					for (i = 3; i < 19; i++)
+					for (i = 4; i < 20; i++)
 				        {
-               					memcpy(&addr.s6_addr[i - 3], &def->data[i], 1);
+               					memcpy(&addr.s6_addr[i - 4], &def->data[i], 1);
         				}
 					inet_ntop(AF_INET6, &addr, socketSpec, INET6_ADDRSTRLEN);
 					isprintf(socketSpecPort, sizeof socketSpecPort,
 					"!%d",
-					((unsigned char) def->data[20])
+					((unsigned char) def->data[21])
 						* 256 +
-					(unsigned char) def->data[21]);
-					strcat(socketSpec, socketSpecPort);
-					putErrmsg("the string:", socketSpec);
+					(unsigned char) def->data[22]);
+					putErrmsg("the string:1", socketSpec);
+					/*strcat(socketSpec, socketSpecPort);
+					putErrmsg("the string:2", socketSpec);*/
 					break;
 				}
 			}
@@ -1292,9 +1295,11 @@ void	*expireNeighbors(void *attr)
 	 * expired.  See ["2.8. Disconnection", paragraph 1, page 16] */
 	while (1)
 	{
-		snooze(MAX(MAX(ctx->announcePeriods[UNICAST],
+		snooze(MAX(MAX(MAX(MAX(ctx->announcePeriods[UNICAST],
 				ctx->announcePeriods[MULTICAST]),
-				ctx->announcePeriods[BROADCAST]));
+				ctx->announcePeriods[BROADCAST]),
+				ctx->announcePeriods[UNICAST6]),
+				ctx->announcePeriods[MULTICAST6]));
 
 		lockResource(&ctx->neighborsLock);
 		nbElt = lyst_first(ctx->neighbors);

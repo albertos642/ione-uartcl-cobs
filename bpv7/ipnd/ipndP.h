@@ -100,7 +100,7 @@ typedef struct
 	int		announcePeriod;
 
 	/* Stores period as UNICAST,MULTICAST and BROADCAST addresses */
-	int		announcePeriods[3];
+	int		announcePeriods[5];
 
 	/* NetAddress lyst, unsorted. */
 	Lyst		listenAddresses;

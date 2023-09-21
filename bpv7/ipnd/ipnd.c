@@ -186,6 +186,8 @@ static int	initializeIpnd()
 	ctx->announcePeriods[UNICAST] = DEFAULT_UNICAST_PERIOD;
 	ctx->announcePeriods[MULTICAST] = DEFAULT_MULTICAST_PERIOD;
 	ctx->announcePeriods[BROADCAST] = DEFAULT_BROADCAST_PERIOD;
+	ctx->announcePeriods[UNICAST6] = DEFAULT_UNICAST_PERIOD;
+	ctx->announcePeriods[MULTICAST6] = DEFAULT_MULTICAST_PERIOD;
 
 	ctx->neighbors = lyst_create_using(getIonMemoryMgr());
 	lyst_compare_set(ctx->neighbors, compareIpndNeighbor);
