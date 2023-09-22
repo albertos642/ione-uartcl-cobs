@@ -150,6 +150,7 @@ int	main(int argc, char *argv[])
 	ReceiverThreadParms	rtp;
 	pthread_t		receiverThread;
 	int			fd;
+	int			i;
 	char			quit = 0;
 	if (ductName == NULL)
 	{
@@ -267,15 +268,36 @@ int	main(int argc, char *argv[])
 	fd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
 	if (fd >= 0)
 	{
-		if (isendto(fd, &quit, 1, 0, (struct sockaddr *) &hostNbr,
-				sizeof(struct sockaddr_in6)) == 1)
+		for (i = 0; i < 3; i++)	/*	Try this 3 times.	*/
 		{
-			pthread_join(receiverThread, NULL);
+			oK(isendto(fd, &quit, 1, 0, (struct sockaddr *)
+					&hostNbr, sizeof(struct sockaddr_in6)));
+
+			/*	Maybe UDP delivered this byte to
+			 *	the thread's socket for a clean
+			 *	shutdown; maybe not.  Give it time.	*/
+
+			microsnooze(250000);
+
+			/*	Now test to see if the thread is
+			 *	still running.				*/
+
+			if (pthread_kill(receiverThread, SIGCONT) != 0)
+			{
+				/*	We are presuming that this
+				 *	means the thread no longer
+				 *	exists, suggesting that it
+				 *	self-terminated cleanly.  So
+				 *	we now go ahead and terminate
+				 *	the main task.			*/
+				break;
+			}
 		}
 
 		closesocket(fd);
 	}
 
+	pthread_detach(receiverThread);	/*	Not pthread_join.	*/
 	closesocket(rtp.ductSocket);
 	writeErrmsgMemos();
 	writeMemo("[i] udpcli6 duct has ended.");
