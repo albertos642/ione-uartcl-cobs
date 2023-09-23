@@ -365,6 +365,8 @@ static int	discoveryAcquired(char *socketSpec, char *discoveryEid,
 
 	if (strcmp(claProtocol, "tcp") == 0)
 	{
+		/*determine IPv4 or IPv6 address type
+		and launch appropriate daemon(s) */
 		if (strchr(socketSpec, '.') != NULL)
 		{
 		portNumber = BpTcpDefaultPortNbr;
@@ -382,6 +384,8 @@ static int	discoveryAcquired(char *socketSpec, char *discoveryEid,
 	}
 	else if (strcmp(claProtocol, "udp") == 0)
 	{
+		/*determine IPv4 or IPv6 address type
+		and launch appropriate daemon(s) */
 		if (strchr(socketSpec, '.') != NULL)
 		{
 		portNumber = BpUdpDefaultPortNbr;
@@ -417,6 +421,8 @@ static int	discoveryAcquired(char *socketSpec, char *discoveryEid,
 		fetchProtocol(claProtocol, &protocol, &elt);
 
 		/*	Add induct for CLA and start it.		*/
+		/*determine IPv4 or IPv6 address type*/
+
 		if (strchr(socketSpec, '.') != NULL)
 		{
 			isprintf(inductName, sizeof inductName, "0.0.0.0:%d",

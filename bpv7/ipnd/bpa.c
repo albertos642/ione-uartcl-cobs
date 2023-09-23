@@ -48,15 +48,18 @@ static int	setUpSendingSocket(const int multicastTTL,
 	int	broadcastDiscoverySockOption;
 	int	addressType;
 	int	on = 1;
-
 	char *destAddr = 0;
 
+
+	/* determine IPv4 or IPv6 address type from listenAddresses passed from
+	calling function's ctx struct*/
 	destAddr = (char *) lyst_data(lyst_first(listenAddresses));
 	addressType = getIpv4AddressType(destAddr);
-
+	
+	/*process IPv6 sockets*/
 	if (addressType == UNICAST6)
 	{
-		 /* Initialize sending socket */
+		 /* Initialize IPv6 sending socket */
 	        sendSocket = socket(AF_INET6, SOCK_DGRAM, 0);
         	if (sendSocket < 0)
         	{
@@ -77,7 +80,7 @@ static int	setUpSendingSocket(const int multicastTTL,
 	}
 	else if(addressType == MULTICAST6)
 	{
-                /* Initialize sending socket */
+                /* Initialize IPv6 sending socket */
                 sendSocket = socket(AF_INET6, SOCK_DGRAM, 0);
                 if (sendSocket < 0)
 		{
@@ -112,58 +115,57 @@ static int	setUpSendingSocket(const int multicastTTL,
         	}
 
 	return sendSocket;
-
 	}
 	else
 	{
-	/* Initialize sending socket */
-	sendSocket = socket(AF_INET, SOCK_DGRAM, 0);
-	if (sendSocket < 0)
-	{
-		putSysErrmsg("send-thread: Can't open beacon sending socket.",
+	/* Initialize IPv4 sending socket */
+		sendSocket = socket(AF_INET, SOCK_DGRAM, 0);
+		if (sendSocket < 0)
+		{
+			putSysErrmsg("send-thread: Can't open beacon sending socket.",
 				NULL);
-		return -1;
-	}
+			return -1;
+		}
 
-	/* Set multicast loop option to avoid receiving
-	   our multicast sent beacons */
-	multicastLoopSockOption = 0;
-	if (setsockopt(sendSocket,
+		/* Set multicast loop option to avoid receiving
+	   	our multicast sent beacons */
+		multicastLoopSockOption = 0;
+		if (setsockopt(sendSocket,
 			IPPROTO_IP,
 			IP_MULTICAST_LOOP,
 			(void *) &multicastLoopSockOption,
 			sizeof(multicastLoopSockOption)) < 0)
-	{
-		putSysErrmsg("send-thread: Can't set multicast loop option \
-		for beacon sending socket.", NULL);
-	}
+		{
+			putSysErrmsg("send-thread: Can't set multicast loop option \
+			for beacon sending socket.", NULL);
+		}
 
-	/* Set multicast ttl option */
-	multicastTTLSockOption = multicastTTL;
-	if (setsockopt(sendSocket,
+		/* Set multicast ttl option */
+		multicastTTLSockOption = multicastTTL;
+		if (setsockopt(sendSocket,
 			IPPROTO_IP,
 			IP_MULTICAST_TTL,
 			(void *) &multicastTTLSockOption,
 			sizeof(multicastTTLSockOption)) < 0)
-	{
+		{
 		putSysErrmsg("send-thread: Can't set multicast TTL option \
-for beacon sending socket.", NULL);
-	}
+			for beacon sending socket.", NULL);
+		}
 
-	if (enabledBroadcastSending)
-	{
-		/* Set broadcast sending options*/
-		broadcastDiscoverySockOption = 1;
-		if (setsockopt(sendSocket,
+		if (enabledBroadcastSending)
+		{
+			/* Set broadcast sending options*/
+			broadcastDiscoverySockOption = 1;
+			if (setsockopt(sendSocket,
 				SOL_SOCKET,
 				SO_BROADCAST,
 				(void *) &broadcastDiscoverySockOption,
 				sizeof(broadcastDiscoverySockOption)) < 0)
-		{
-			putSysErrmsg("send-thread: Can't set broadcast \
-sending option", NULL);
+			{
+				putSysErrmsg("send-thread: Can't set broadcast \
+					sending option", NULL);
+			}
 		}
-	}
 
 	return sendSocket;
 	}
@@ -200,7 +202,7 @@ static int	sendBeacon(Beacon *beacon, Destination *dest, int socket)
 
 	addressType = getIpv4AddressType(dest->addr.ip);
 
-	if (addressType == UNICAST6)
+	if (addressType == UNICAST6  || adressType == MULTICAST6)
 	{
 		/* send beacon via IPv6 */
 		dest6_addr.sin6_family = AF_INET6;
@@ -221,7 +223,7 @@ static int	sendBeacon(Beacon *beacon, Destination *dest, int socket)
 	}
 	else
 	{	
-		/* Send beacon */
+		/* Send beacon via IPv4*/
 		memset(&dest_addr, 0, sizeof(dest_addr));
 		dest_addr.sin_family = AF_INET;
 		dest_addr.sin_addr.s_addr = inet_addr(dest->addr.ip);
@@ -566,7 +568,7 @@ static int	*setUpListenSockets(Lyst listenAddresses,
 
 		if (addressType == UNICAST6)
         	{
-			/* Create socket */
+			/* Create socket IPv6 Unicast Socket*/
                 	listenSocket = socket(AF_INET6, SOCK_DGRAM, 0);
                 	if (listenSocket < 0)
                 	{
@@ -599,7 +601,7 @@ static int	*setUpListenSockets(Lyst listenAddresses,
         	}
 		else if(addressType == MULTICAST6)
 		{
-                        /* Create socket */
+                        /* Create IPv6 Multicast socket */
                         listenSocket = socket(AF_INET6, SOCK_DGRAM, 0);
 			if (listenSocket < 0)
                         {
@@ -634,7 +636,7 @@ static int	*setUpListenSockets(Lyst listenAddresses,
                 }
 		else
 		{
-			/* Create socket */
+			/* Create IPv4 socket */
 			listenSocket = socket(AF_INET, SOCK_DGRAM, 0);
 			if (listenSocket < 0)
 			{
@@ -781,7 +783,7 @@ static void	bp_discover_contact(char acquired, IPNDCtx *ctx, char *eid)
 
 					break;
 				}
-		
+				/* CLA-TCP-V6 service definition handler*/
 				if (def->number == 66)
 				{
 					for (i = 4; i < 20; i++)

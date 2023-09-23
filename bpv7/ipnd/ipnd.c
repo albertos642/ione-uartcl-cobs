@@ -693,7 +693,8 @@ static int	addService(int tokenCount, char** tokens)
 	/*parse ip address string from token[1]*/
 	while (i == 1)
 	{
-        	if ((pTo = strchr(tokens[1], '.')) != NULL)
+        	/*determine IPv4 or IPv6 address type.  for IPv4 execute:*/  
+		if ((pTo = strchr(tokens[1], '.')) != NULL)
                 {
                 	if ((pTo = strchr(tokens[i], ':')) != NULL)
                         {
@@ -760,6 +761,7 @@ static int	addService(int tokenCount, char** tokens)
                                 tagChild->strVal = pFrom;
                         }
                 }
+		/*for IPv6 address, execute:*/
 		else if ((pTo = strchr(tokens[i], '.')) == NULL)
                 {
                         if ((pTo = strchr(tokens[i], ':')) != NULL)
