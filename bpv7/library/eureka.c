@@ -5,7 +5,7 @@
  *	ALL RIGHTS RESERVED.  U.S. Government Sponsorship acknowledged.
  *
  *	Author: Scott Burleigh, JPL
- *
+ *	Add IPv6 daemon conditionals to discoveryAcquired(), Scott Johnson, Spacely Packets, 9/22/2023
  */
 
 #include "bpP.h"

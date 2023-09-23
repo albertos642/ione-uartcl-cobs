@@ -13,6 +13,7 @@
  *		- ION IPND Implementation Assembly Part2
  *	Version 2.1 DTN Neighbor Discovery - ION IPND Fix Defects and Issues
  *	Version 2.2 Shared context ctx passed explicitely to threads to avoid shared library security change implications
+ *	Version 3.0 Add IPv6 support, Scott Johnson, Spacely Packets, 9/22/2023
  */
 
 #include "platform.h"
@@ -793,9 +794,7 @@ static void	bp_discover_contact(char acquired, IPNDCtx *ctx, char *eid)
 					((unsigned char) def->data[21])
 						* 256 +
 					(unsigned char) def->data[22]);
-					putErrmsg("the string:1", socketSpec);
-					/*strcat(socketSpec, socketSpecPort);
-					putErrmsg("the string:2", socketSpec);*/
+					/*strcat(socketSpec, socketSpecPort);*/
 					break;
 				}
 			}

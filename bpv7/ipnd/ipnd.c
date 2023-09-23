@@ -11,6 +11,7 @@
  *		- ION IPND Implementation Assembly Part2
  *	Version 2.1 DTN Neighbor Discovery - ION IPND Fix Defects and Issues
  *	Version 2.2 Shared context ctx passed explicitely to threads to avoid shared library security change implications
+ *      Version 3.0 Add IPv6 support, Scott Johnson, Spacely Packets, 9/22/2023
  */
 
 #include <stdlib.h>
