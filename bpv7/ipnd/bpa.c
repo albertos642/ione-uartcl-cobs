@@ -53,9 +53,16 @@ static int	setUpSendingSocket(const int multicastTTL,
 
 	/* determine IPv4 or IPv6 address type from listenAddresses passed from
 	calling function's ctx struct*/
-	destAddr = (char *) lyst_data(lyst_first(listenAddresses));
-	addressType = getIpv4AddressType(destAddr);
-	
+	if (listenAddresses)
+	{	
+		destAddr = (char *) lyst_data(lyst_first(listenAddresses));
+		addressType = getIpv4AddressType(destAddr);
+	}
+	else
+	{
+		putSysErrmsg("listen address not defined; add 'a listen $address' to ipnd runcontrol file.", NULL);
+		return -1;
+	}
 	/*process IPv6 sockets*/
 	if (addressType == UNICAST6)
 	{
@@ -202,7 +209,7 @@ static int	sendBeacon(Beacon *beacon, Destination *dest, int socket)
 
 	addressType = getIpv4AddressType(dest->addr.ip);
 
-	if (addressType == UNICAST6  || adressType == MULTICAST6)
+	if (addressType == UNICAST6  || addressType == MULTICAST6)
 	{
 		/* send beacon via IPv6 */
 		dest6_addr.sin6_family = AF_INET6;
