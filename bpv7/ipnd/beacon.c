@@ -875,6 +875,7 @@ int	deserializeBeacon(unsigned char *rawBeacon, const int rawBeaconLength,
 			if (validateServiceDefinition(ctx->tags,
 					serviceDefinition->data,
 					serviceDefinition->dataLength) == -1)
+
 			{
 				isprintf(buffer, sizeof buffer,
 						"[?] Received beacon's service \

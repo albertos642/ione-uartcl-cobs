@@ -10,6 +10,7 @@
  *	Version 2.0 DTN Neighbor Discovery
  *		- ION IPND Implementation Assembly Part2
  *	Version 2.1 DTN Neighbor Discovery - ION IPND Fix Defects and Issues
+ *      Version 3.0 Add IPv6 support, Scott Johnson, Spacely Packets, 9/22/2023
  */
 
 #include <stdint.h> 
@@ -18,6 +19,7 @@
 #include "helper.h"
 #include "bpa.h"
 #include "ipndP.h"
+#include <string.h>
 
 static int	toBinary(const char *string, char *buf)
 {
@@ -148,12 +150,26 @@ int	hasAnActiveConnection(char *eid, int period)
 /**
  * Gets address type.
  * @param  ip Ip of address to determine type.
- * @return    Address type: UNICAST, BROADCAST, MULTICAST
+ * @return    Address type: UNICAST, BROADCAST, MULTICAST, UNICAST6, MULTICAST6
  *            -1 on unsupported address.
  */
 int	getIpv4AddressType(const char *ip)
 {
 	unsigned char	binaryAddr[4];
+
+	/* determine if address is IPv6*/
+	if (strstr(ip, ":") != NULL)
+	{ 
+	/* look for multicast prefix */
+		if (strncmp(ip, "ff0", 3) == 0)
+		{ 
+			return MULTICAST6;
+		}
+		else
+		{
+			return UNICAST6;
+		}
+	}
 
 	/* Convert address to binary */
 	if (!toBinary(ip, (char *) binaryAddr))
@@ -206,7 +222,7 @@ NetAddress	*findAddr(const char *ip, Lyst addresses)
 	for (i = 0; i < lyst_length(addresses); i++)
 	{
 		addr = (NetAddress *) lyst_data(addrElt);
-		if (strncasecmp(addr->ip, ip, INET_ADDRSTRLEN) == 0)
+		if (strncasecmp(addr->ip, ip, INET6_ADDRSTRLEN) == 0)
 		{
 			break;
 		}
@@ -236,7 +252,7 @@ int	compareIpndNeighbor(void *data1, void *data2)
 	IpndNeighbor	*nb2 = data2;
 	int		addrCmp;
 
-	addrCmp = strncasecmp(nb1->addr.ip, nb2->addr.ip, INET_ADDRSTRLEN);
+	addrCmp = strncasecmp(nb1->addr.ip, nb2->addr.ip, INET6_ADDRSTRLEN);
 	if (addrCmp == 0)
 	{
 		if (nb1->addr.port == nb2->addr.port)
@@ -273,7 +289,7 @@ LystElt	findIpndNeighbor(const char *ip, const int port, Lyst neighbors)
 		return NULL;
 	}
 
-	istrcpy(nb.addr.ip, ip, INET_ADDRSTRLEN);
+	istrcpy(nb.addr.ip, ip, INET6_ADDRSTRLEN);
 	nb.addr.port = port;
 	return lyst_search(lyst_first(neighbors), (void *) &nb);
 }
@@ -324,7 +340,7 @@ LystElt	findDestinationByAddr(NetAddress *addr, Lyst destinations)
 	for (i = 0; i < lyst_length(destinations); i++)
 	{
 		dest = (Destination *) lyst_data(destinationElt);
-		if (strncasecmp(dest->addr.ip, addr->ip, INET_ADDRSTRLEN) == 0
+		if (strncasecmp(dest->addr.ip, addr->ip, INET6_ADDRSTRLEN) == 0
 		&& dest->addr.port == addr->port)
 		{
 			break;
@@ -584,11 +600,17 @@ int	stringIP4ToFixed32Bytes(char *str, char *buf, int maxLen)
  */
 int	stringIP6ToBytesBytes(char *str, char *buf, int maxLen)
 {
-	/*	No portable support for IPV6 at this time.		*/
+	struct 	in6_addr addr;
+	int 	i;
 
 	if (maxLen < 1 + 16) return -1;
-	buf[0] = 16;
-	memset(buf + 1, 0, 16);
+	inet_pton(AF_INET6, str, &addr);
+	memset (&buf[0], 16, 1);
+	for (i = 0; i < 16; i++)
+	{
+		memcpy (&buf[i + 1], &addr.s6_addr[i], 1);
+	}
+
 	return 17;
 }
 
@@ -808,14 +830,15 @@ int	bytesIP4ToFixed32String(unsigned char *data, char *buf, int maxLen)
 int	bytesIP6ToBytesString(unsigned char *data, char *buf, int maxLen)
 {
 	/* IP6 is encoded as byte array	*/
+	
+	struct in6_addr  addr;
+	int i;
 
-	if (data[0] != 16)
-	{
-		return bytesToBytesString(data, buf, maxLen);
-	}
-
-	/*	No portable support for IPV6 at this time.		*/
-
-	memset(buf, 0, maxLen);
-	return 1 + 16;
+	for (i = 0; i < 16; i++)
+        {
+                memcpy(&addr.s6_addr[i], &data[i + 1], 1);
+        }
+	
+	inet_ntop(AF_INET6, &addr, buf, INET6_ADDRSTRLEN);
+	return 17;
 }

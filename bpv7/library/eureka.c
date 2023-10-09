@@ -5,7 +5,7 @@
  *	ALL RIGHTS RESERVED.  U.S. Government Sponsorship acknowledged.
  *
  *	Author: Scott Burleigh, JPL
- *
+ *	Add IPv6 daemon conditionals to discoveryAcquired(), Scott Johnson, Spacely Packets, 9/22/2023
  */
 
 #include "bpP.h"
@@ -365,17 +365,41 @@ static int	discoveryAcquired(char *socketSpec, char *discoveryEid,
 
 	if (strcmp(claProtocol, "tcp") == 0)
 	{
+		/*determine IPv4 or IPv6 address type
+		and launch appropriate daemon(s) */
+		if (strchr(socketSpec, '.') != NULL)
+		{
 		portNumber = BpTcpDefaultPortNbr;
 		inductDaemon = "tcpcli";
 		outductDaemon = "";
 		maxPayloadLength = 0;
+		}
+		else
+		{
+		portNumber = BpTcpDefaultPortNbr;
+		inductDaemon = "tcpcli6";
+		outductDaemon = "tcpclo6";
+		maxPayloadLength = 0;
+		}
 	}
 	else if (strcmp(claProtocol, "udp") == 0)
 	{
+		/*determine IPv4 or IPv6 address type
+		and launch appropriate daemon(s) */
+		if (strchr(socketSpec, '.') != NULL)
+		{
 		portNumber = BpUdpDefaultPortNbr;
 		inductDaemon = "udpcli";
 		outductDaemon = "udpclo";
 		maxPayloadLength = 65000;
+		}
+		else
+		{
+		portNumber = BpTcpDefaultPortNbr;
+		inductDaemon = "udpcli6";
+		outductDaemon = "udpclo6";
+		maxPayloadLength = 0;
+		}
 	}
 	else
 	{
@@ -397,9 +421,20 @@ static int	discoveryAcquired(char *socketSpec, char *discoveryEid,
 		fetchProtocol(claProtocol, &protocol, &elt);
 
 		/*	Add induct for CLA and start it.		*/
+		/*determine IPv4 or IPv6 address type*/
 
-		isprintf(inductName, sizeof inductName, "0.0.0.0:%d",
+		if (strchr(socketSpec, '.') != NULL)
+		{
+			isprintf(inductName, sizeof inductName, "0.0.0.0:%d",
 				portNumber);
+		}
+		else
+		{
+			isprintf(inductName, sizeof inductName, "::!%d",
+				portNumber);
+		}
+		
+		
 		if (addInduct(protocol.name, inductName, inductDaemon) < 0)
 		{
 			putErrmsg("Can't add induct.", inductName);

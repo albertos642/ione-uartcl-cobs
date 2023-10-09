@@ -10,6 +10,7 @@
  *	Version 1.0 2015/05/09 Gerard Garcia
  *	Version 2.0 DTN Neighbor Discovery
  *		- ION IPND Implementation Assembly Part2
+ *	Version 3.0  Add IPv6 support, Scott Johnson, Spacely Packets, 9/22/2023
  */
 
 #ifndef _HELPER_H_
@@ -28,7 +29,7 @@ extern "C" {
 /* Network address. */
 typedef struct
 {
-	char ip[INET_ADDRSTRLEN];
+	char ip[INET6_ADDRSTRLEN];
 	int port;
 } NetAddress;
 
@@ -37,7 +38,9 @@ enum	addressType
 {
 	UNICAST,
 	MULTICAST,
-	BROADCAST
+	BROADCAST,
+	UNICAST6,
+	MULTICAST6
 };
 
 void		switchEcho(int tokenCount, char **tokens);
