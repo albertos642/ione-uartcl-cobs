@@ -313,7 +313,6 @@ static int	addDestination(char *ip)
 	int		addressType = getIpv4AddressType(ip);
 
 	CHKCTX(ctx);
-
 	if (addressType == -1)
 	{
 		putErrmsg("Unsupported address.", NULL);
@@ -324,12 +323,13 @@ static int	addDestination(char *ip)
 	istrcpy(dest->addr.ip, ip, INET6_ADDRSTRLEN);
 	dest->addr.port = ctx->port;
 	*dest->eid = '\0';
+#if 0
 	dest->announcePeriod = ctx->announcePeriods[1];
+#endif
+	dest->announcePeriod = DEFAULT_ANNOUNCE_PERIOD;
 	dest->nextAnnounceTimestamp = time(NULL);
 	dest->fixed = 1;
-
-	lyst_insert(ctx->destinations, dest);
-
+	lyst_insert_last(ctx->destinations, dest);
 	if (addressType == BROADCAST)
 	{
 		ctx->enabledBroadcastSending = 1;
@@ -339,7 +339,6 @@ static int	addDestination(char *ip)
 		"[i] Destination %s:%d added with announcement interval %d.",
 		dest->addr.ip, dest->addr.port, dest->announcePeriod);
 	printText(buffer);
-
 	return 0;
 }
 

@@ -33,7 +33,10 @@
  * @return     Socket on success, -1 on error.
  */
 static int	setUpSendingSocket(const int multicastTTL,
+		const int enabledBroadcastSending, Lyst destinations)
+#if 0
 		const int enabledBroadcastSending, Lyst listenAddresses)
+#endif
 {
 	/* Sets up sending sockets */
 
@@ -48,13 +51,27 @@ static int	setUpSendingSocket(const int multicastTTL,
 	int	broadcastDiscoverySockOption;
 	int	addressType;
 	int	on = 1;
-	char *destAddr = 0;
+	char	*destAddr = 0;
 
-
-	/* determine IPv4 or IPv6 address type from listenAddresses passed from
+#if 0
+/* determine IPv4 or IPv6 address type from listenAddresses passed from */
+#endif
+	/* determine IPv4 or IPv6 address type from destinations passed from
 	calling function's ctx struct*/
+	if (destinations && lyst_length(destinations) > 0)
+	{
+		destAddr = (char *) lyst_data(lyst_first(destinations));
+		addressType = getIpv4AddressType(destAddr);
+	}
+	else
+	{
+		writeMemo("[?] destination address not defined; add 'a \
+destination $address' to ipnd runcontrol file.");
+		return -1;
+	}
+#if 0
 	if (listenAddresses)
-	{	
+	{
 		destAddr = (char *) lyst_data(lyst_first(listenAddresses));
 		addressType = getIpv4AddressType(destAddr);
 	}
@@ -63,6 +80,7 @@ static int	setUpSendingSocket(const int multicastTTL,
 		putSysErrmsg("listen address not defined; add 'a listen $address' to ipnd runcontrol file.", NULL);
 		return -1;
 	}
+#endif
 	/*process IPv6 sockets*/
 	if (addressType == UNICAST6)
 	{
@@ -70,20 +88,21 @@ static int	setUpSendingSocket(const int multicastTTL,
 	        sendSocket = socket(AF_INET6, SOCK_DGRAM, 0);
         	if (sendSocket < 0)
         	{
-                	putSysErrmsg("send-thread: Can't open beacon sending socket.",
-                                NULL);
+			putSysErrmsg("send-thread: Can't open beacon sending \
+socket.", NULL);
                 	return -1;
         	}
-		if (setsockopt(sendSocket, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on)) < 0)
+
+		if (setsockopt(sendSocket, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on,
+				sizeof(on)) < 0)
 		{
-			 putSysErrmsg("send-thread: socket option foul, 5 yard penalty",
+			 putSysErrmsg("send-thread: socket option foul, 5 \
+ yard penalty",
                                 NULL);
                         return -1;
 		}
 
-
-
-	return sendSocket;
+		return sendSocket;
 	}
 	else if(addressType == MULTICAST6)
 	{
@@ -91,10 +110,11 @@ static int	setUpSendingSocket(const int multicastTTL,
                 sendSocket = socket(AF_INET6, SOCK_DGRAM, 0);
                 if (sendSocket < 0)
 		{
-                	putSysErrmsg("send-thread: Can't open beacon sending socket.",
-                                NULL);
+			putSysErrmsg("send-thread: Can't open beacon sending \
+socket.", NULL);
                 	return -1;
         	}
+
 		/* Set multicast loop option to avoid receiving
            	our multicast sent beacons */
 
@@ -105,8 +125,8 @@ static int	setUpSendingSocket(const int multicastTTL,
                         (void *) &multicastLoopSockOption,
                         sizeof(multicastLoopSockOption)) < 0)
         	{
-                	putSysErrmsg("send-thread: Can't set multicast loop option \
-			for beacon sending socket.", NULL);
+			putSysErrmsg("send-thread: Can't set multicast loop \
+option for beacon sending socket.", NULL);
         	}
 
         	/* Set multicast ttl option */
@@ -117,11 +137,11 @@ static int	setUpSendingSocket(const int multicastTTL,
                         (void *) &multicastTTLSockOption,
                         sizeof(multicastTTLSockOption)) < 0)
         	{
-                	putSysErrmsg("send-thread: Can't set multicast TTL option \
-			for beacon sending socket.", NULL);
+			putSysErrmsg("send-thread: Can't set multicast TTL \
+option for beacon sending socket.", NULL);
         	}
 
-	return sendSocket;
+		return sendSocket;
 	}
 	else
 	{
@@ -129,8 +149,8 @@ static int	setUpSendingSocket(const int multicastTTL,
 		sendSocket = socket(AF_INET, SOCK_DGRAM, 0);
 		if (sendSocket < 0)
 		{
-			putSysErrmsg("send-thread: Can't open beacon sending socket.",
-				NULL);
+			putSysErrmsg("send-thread: Can't open beacon sending \
+socket.", NULL);
 			return -1;
 		}
 
@@ -143,8 +163,8 @@ static int	setUpSendingSocket(const int multicastTTL,
 			(void *) &multicastLoopSockOption,
 			sizeof(multicastLoopSockOption)) < 0)
 		{
-			putSysErrmsg("send-thread: Can't set multicast loop option \
-			for beacon sending socket.", NULL);
+			putSysErrmsg("send-thread: Can't set multicast loop \
+option for beacon sending socket.", NULL);
 		}
 
 		/* Set multicast ttl option */
@@ -155,8 +175,8 @@ static int	setUpSendingSocket(const int multicastTTL,
 			(void *) &multicastTTLSockOption,
 			sizeof(multicastTTLSockOption)) < 0)
 		{
-		putSysErrmsg("send-thread: Can't set multicast TTL option \
-			for beacon sending socket.", NULL);
+			putSysErrmsg("send-thread: Can't set multicast TTL \
+option for beacon sending socket.", NULL);
 		}
 
 		if (enabledBroadcastSending)
@@ -170,11 +190,11 @@ static int	setUpSendingSocket(const int multicastTTL,
 				sizeof(broadcastDiscoverySockOption)) < 0)
 			{
 				putSysErrmsg("send-thread: Can't set broadcast \
-					sending option", NULL);
+sending option", NULL);
 			}
 		}
 
-	return sendSocket;
+		return sendSocket;
 	}
 }
 
@@ -292,9 +312,12 @@ void	*sendBeacons(void *attr)
 
 	lockResource(&ctx->configurationLock);
 	sendSocket = setUpSendingSocket(ctx->multicastTTL,
+			ctx->enabledBroadcastSending, ctx->destinations);
+#if 0
+	sendSocket = setUpSendingSocket(ctx->multicastTTL,
 			ctx->enabledBroadcastSending, ctx->listenAddresses);
+#endif
 	unlockResource(&ctx->configurationLock);
-
 	if (sendSocket < 0)
 	{
 		putErrmsg("send-thread: Error initializing sending socket.",
@@ -790,20 +813,26 @@ static void	bp_discover_contact(char acquired, IPNDCtx *ctx, char *eid)
 
 					break;
 				}
+
 				/* CLA-TCP-V6 service definition handler*/
+
 				if (def->number == 66)
 				{
 					for (i = 4; i < 20; i++)
 				        {
-               					memcpy(&addr.s6_addr[i - 4], &def->data[i], 1);
+						memcpy(&addr.s6_addr[i - 4],
+							&def->data[i], 1);
         				}
-					inet_ntop(AF_INET6, &addr, socketSpec, INET6_ADDRSTRLEN);
-					isprintf(socketSpecPort, sizeof socketSpecPort,
-					"!%d",
-					((unsigned char) def->data[21])
-						* 256 +
-					(unsigned char) def->data[22]);
-					/*strcat(socketSpec, socketSpecPort);*/
+
+					inet_ntop(AF_INET6, &addr, socketSpec,
+						INET6_ADDRSTRLEN);
+					isprintf(socketSpecPort,
+						sizeof socketSpecPort,
+						"!%d",
+						((unsigned char) def->data[21])
+							* 256 +
+						(unsigned char) def->data[22]);
+					strcat(socketSpec, socketSpecPort);
 					break;
 				}
 			}
@@ -908,7 +937,7 @@ configured. IPND will not receive any beacon.");
 
 	MRELEASE(listenSockets);
 
-#if	MAX_BEACON_SIZE > 1024
+#if MAX_BEACON_SIZE > 1024
 	recvDataBuffer = MTAKE(MAX_BEACON_SIZE);
 	CHKNULL(recvDataBuffer);
 
@@ -922,7 +951,6 @@ configured. IPND will not receive any beacon.");
 		readListenSocketsSet = activeListenSocketsSet;
 		nb = NULL;
 		newNb = 0;
-
 		if (select(FD_SETSIZE, &readListenSocketsSet, NULL, NULL, NULL)
 				< 0)
 		{
@@ -938,7 +966,8 @@ configured. IPND will not receive any beacon.");
 
 			recevingSocket = i;
 			/*determine ip verson*/
-			aV = (char *) lyst_data(lyst_first(ctx->listenAddresses));
+			aV = (char *)
+				lyst_data(lyst_first(ctx->listenAddresses));
 			addrVersion = getIpv4AddressType(aV);
 
 			if (addrVersion == UNICAST6)
@@ -948,51 +977,51 @@ configured. IPND will not receive any beacon.");
 				srcAddr6.sin6_flowinfo = 0;
 				srcAddr6.sin6_port = htons(0);
 				srcAddrLen = sizeof(struct sockaddr_in6);
-                                if ((recvDataBufferLen = recvfrom(recevingSocket,
-                                        (char *) recvDataBuffer,
-                                        MAX_BEACON_SIZE, 0,
-                                        (struct sockaddr *) &srcAddr6,
-                                        (socklen_t *) &srcAddrLen)) < 0)
+                                if ((recvDataBufferLen =
+						recvfrom(recevingSocket,
+						(char *) recvDataBuffer,
+						MAX_BEACON_SIZE, 0,
+						(struct sockaddr *) &srcAddr6,
+						(socklen_t *) &srcAddrLen)) < 0)
                                 {
-                                        putSysErrmsg("receive-thread: Error receiving \
-data.", NULL);
+                                        putSysErrmsg("receive-thread: Error \
+receiving data.", NULL);
                                         continue;
                                 }
 			
-                        timeOfReception = time(NULL);
-
-			inet_ntop(AF_INET6, &srcAddr6.sin6_addr, srcAddrStr, srcAddrLen);
-
-			/* We don't consider sender port. */
-                        lockResource(&ctx->configurationLock);
-                        srcAddrPort = ctx->port;
-                        srcAddrType = getIpv4AddressType(srcAddrStr);
-                        unlockResource(&ctx->configurationLock);
-
+				timeOfReception = time(NULL);
+				inet_ntop(AF_INET6, &srcAddr6.sin6_addr,
+						srcAddrStr, srcAddrLen);
+				/* We don't consider sender port. */
+				lockResource(&ctx->configurationLock);
+				srcAddrPort = ctx->port;
+				srcAddrType = getIpv4AddressType(srcAddrStr);
+				unlockResource(&ctx->configurationLock);
 			}
 
 			else
 			{
 				srcAddrLen = sizeof(srcAddr);
-				if ((recvDataBufferLen = irecvfrom(recevingSocket,
-					(char *) recvDataBuffer,
-					MAX_BEACON_SIZE, 0,
-					(struct sockaddr *) &srcAddr,
-					(socklen_t *) &srcAddrLen)) < 0)
+				if ((recvDataBufferLen =
+						irecvfrom(recevingSocket,
+						(char *) recvDataBuffer,
+						MAX_BEACON_SIZE, 0,
+						(struct sockaddr *) &srcAddr,
+						(socklen_t *) &srcAddrLen)) < 0)
 				{
-					putSysErrmsg("receive-thread: Error receiving \
-data.", NULL);
+					putSysErrmsg("receive-thread: Error \
+receiving data.", NULL);
 					continue;
 				}
 
-			timeOfReception = time(NULL);
-			istrcpy(srcAddrStr, inet_ntoa(srcAddr.sin_addr),
-					INET_ADDRSTRLEN);
-			/* We don't consider sender port. */
-			lockResource(&ctx->configurationLock);
-			srcAddrPort = ctx->port;
-			srcAddrType = getIpv4AddressType(srcAddrStr);
-			unlockResource(&ctx->configurationLock);
+				timeOfReception = time(NULL);
+				istrcpy(srcAddrStr, inet_ntoa(srcAddr.sin_addr),
+						INET_ADDRSTRLEN);
+				/* We don't consider sender port. */
+				lockResource(&ctx->configurationLock);
+				srcAddrPort = ctx->port;
+				srcAddrType = getIpv4AddressType(srcAddrStr);
+				unlockResource(&ctx->configurationLock);
 			}
 #if IPND_DEBUG
 			isprintf(buffer, sizeof buffer,
@@ -1001,7 +1030,6 @@ data.", NULL);
 					recvDataBufferLen, srcAddrStr);
 			printText(buffer);
 #endif
-
 			if (*srcAddrStr == '\0')
 			{
 				putErrmsg("receive-thread: Error converting \
@@ -1080,7 +1108,6 @@ Received beacon's mandatory parts cannot be parsed.", NULL);
 Received beacon's optional part cannot be parsed.", NULL);
 						printText(buffer);
 					}
-
 #if IPND_DEBUG
 					isprintf(buffer, sizeof buffer,
 						"[i] receive-thread: Received \

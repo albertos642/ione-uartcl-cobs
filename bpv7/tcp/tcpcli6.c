@@ -1169,8 +1169,8 @@ lost (keepalive)", tag);
 			result = itcp_send(&(session->sock), ack, len);
 			if (result < 1)
 			{
-				writeMemoNote("[?] tcpcl session lost \
-(ack)", tag);
+				writeMemoNote("[?] tcpcl session lost (ack)",
+						tag);
 				ionKillMainThread(procName());
 				running = 0;
 				break;

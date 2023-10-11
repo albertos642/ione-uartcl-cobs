@@ -25,8 +25,12 @@ void	bssStop()
 
 	if (_datFile(0, 0) == -1)	/*	Must destroy tblIndex.	*/
 	{
-		oK(_tblIndex(&destroy));
-		ionDetach();
+		if (_tblIndex(NULL))	/*	tblIndex still exists.	*/
+		{
+			/*	Must destroy it.			*/
+
+			oK(_tblIndex(&destroy));
+		}
 	}
 
 	recvThreadValid = _recvThreadId(&recvThread, 0);
@@ -54,8 +58,12 @@ void	bssClose()
 
 	if (_recvThreadId(NULL, 0) == 0)/*	No active receiver.	*/
 	{
-		oK(_tblIndex(&destroy));/*	Must destroy tblIndex.	*/
-		ionDetach();
+		if (_tblIndex(NULL))	/*	tblIndex still exists.	*/
+		{
+			/*	Must destroy it.			*/
+
+			oK(_tblIndex(&destroy));
+		}
 	}
 
 	if (_datFile(0,0) != -1)

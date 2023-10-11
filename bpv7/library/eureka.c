@@ -369,17 +369,17 @@ static int	discoveryAcquired(char *socketSpec, char *discoveryEid,
 		and launch appropriate daemon(s) */
 		if (strchr(socketSpec, '.') != NULL)
 		{
-		portNumber = BpTcpDefaultPortNbr;
-		inductDaemon = "tcpcli";
-		outductDaemon = "";
-		maxPayloadLength = 0;
+			portNumber = BpTcpDefaultPortNbr;
+			inductDaemon = "tcpcli";
+			outductDaemon = "";
+			maxPayloadLength = 0;
 		}
 		else
 		{
-		portNumber = BpTcpDefaultPortNbr;
-		inductDaemon = "tcpcli6";
-		outductDaemon = "tcpclo6";
-		maxPayloadLength = 0;
+			portNumber = BpTcpDefaultPortNbr;
+			inductDaemon = "tcpcli6";
+			outductDaemon = "tcpclo6";
+			maxPayloadLength = 0;
 		}
 	}
 	else if (strcmp(claProtocol, "udp") == 0)
@@ -388,17 +388,17 @@ static int	discoveryAcquired(char *socketSpec, char *discoveryEid,
 		and launch appropriate daemon(s) */
 		if (strchr(socketSpec, '.') != NULL)
 		{
-		portNumber = BpUdpDefaultPortNbr;
-		inductDaemon = "udpcli";
-		outductDaemon = "udpclo";
-		maxPayloadLength = 65000;
+			portNumber = BpUdpDefaultPortNbr;
+			inductDaemon = "udpcli";
+			outductDaemon = "udpclo";
+			maxPayloadLength = 65000;
 		}
 		else
 		{
-		portNumber = BpTcpDefaultPortNbr;
-		inductDaemon = "udpcli6";
-		outductDaemon = "udpclo6";
-		maxPayloadLength = 0;
+			portNumber = BpUdpDefaultPortNbr;
+			inductDaemon = "udpcli6";
+			outductDaemon = "udpclo6";
+			maxPayloadLength = 0;
 		}
 	}
 	else

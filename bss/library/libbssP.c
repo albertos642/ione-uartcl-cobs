@@ -251,6 +251,7 @@ tblIndex	*_tblIndex(int *control)
 		if (*control)		/*	Creating.		*/
 		{
 			index = MTAKE(sizeof(tblIndex));
+			memset((char *) index, 0, sizeof(tblIndex));
 		}
 	}
 
@@ -1063,7 +1064,6 @@ void	*recvBundles(void *args)
 	bp_close(sap);
 	writeErrmsgMemos();
 	writeMemo("[i] Stopping bss reception thread.");
-	bp_detach();
 	oK(_recvThreadId(NULL, -1));
 	return NULL;
 }
@@ -1316,6 +1316,7 @@ void	findIndexRow(time_t time, long *position)
 	CHKVOID(position);
 	CHKVOID(index);
 	hdr = &(index->header);
+	CHKVOID(hdr);
 	if (hdr->oldestTime == 0	/*	Empty database.		*/
 	|| time > hdr->newestTime)	/*	Hasn't happened yet.	*/
 	{
