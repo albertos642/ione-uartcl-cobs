@@ -15,9 +15,7 @@ if [[ $BP_VERSION == "bpv6" ]] ; then
     fi
 fi
 
-echo "Cleaning up old ION ..."
-rm ion_nodes 1.ipn.udp/ion.log 2.ipn.udp/ion.log 2.ipn.udp/testfile1
-killm
+./cleanup
 
 echo "Starting ION..."
 export ION_NODE_LIST_DIR=$PWD

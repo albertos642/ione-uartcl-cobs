@@ -64,10 +64,10 @@ CGROBJS = libcgr.o
 
 LBP = -lbp -limcfw -lipnfw -ldtn2fw
 
-RUNTIMES = bpadmin bpsecadmin bpsink bpsource bpdriver bpecho bpcounter bpsendfile bprecvfile bpclock bptransit bpclm ipnadmin ipnfw ipnadminep dtn2admin dtn2fw dtn2adminep tcpcli tcpclo tcpcli6 tcpclo6 stcpcli stcpclo brsscla brsccla udpcli udpclo dgrcli dgrclo ltpcli ltpclo lgsend lgagent bptrace bpstats bplist bpcancel hmackeys bping bpstats2 bpchat imcfw imcadminep bsspcli bsspclo bibeclo bibeadmin bpnmtest ipnd cgrfetch bpversion cpsd uartcli uartclo irfadmin irfd
+RUNTIMES = bpadmin bpsecadmin bpsink bpsource bpdriver bpecho bpcounter bpsendfile bprecvfile bpclock bptransit bpclm ipnadmin ipnfw ipnadminep dtn2admin dtn2fw dtn2adminep tcpcli tcpclo tcpcli6 tcpclo6 stcpcli stcpclo stcpcli6 stcpclo6 brsscla brsccla udpcli udpclo udpcli6 udpclo6 dgrcli dgrclo ltpcli ltpclo lgsend lgagent bptrace bpstats bplist bpcancel hmackeys bping bpstats2 bpchat imcfw imcadminep bsspcli bsspclo bibeclo bibeadmin bpnmtest ipnd cgrfetch bpversion cpsd uartcli uartclo irfadmin irfd
 # dccpcli dccpclo
 
-ALL = check $(BPLIBS) libcgr.so libipnfw.so libimcfw.so libdtn2fw.so libstcpcla.so libudpcla.so libuartcla.so $(RUNTIMES)
+ALL = check $(BPLIBS) libcgr.so libipnfw.so libimcfw.so libdtn2fw.so libstcpcla.so libstcpcla6.so libudpcla.so libudpcla6.so libuartcla.so $(RUNTIMES)
 
 all:		$(ALL)
 
@@ -252,6 +252,14 @@ stcpclo:	stcpclo.o $(BPLIBS) libstcpcla.so
 		$(CC) -o stcpclo stcpclo.o -L./lib -L$(ROOT)/lib -lstcpcla $(LBP) -lici -lpthread -lm
 		cp stcpclo ./bin
 
+stcpcli6:	stcpcli6.o $(BPLIBS) libstcpcla6.so
+		$(CC) -o stcpcli6 stcpcli6.o -L./lib -L$(ROOT)/lib -lstcpcla6 $(LBP) -lici -lpthread -lm
+		cp stcpcli6 ./bin
+
+stcpclo6:	stcpclo6.o $(BPLIBS) libstcpcla6.so
+		$(CC) -o stcpclo6 stcpclo6.o -L./lib -L$(ROOT)/lib -lstcpcla6 $(LBP) -lici -lpthread -lm
+		cp stcpclo6 ./bin
+
 #	-	-	UDP executables	-	-	-	-	-
 
 udpcli:		udpcli.o $(BPLIBS) libudpcla.so
@@ -399,6 +407,10 @@ libudpcla.so:	libudpcla.o
 libudpcla6.so:	libudpcla6.o
 		$(LD) -o libudpcla6.so libudpcla6.o
 		cp libudpcla6.so ./lib
+
+libstcpcla6.so:	libstcpcla6.o
+		$(LD) -o libstcpcla6.so libstcpcla6.o
+		cp libstcpcla6.so ./lib
 
 libuartcla.so:	libuartcla.o
 		$(LD) -o libuartcla.so libuartcla.o

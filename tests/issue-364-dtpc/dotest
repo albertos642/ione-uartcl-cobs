@@ -221,6 +221,7 @@ then
 	RETVAL=1
 fi
 
+echo "....end of error reporting."
 echo ""
 echo "DTPC test completed."
 exit $RETVAL

@@ -1,0 +1,4 @@
+#!/bin/bash
+echo "Cleaning up old ION ..."
+rm -f ion_nodes 1.ipn.stcp/ion.log 2.ipn.stcp/ion.log 2.ipn.stcp/testfile1
+killm
