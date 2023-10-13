@@ -73,7 +73,21 @@ in-order are counted while the out-of-order frames are stored in the
 BSS database.  Every 5 seconds the receiver checks to see if all 1000
 frames have been received into the database in correct transmission
 order; when this has been accomplished, the total numbers of frames
-received in real time and in replay are printed and the test terminates."
+received in real time and in replay are printed and the test terminates.
+
+NOTE: this test is RESOURCE-INTENSIVE!  It preallocates a large BSS database,
+which consumes much of the working memory allocated to the receiving node;
+for a small machine, the maximum amount of working memory that can be
+allocated may be too little to support transmission of a non-trivial
+stream of bundles, resulting in test failure.  To get it to succeed
+you may have to send a stream of only 5 bundles, or else reduce the
+size of the BSS database by changing the WINDOW constant in bssP.h
+to a much smaller number and recompiling bss.
+
+Also NOTE: for now, the configured data loss on the real-time data
+stream WILL NOT HAPPEN when running on IPv6.  This is because that
+data loss is imposed by the owltsim link simulator, which has not yet
+been adapted to operate over IPv6."
 
 echo
 echo "CONFIG: 2 node custom BSS:"
@@ -134,17 +148,17 @@ fi
 cd ../2.ipn.bssp
 echo
 echo "Starting bsscounter application..."
-bsscounter 5 bssDB ../ ipn:2.71 > bsscounter.output &
+bsscounter 300 bssDB ../ ipn:2.71 > bsscounter.output &
 sleep 2
 
 cd ../1.ipn.bssp
 echo
-echo "Sending a stream of 5 bundles from node 1 to node 2..."
+echo "Sending a stream of 300 bundles from node 1 to node 2..."
 
-bssdriver ipn:1.2 ipn:2.71 5
+bssdriver ipn:1.2 ipn:2.71 300
 
 # Allow time for necessary retransmission to be completed.
-sleep 15
+sleep 30
 
 echo ""
 cd ../2.ipn.bssp
