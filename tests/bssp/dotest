@@ -134,13 +134,13 @@ fi
 cd ../2.ipn.bssp
 echo
 echo "Starting bsscounter application..."
-bsscounter 1000 bssDB ../ ipn:2.71 > bsscounter.output &
+bsscounter 5 bssDB ../ ipn:2.71 > bsscounter.output &
 sleep 2
 
 cd ../1.ipn.bssp
 echo
-echo "Sending a stream of 1000 bundles from node 1 to node 2..."
-bssdriver ipn:1.2 ipn:2.71 1000
+echo "Sending a stream of 5 bundles from node 1 to node 2..."
+bssdriver ipn:1.2 ipn:2.71 5
 
 # Allow time for necessary retransmission to be completed.
 sleep 15
