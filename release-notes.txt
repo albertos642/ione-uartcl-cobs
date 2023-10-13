@@ -1,6 +1,6 @@
-= Release Notes for IONe 1.0.1 =
+= Release Notes for IONe 1.1.0 =
 
-February 27, 2023
+October 13, 2023
 
 %%%%%%%%%%%
 = GENERAL =
@@ -49,6 +49,40 @@ NASA is able to provide for ION baseline users:
 In short, USE OF IONe IS STRICTLY AT YOUR OWN RISK!  That said, feedback
 (especially including well-documented bug reports) is most welcome; please
 join us on the IONe mailing list (ione-discuss@lists.sourceforge.net).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+= NOTES ON RELEASE 1.1.0 =
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This is a relatively minor release of IONe that upgrades several existing
+features:
+
+- IPv6 support has been extended to neighbor discovery (ipnd) and the
+  stcp and bssp convergence-layer adapters.
+
+- A bug in multicast has been fixed, finally enabling the DTKA (delay-
+  tolerant security key management) test to pass.  The tc-dtka test has
+  been added to the IONe regression test suite.
+
+- A bug in bpcancel has been fixed.
+
+- A bug in ionrestart has been fixed; this should eliminate restart loops.
+
+- The nm system should now build properly in OpenWRT.
+
+- An improved mechanism for shutting down UDP-based convergence-layer
+  adapters and link service adapters has been developed.  This should
+  solve the problem of link shutdown activities hanging while waiting
+  for these UDP-based daemons to terminate.
+
+-  Various other errors, in the code and some tests, have been fixed.
+
+The changes have been tested on 64-bit and 32-bit Linux platforms, but
+clearly some bugs may remain!  If you find that something doesn't work,
+please open a ticket at https://sourceforge.net/p/ione/tickets.
+
+A major overhaul of routing, based in part on Olivier de Jonckere's
+research, is planned for IONe 1.2.0, but that will take some time.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 = NOTES ON CHANGES IMPORTED FROM ION 4.1.2 =
