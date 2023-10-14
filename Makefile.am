@@ -3528,7 +3528,7 @@ ionexit_CFLAGS = $(icicflags) $(AM_CFLAGS)
 
 ionrestart_SOURCES = restart/utils/ionrestart.c
 ionrestart_LDADD = libici.la $(bplib) libltp.la libcfdp.la 
-ionrestart_CFLAGS = -I$(srcdir)/ici/sdr -I$(srcdir)/ici/library -I$(srcdir)/$(BP_DIR)/library -I$(srcdir)/ltp/library -I$(srcdir)/ici/library -I$(srcdir)/cfdp/library $(AM_CFLAGS)
+ionrestart_CFLAGS = -I$(srcdir)/ici/sdr -I$(srcdir)/ici/library -I$(srcdir)/$(BP_DIR)/library -I$(srcdir)/ltp/library -I$(srcdir)/ici/library -I$(srcdir)/cfdp/library -I$(srcdir)/cfdp/include $(AM_CFLAGS)
 
 ##########################
 #
