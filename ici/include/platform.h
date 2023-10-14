@@ -177,6 +177,9 @@ typedef unsigned long long	uaddr;	/*	Pointer-sized integer.	*/
 #define	ADDR_FIELDSPEC		"%#llx"
 #define	ADDR_FIELDSPEC_INT	"%llu"
 #endif				/*	end #ifdef mingw || ION4WIN	*/
+#ifndef lseek64
+#define lseek64(a, b, c)	lseek(a, b, c)
+#endif
 #define ilseek(a, b, c)		lseek64(a, b, c)
 #define	strtovast(x)		strtoll(x, NULL, 0)
 #define	strtouvast(x)		strtoull(x, NULL, 0)
