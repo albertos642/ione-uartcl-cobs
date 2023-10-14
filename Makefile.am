@@ -2622,7 +2622,7 @@ tcPODM1 = pod2man -s 1 -c "TC executables"
 tcPODM3 = pod2man -s 3 -c "TC library functions"
 tcPODM5 = pod2man -s 5 -c "TC configuration files"
 
-tccflags = -I$(srcdir)/tc/authority -I$(srcdir)/tc/client -I$(srcdir)/tc/include -I$(srcdir)/ici/zfec-1.4.24/zfec -I$(BP_SRC_DIR)/library -I$(BP_SRC_DIR)/include -I$(BP_SRC_DIR)/ipn
+tccflags = -I$(srcdir)/tc/authority -I$(srcdir)/tc/client -I$(srcdir)/tc/include -I$(srcdir)/tc/dtka -I$(srcdir)/ici/zfec-1.4.24/zfec -I$(BP_SRC_DIR)/library -I$(BP_SRC_DIR)/include -I$(BP_SRC_DIR)/ipn
 
 tcbin = \
 	dtka \
