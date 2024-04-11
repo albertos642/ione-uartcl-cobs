@@ -6,4 +6,4 @@ bsspadmin	.
 sleep 1
 ionadmin	.
 sleep 1
-killall		owltsim
+killall		owltsim6

@@ -12,7 +12,7 @@ ionsecadmin 	amroc.ionsecrc &
 echo "c" >> 1.log
 sleep 1
 
-owltsim		amroc.owltsim &
+owltsim6		amroc.owltsim &
 sleep 1
 
 bsspadmin	amroc.bssprc &

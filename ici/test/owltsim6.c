@@ -11,6 +11,12 @@
 #include "platform.h"
 #include "lyst.h"
 #include "ion.h"
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <netdb.h>
+
+
 
 #define	MAX_DATAGRAM	65535
 
@@ -139,8 +145,8 @@ static void	*receiveUdp(void *parm)
 	SimThreadParms		*stp = (SimThreadParms *) parm;
 	unsigned int		datagramCount = 0;
 	char			*buffer;
-	struct sockaddr		socketName;
-	struct sockaddr_in6	*inetName = 0;
+/*	struct sockaddr		socketName;*/
+	struct sockaddr_in6	inetName;
 	socklen_t		nameLength;
 	int			datagramLen;
 	struct sockaddr_in6	fromAddr;
@@ -164,33 +170,32 @@ static void	*receiveUdp(void *parm)
 		perror("owltsim6 can't open reception socket");
 		owltsimExit(1);
 	}
-
-	inetName->sin6_family = AF_INET6;
-	inetName->sin6_addr = in6addr_any;
-	inetName->sin6_port = htons(stp->myPortNbr);
-	inetName->sin6_flowinfo = 0;
-	nameLength = sizeof(struct sockaddr);
+	inetName.sin6_family = AF_INET6;
+	inetName.sin6_addr = in6addr_any;
+	inetName.sin6_port = htons(stp->myPortNbr);
+	inetName.sin6_flowinfo = 0;
+	nameLength = sizeof(struct sockaddr_in6);
 	if (reUseAddress(stp->insock)
-	|| bind(stp->insock, &socketName, nameLength) < 0
-	|| getsockname(stp->insock, &socketName, &nameLength) < 0)
+	|| bind(stp->insock, (struct sockaddr *) &inetName, nameLength) < 0
+	|| getsockname(stp->insock, (struct sockaddr *) &inetName, &nameLength) < 0)
 	{
-		perror("owltsim can't initialize reception socket");
+		perror("owltsim6 can't initialize reception socket");
 		printf("port number: %hu\n", stp->myPortNbr);
 		owltsimExit(0);
 	}
 
 	/*	Create transmisssion socket.				*/
 
-	memset((char *) &socketName, 0, sizeof socketName);
+	memset((char *) &inetName, 0, sizeof inetName);
 	
 	/*use parseSocketSpec6*/
-	inetName->sin6_family = AF_INET6;
-	if (parseSocketSpecSix(stp->destHostName, inetName) != 0)
+	inetName.sin6_family = AF_INET6;
+	if (parseSocketSpecSix(stp->destHostName, &inetName) != 0)
         {
                 putErrmsg("Can't get IP for host.", stp->destHostName);
         }
 
-	inetName->sin6_port = htons(stp->destPortNbr);
+	inetName.sin6_port = htons(stp->destPortNbr);
 	
 	stp->outsock = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
 	if (stp->outsock < 0)
@@ -199,10 +204,10 @@ static void	*receiveUdp(void *parm)
 		owltsimExit(1);
 	}
 
-	nameLength = sizeof(struct sockaddr);
+	nameLength = sizeof(struct sockaddr_in6);
 	if (reUseAddress(stp->outsock)
-	|| connect(stp->outsock, &socketName, nameLength) < 0
-	|| getsockname(stp->outsock, &socketName, &nameLength) < 0)
+	|| connect(stp->outsock, (struct sockaddr *) &inetName, nameLength) < 0
+	|| getsockname(stp->outsock, (struct sockaddr *) &inetName, &nameLength) < 0)
 	{
 		perror("owltsim can't initialize transmission socket");
 		printf("host name: %s\n", stp->destHostName);
@@ -459,7 +464,7 @@ int	main(int argc, char *argv[])
 	 *	it's time to stop the simulator.			*/
 
 	snooze(2000000000);
-	puts("owltsim is ending.");
+	puts("owltsim6 is ending.");
 #ifdef mingw
 	oK(_winsock(1));
 #endif
