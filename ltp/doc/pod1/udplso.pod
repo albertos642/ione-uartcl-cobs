@@ -12,6 +12,8 @@ B<udplso> is a background "daemon" task that extracts LTP segments from the
 queue of segments bound for the indicated remote LTP engine, encapsulates
 them in UDP datagrams, and sends those datagrams to the indicated UDP port
 on the indicated host.  If not specified, port number defaults to 1113.
+This is the IPv4 only verion of the program udplso6, which
+is designed for IPv6 only operation.
 
 Each "span" of LTP data interchange between the local LTP engine and a
 neighboring LTP engine requires its own link service output task, such

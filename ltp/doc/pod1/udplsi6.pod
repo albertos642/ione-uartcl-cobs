@@ -13,7 +13,8 @@ UDP socket bound to I<local_hostname> and I<local_port_nbr>, extracts LTP
 segments from those datagrams, and passes them to the local LTP engine.
 Host name "@" signifies that the host name returned by hostname(1) is to
 be used as the socket's host name.  If not specified, port number defaults
-to 1113.
+to 1113. This is the IPv6 only verion of the program udplsi, which
+is designed for IPv4 only operation.
 
 The link service input task is spawned automatically by B<ltpadmin> in
 response to the 's' command that starts operation of the LTP protocol;
