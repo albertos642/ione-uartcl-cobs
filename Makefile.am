@@ -1813,6 +1813,7 @@ bpbin = \
 	bping \
 	bplist \
 	bpnmtest \
+	bppower \
 	bprecvfile \
 	bpsecadmin \
 	bpsendfile \
@@ -2576,6 +2577,10 @@ bpsendfile_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 bpsink_SOURCES = bpv7/test/bpsink.c
 bpsink_LDADD = libici.la $(bplib)
 bpsink_CFLAGS = $(bpcflags) $(AM_CFLAGS)
+
+bppower_SOURCES = bpv7/test/bppower.c
+bppower_LDADD = libici.la $(bplib)
+bppower_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 
 bpsource_SOURCES = bpv7/test/bpsource.c
 bpsource_LDADD = libici.la $(bplib)
