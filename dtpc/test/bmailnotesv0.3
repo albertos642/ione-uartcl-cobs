@@ -1,0 +1,12 @@
+Notes related to bmail suite v0.3
+
+This version represents a significant code refactor over v0.2, implementing 
+a dtpc layer on top of BP for elision and optional reliability 
+acknowledgement services, in addition to zlib compression of payload data.
+
+This code compiles, but does not entirely work yet, and is filled with 
+checkpointing and other instrumentation code included for debugging 
+purposes. To replace the default v0.2 release, also included in the 
+bpv7/test directory, edit the appropriate lines of Makefile.am to comment 
+out the bundlemailer/mailbundler components from the BPv7 section, and 
+uncomment the appropriate lines of the DTPC section.

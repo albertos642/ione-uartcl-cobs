@@ -1,0 +1,14 @@
+Notes related to bmail suite v0.2
+
+This release fixes a S/MIME error introduced by a flaw in blank line 
+handling. Run the bmail script n a terminal after your MX, DNS, and ION are 
+correctly configured.
+
+A code refactor (v0.3) is underway, introducing dtpc elision and reliability 
+services, as well as zlib compression of payloads.  That code can be found 
+in dtpc/test/ .  To switch to that code, which compiles, but has a 
+decompression data corruption bug, in addition to needing a while loop to 
+process output (maybe), comment the relevant sections in the BPv7 section of 
+Makefile.am, and uncomment the relevant sections in the DTPC section.  To 
+implement v0.3, dtpcd configuration in ION is required.
+

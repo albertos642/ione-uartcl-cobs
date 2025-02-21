@@ -1,0 +1,12 @@
+#/bin/bash
+#v0.3 bmail script, note EID is no longer the $1 argument
+#DTPC specific TopicID is now $1 argument
+
+while [ true ]
+do
+MAIL="$(bundlemailer 25)"
+echo "$MAIL"
+echo "$MAIL" | /usr/sbin/exim -bS
+unset MAIL
+
+done

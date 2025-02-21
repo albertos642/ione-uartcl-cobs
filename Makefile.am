@@ -1826,6 +1826,7 @@ bpbin = \
 	brsscla \
 	bsspcli \
 	bsspclo \
+	bundlemailer \
 	cgrfetch \
 	cpsd \
 	dgrcli \
@@ -1844,6 +1845,7 @@ bpbin = \
 	lgsend \
 	ltpcli \
 	ltpclo \
+	mailbundler \
 	stcpcli \
 	stcpclo \
 	stcpcli6 \
@@ -2536,6 +2538,14 @@ brsscla_LDADD = libici.la $(bplib) $(PTHREAD_LIBS)
 brsscla_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 
 # --- Test Executables --- #
+
+bundlemailer_SOURCES = bpv7/test/bundlemailer.c
+bundlemailer_LDADD = libici.la $(bplib)
+bundlemailer_CFLAGS = $(bpcflags) $(AM_CFLAGS)
+
+mailbundler_SOURCES = bpv7/test/mailbundler.c
+mailbundler_LDADD = libici.la $(bplib)
+mailbundler_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 
 bpchat_SOURCES = bpv7/test/bpchat.c
 bpchat_LDADD = libici.la $(bplib) $(PTHREAD_LIBS)
@@ -3432,8 +3442,10 @@ dtpcbin = \
 	dtpcadmin \
 	dtpcclock \
 	dtpcd \
+#	mailbundler \
+#	bundlemailer \
 	dtpcreceive \
-	dtpcsend
+	dtpcsend 
 
 dtpclib = \
 	libdtpc.la
@@ -3500,6 +3512,14 @@ dtpcreceive_CFLAGS = $(dtpccflags) $(AM_CFLAGS)
 dtpcsend_SOURCES = dtpc/test/dtpcsend.c
 dtpcsend_LDADD = libdtpc.la libici.la $(bplib) 
 dtpcsend_CFLAGS = $(dtpccflags) $(AM_CFLAGS)
+
+#mailbundler_SOURCES = dtpc/test/mailbundler.c
+#mailbundler_LDADD = libdtpc.la libici.la  $(bplib) -lz
+#mailbundler_CFLAGS = $(dtpccflags) $(AM_CFLAGS)
+
+#bundlemailer_SOURCES = dtpc/test/bundlemailer.c
+#bundlemailer_LDADD = libdtpc.la libici.la $(bplib) -lz
+#bundlemailer_CFLAGS = $(dtpccflags) $(AM_CFLAGS)
 
 # --- Daemon Executables --- #
 

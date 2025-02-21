@@ -1,0 +1,10 @@
+#!/bin/bash
+
+while [ true ]
+do
+MAIL="$(bundlemailer ipn:ADDNODE.ADDSERVICE)"
+#echo "$MAIL" uncomment to echo to terminal
+echo "$MAIL" | /usr/sbin/exim -bS
+unset MAIL
+
+done
