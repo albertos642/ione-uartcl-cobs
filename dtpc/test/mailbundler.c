@@ -128,9 +128,11 @@ int	main(int argc, char **argv)
 	Sdr		sdr;
 	unsigned char	*compr = 0;
 	uLong		comprLen = 0;
+	/*uLong		structLen = 0;*/
 	uLong 		textBufferLength = 0;
 	int		textLength = 0;
 	Object		extent;
+	Address		addr;
 	DtpcSAP         sap;
 	DtpcElisionFn   elisionFn;
 	unsigned int 	profileID = 25;
@@ -229,6 +231,7 @@ int	main(int argc, char **argv)
 		putErrmsg("[?] No mail for mailbundler to send.", NULL);
 		dtpc_detach();
 		dtpc_close(sap);
+		ionDetach();
 		return 0;
 	}
 	/*	compression  */
@@ -240,9 +243,8 @@ int	main(int argc, char **argv)
 	putErrmsg("compress bound", itoa(comprLen));
 	compr = MTAKE(comprLen);
 	putErrmsg("mtake", NULL);
-	ret = compress2(compr, &comprLen, (const unsigned char *)textBuffer, textBufferLength, 9);
+	ret = compress2(compr, &comprLen, (const unsigned char *)textBuffer, textBufferLength, 6);
 	putErrmsg("compressed size", itoa(comprLen));
-	MRELEASE(textBuffer);
 	putErrmsg("compressed!", NULL);
         if (ret != Z_OK)
 	{
@@ -256,17 +258,25 @@ int	main(int argc, char **argv)
 	putErrmsg("uncompressed size packed into struct!", itoa(comprPayload.uncomprSize));
 	comprPayload.comprSize = comprLen;
 	putErrmsg("compressed size packed into struct!", itoa(comprPayload.comprSize));
-	comprPayload.comprData = (unsigned char *) compr;
+	comprPayload.comprData = compr;
 	putErrmsg("struct payload packed into struct!", NULL);
+
+	 for (size_t j = 0; j < comprPayload.comprSize; j++) {
+                        printf("%02x ",comprPayload.comprData[j]);
+                        }
+
 
 	CHKZERO(sdr_begin_xn(sdr));
 	putErrmsg("begin sdr transaction!", NULL);
-	extent = sdr_malloc(sdr, comprLen + sizeof(uLong) + sizeof(uLong));
+	/*structLen = sizeof(uLongf) + sizeof(uLong) + comprLen;*/
+	extent = sdr_malloc(sdr, bufferLength);
+	addr = extent;
 	if (extent)
 	{
-		sdr_write(sdr, extent,(char *) &comprPayload, comprLen + sizeof(uLong) + (sizeof(uLong)));
+		sdr_write(sdr, addr, (char *) textBuffer, bufferLength);
 	}
 	putErrmsg("write to sdr!", NULL);
+	MRELEASE(textBuffer);
 
 	if (sdr_end_xn(sdr) < 0)
 	{
@@ -276,7 +286,7 @@ int	main(int argc, char **argv)
 		return 0;
 	}
 
-	switch (dtpc_send(profileID, sap, destEid, 0, 0, 0, 0, NULL, 0, 0, NULL, 0, extent, comprLen + sizeof(uLong) + sizeof(uLong)))
+	switch (dtpc_send(profileID, sap, destEid, 0, 0, 0, 0, NULL, 0, 0, NULL, 0, addr, bufferLength))
 	{
 	case -1:
                 putErrmsg("Can't send adu.", NULL);

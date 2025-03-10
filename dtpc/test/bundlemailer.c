@@ -47,7 +47,7 @@ void zerr(int ret)
 int	bundlemailer(saddr a1, saddr a2, saddr a3, saddr a4, saddr a5,
 		saddr a6, saddr a7, saddr a8, saddr a9, saddr a10)
 {
-	int             topicID = a1;
+	unsigned int             topicID = a1;
 
 #else
 int	main(int argc, char **argv)
@@ -59,14 +59,15 @@ int	main(int argc, char **argv)
 	Sdr 	sdr;
 	DtpcDelivery	dlv;
 	int		state = 0;
-	int		ret;
-	struct comprPl {
+	/*int		ret;*/
+	/*typedef struct {
                 uLongf	 	uncomprSize;
                 uLong		comprSize;
-                const unsigned char	comprData[1000000];
-        } comprPayload = {0, 0};
-	unsigned char   decompr[1000000];
-
+                unsigned char	comprData[1000000];
+        } comprPl ;
+	comprPl comprPayload = {0, 0};*/
+	/*unsigned char   decompr[1000000];*/
+	char textBuffer[1000000];
 /*	int		contentLength;
 	ZcoReader	reader;
 	int		len;
@@ -124,7 +125,8 @@ int	main(int argc, char **argv)
 			CHKZERO(sdr_begin_xn(sdr));
 			putErrmsg("begin sdr xn", NULL);
 			/*read dtpc adu from sdr into payload struct*/
-			sdr_read(sdr, (char *) &comprPayload, dlv.item, dlv.length);
+			sdr_read(sdr, textBuffer, dlv.item, dlv.length);
+			/*comprPayload = (comprPl *) dlv.item;*/
 			putErrmsg("payload size from sdr_read", itoa(dlv.length));
 			sdr_exit_xn(sdr);
 			putErrmsg("sdr exit xn", NULL);
@@ -138,25 +140,28 @@ int	main(int argc, char **argv)
 
 			/*get inflated size from struct element
 			transmitted over network*/
-			putErrmsg("get decompressed size", itoa(comprPayload.uncomprSize));
+			/*putErrmsg("get decompressed size", itoa(comprPayload.uncomprSize));*/
 			/*get deflated size from struct element*/
-			putErrmsg("get compressed size", itoa(comprPayload.comprSize));
-			for (size_t i = 0; i < comprPayload.comprSize; i++) {
-			printf("%02x ",comprPayload.comprData[i]);
-			}
+			/*putErrmsg("get compressed size", itoa(comprPayload.comprSize));*/
 
-			
+
+			/*for (size_t i = 0; i < comprPayload.comprSize; i++) {
+			printf("%02x ",comprPayload.comprData[i]);
+			}*/
+
+
 			/*decompress adu payload struct payload element*/
-			ret = uncompress(decompr, &comprPayload.uncomprSize, comprPayload.comprData, comprPayload.comprSize);
+			/*ret = uncompress(decompr, &comprPayload.uncomprSize, comprPayload.comprData, comprPayload.comprSize);*/
 			/*test decompression result*/
-			if (ret != Z_OK)
+			/*if (ret != Z_OK)
 		        {
 		            zerr(ret);
 		        }
 
-			putErrmsg("uncompress return value", itoa(ret));
+			putErrmsg("uncompress return value", itoa(ret));*/
 
-/* read line by line so the blank lines can be restored, 
+/* todo:  output parser to solve newline problem
+read line by line so the blank lines can be restored, 
 or just sub in a newline before compression instead of -5tr1p- ?*/
 
 /*				content[contentLength] = '\0';
@@ -167,7 +172,7 @@ or just sub in a newline before compression instead of -5tr1p- ?*/
 				{
 					mail[0] = '\0';
 				}*/
-			PUTS((char *) decompr);
+			PUTS((char *) textBuffer);
                         fflush(NULL);
                         PUTS("QUIT");
                         fflush(NULL);
