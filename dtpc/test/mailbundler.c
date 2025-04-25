@@ -76,13 +76,13 @@ static int	_running(int *newState)
 	return state;
 }
 
-static void	handleQuit(int signum)
+/*static void	handleQuit(int signum)
 {
 	int	stop = 0;
 
 
 	oK(_running(&stop));
-}
+}*/
 
 void zerr(int ret)
 {
@@ -122,13 +122,12 @@ int	main(int argc, char **argv)
 		break;
 	}
 #endif
-	unsigned int	topicID = 25;
-	int		ret = 12; 
+	unsigned int	topicID = 26;
+	/*int		ret = 12;*/ 
 	int		stop;
 	Sdr		sdr;
-	unsigned char	*compr = 0;
-	uLong		comprLen = 0;
-	/*uLong		structLen = 0;*/
+	/*unsigned char	*compr = 0;
+	uLong		comprLen = 0;*/
 	uLong 		textBufferLength = 0;
 	int		textLength = 0;
 	Object		extent;
@@ -138,11 +137,6 @@ int	main(int argc, char **argv)
 	unsigned int 	profileID = 25;
 	int 		bufferLength = 0;
 	int		fd;
-	struct comprPl {
-		uLongf 		uncomprSize;
-		uLong 		comprSize;
-		unsigned char	*comprData;
-	} comprPayload = {0, 0, 0};
 
 	elisionFn = checkElision;
 
@@ -166,25 +160,24 @@ int	main(int argc, char **argv)
 
 	oK(_dtpcsap(&sap));
 	sdr = getIonsdr();
-	isignal(SIGINT, handleQuit);
+	/*isignal(SIGINT, handleQuit);*/
 	fd = fileno(stdin);
 	char    	*text = MTAKE(4096);
 	char		*textBuffer = MTAKE(1000000);
 	/*loop to collect email from stdin line by line into buffer*/
 	while (igets(fd, text, 4096, &textLength) != NULL)
 	{
-		/*denotes end of smtp message*/
+		/*"."denotes end of smtp message*/
 		if ((strcmp (text, ".")) == 0)
 		{
-			putErrmsg("last", text);
-	                memcpy (textBuffer + bufferLength, text, textLength);
-        	        textBuffer[bufferLength + textLength] = '\0';
+	                memcpy(textBuffer + bufferLength, text, textLength);
+        	        textBuffer[bufferLength + textLength] = '\n';
                 	bufferLength += textLength + 1;
-			putErrmsg("bsize3", itoa(bufferLength));
 			MRELEASE(text);
 			close(fileno(stdin));
 			break;
 		}
+
 		/*nono buffer overflow!*/
 		if (bufferLength + textLength + 1 > 1000000)
 		{
@@ -192,36 +185,10 @@ int	main(int argc, char **argv)
 			MRELEASE(textBuffer);
 			break;
 		}
-		/*handle blank line*/
-		if (istrlen(text, 4096) == 0)
-		{
-			text[0] = '\n';
-			textLength++;
-			/*text[1] = '\0';
-			textLength++;
-			text[2] = 't';
-			textLength++;
-			text[3] = 'r';
-			textLength++;
-			text[4] = '1';
-			textLength++;
-			text[5] = 'p';
-			textLength++;
-			text[6] = '-';
-			textLength++;
-			text[7] = '\0';
-			textLength++;*/
-		putErrmsg("blank", text);
-		}
-
-		/*todo: add switch/case handler for textLength return values*/
 		
-		putErrmsg("text", text);
-		putErrmsg("bsize1", itoa(bufferLength));
-		memcpy (textBuffer + bufferLength, text, textLength); 
+		memcpy(textBuffer + bufferLength, text, textLength);
 		textBuffer[bufferLength + textLength] = '\n';
 		bufferLength += textLength + 1;
-		putErrmsg("bsize2", itoa(bufferLength));
 
 	}
 
@@ -235,58 +202,43 @@ int	main(int argc, char **argv)
 		return 0;
 	}
 	/*	compression  */
-	putErrmsg("compress!", NULL);
 
 	textBufferLength = bufferLength;
-	putErrmsg("get uncompressed length", itoa(textBufferLength));
-	comprLen = compressBound(textBufferLength);
-	putErrmsg("compress bound", itoa(comprLen));
-	compr = MTAKE(comprLen);
-	putErrmsg("mtake", NULL);
-	ret = compress2(compr, &comprLen, (const unsigned char *)textBuffer, textBufferLength, 6);
-	putErrmsg("compressed size", itoa(comprLen));
-	putErrmsg("compressed!", NULL);
+	/*determine upper bound of compressed size*/
+	/*comprLen = compressBound(textBufferLength);*/
+	/*take enough for unsigned long too*/
+	/*compr = MTAKE(comprLen + 8);*/
+	/*ret = compress2(compr, &comprLen, (const unsigned char *) textBuffer, textBufferLength, 6);
+
         if (ret != Z_OK)
 	{
        	    zerr(ret);
-	}
-	putErrmsg("zlib return value", itoa(ret));
+	}*/
 	/*	 end of compression  */
-	/*	 pack structure  */
-
-	comprPayload.uncomprSize = bufferLength;
-	putErrmsg("uncompressed size packed into struct!", itoa(comprPayload.uncomprSize));
-	comprPayload.comprSize = comprLen;
-	putErrmsg("compressed size packed into struct!", itoa(comprPayload.comprSize));
-	comprPayload.comprData = compr;
-	putErrmsg("struct payload packed into struct!", NULL);
-
-	 for (size_t j = 0; j < comprPayload.comprSize; j++) {
-                        printf("%02x ",comprPayload.comprData[j]);
-                        }
-
-
+	/*	 append uncompressed length to compressed data  */
+	/*memcpy(compr + comprLen, (void *) textBufferLength, 8);*/
+	/*	write to sdr*/
 	CHKZERO(sdr_begin_xn(sdr));
-	putErrmsg("begin sdr transaction!", NULL);
-	/*structLen = sizeof(uLongf) + sizeof(uLong) + comprLen;*/
+	/*extent = sdr_malloc(sdr, comprLen + 8);*/
 	extent = sdr_malloc(sdr, bufferLength);
 	addr = extent;
 	if (extent)
 	{
-		sdr_write(sdr, addr, (char *) textBuffer, bufferLength);
+		/*sdr_write(sdr, addr, (char *) compr, comprLen + 8);*/
+		sdr_write(sdr, addr, textBuffer, textBufferLength);
 	}
-	putErrmsg("write to sdr!", NULL);
 	MRELEASE(textBuffer);
 
 	if (sdr_end_xn(sdr) < 0)
 	{
 		putErrmsg("No space for mail ADU.", NULL);
-		dtpc_detach();
 		dtpc_close(sap);
+		dtpc_detach();
+		ionDetach();
 		return 0;
 	}
 
-	switch (dtpc_send(profileID, sap, destEid, 0, 0, 0, 0, NULL, 0, 0, NULL, 0, addr, bufferLength))
+	switch (dtpc_send(profileID, sap, destEid, 0, 0, 0, 0, NULL, 0, 0, NULL, 0, addr, textBufferLength))
 	{
 	case -1:
                 putErrmsg("Can't send adu.", NULL);
@@ -309,24 +261,21 @@ int	main(int argc, char **argv)
 
                 break;
 	case 1:
-		putErrmsg("dtpc send!", NULL);
 
-		MRELEASE(compr);
-		putErrmsg("release compressed data", NULL);
-
-
+		MRELEASE(textBuffer);
+		/*MRELEASE(compr);*/
+		/*CHKZERO(sdr_begin_xn(sdr));
+		sdr_free(sdr, extent);
+		sdr_end_xn(sdr);*/
 	default:
 		break;
 	}
+	/*CHKZERO(sdr_begin_xn(sdr));
+	sdr_free(sdr, extent);
+	sdr_end_xn(sdr);*/
 	dtpc_close(sap);
-	putErrmsg("dtpc close", NULL);
-
 	dtpc_detach();
-	putErrmsg("dtpc detach", NULL);
-
-	putErrmsg("Mail bundled.", NULL);
 	ionDetach();
-	putErrmsg("ion detach", NULL);
 	return 0;
 
 }

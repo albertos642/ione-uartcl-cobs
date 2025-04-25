@@ -9,7 +9,9 @@
 #include <dtpc.h>
 #include <zlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <err.h>
 
 static DtpcSAP  _dtpcsap(DtpcSAP *newSAP)
 {
@@ -23,7 +25,6 @@ static DtpcSAP  _dtpcsap(DtpcSAP *newSAP)
 
         return sap;
 }
-
 
 void zerr(int ret)
 {
@@ -41,8 +42,6 @@ void zerr(int ret)
     }
 }
 
-
-
 #if defined (ION_LWT)
 int	bundlemailer(saddr a1, saddr a2, saddr a3, saddr a4, saddr a5,
 		saddr a6, saddr a7, saddr a8, saddr a9, saddr a10)
@@ -56,26 +55,14 @@ int	main(int argc, char **argv)
 
 #endif
 	DtpcSAP         sap;
-	Sdr 	sdr;
+	Sdr 		sdr;
 	DtpcDelivery	dlv;
 	int		state = 0;
-	/*int		ret;*/
-	/*typedef struct {
-                uLongf	 	uncomprSize;
-                uLong		comprSize;
-                unsigned char	comprData[1000000];
-        } comprPl ;
-	comprPl comprPayload = {0, 0};*/
-	/*unsigned char   decompr[1000000];*/
-	char textBuffer[1000000];
-/*	int		contentLength;
-	ZcoReader	reader;
-	int		len;
-	char		content[80];
-	char		mail[84];
-	int		msend;
-	int		bline;*/
-
+	char 		textBuffer[1000000];/*dynamically allocate?*/
+	/*int		comprSize;
+	unsigned long 	*unComprSize = 0;
+	int		ret;
+	unsigned char	*decompr = 0;*/
 #ifndef mingw
 	setlinebuf(stdout);
 #endif
@@ -97,14 +84,13 @@ int	main(int argc, char **argv)
 	oK(_dtpcsap(&sap));
 	while (state == 0)
 	{
-		putErrmsg("waiting to rx", NULL);
+		writeMemo("[i] Waiting to RX ADU.");
 
 		if (dtpc_receive(sap, &dlv, DTPC_BLOCKING) < 0)
 		{
 			putErrmsg("bundlemailer reception failed.", NULL);
 			continue;
 		}
-		/*putErrmsg("dtpc received", NULL);*/
 
 		if (dlv.result == ReceptionInterrupted)
 		{
@@ -120,73 +106,39 @@ int	main(int argc, char **argv)
 
 		if (dlv.result == PayloadPresent)
 		{
-			/*access dlv.item, write to comprPayload*/
-
+			/*read dtpc adu from sdr into payload buffer*/
 			CHKZERO(sdr_begin_xn(sdr));
-			putErrmsg("begin sdr xn", NULL);
-			/*read dtpc adu from sdr into payload struct*/
 			sdr_read(sdr, textBuffer, dlv.item, dlv.length);
-			/*comprPayload = (comprPl *) dlv.item;*/
-			putErrmsg("payload size from sdr_read", itoa(dlv.length));
 			sdr_exit_xn(sdr);
-			putErrmsg("sdr exit xn", NULL);
-                        dtpc_release_delivery(&dlv);
-			putErrmsg("release dlv", NULL);
+			/*parse size from last 8 bytes(inflated size), then*/
+                        /*memcpy(unComprSize, textBuffer + dlv.length - 8, 8);
+			comprSize = dlv.length - 8;*/
+			dtpc_release_delivery(&dlv);
 
-			/*decompress, write to stdout and terminate*/
-
-			/* allocate memory from ion working memory
-			decompr = MTAKE(comprPayload.uncomprSize);*/
-
-			/*get inflated size from struct element
-			transmitted over network*/
-			/*putErrmsg("get decompressed size", itoa(comprPayload.uncomprSize));*/
-			/*get deflated size from struct element*/
-			/*putErrmsg("get compressed size", itoa(comprPayload.comprSize));*/
-
-
-			/*for (size_t i = 0; i < comprPayload.comprSize; i++) {
-			printf("%02x ",comprPayload.comprData[i]);
+			/*DEBUG print actual bytes in compressed adu
+			for (size_t i = 0; i < unComprSize; i++) {
+			printf("%02x ",[i]);
 			}*/
 
-
-			/*decompress adu payload struct payload element*/
-			/*ret = uncompress(decompr, &comprPayload.uncomprSize, comprPayload.comprData, comprPayload.comprSize);*/
+			/*decompress parsed adu payload*/
+			/*ret = uncompress((unsigned char *) decompr, unComprSize, (unsigned char *)textBuffer, comprSize);*/
+			
 			/*test decompression result*/
+			
 			/*if (ret != Z_OK)
 		        {
 		            zerr(ret);
-		        }
+		        }*/
 
-			putErrmsg("uncompress return value", itoa(ret));*/
-
-/* todo:  output parser to solve newline problem
-read line by line so the blank lines can be restored, 
-or just sub in a newline before compression instead of -5tr1p- ?*/
-
-/*				content[contentLength] = '\0';
-				isprintf(mail, sizeof mail, "%s", content);
-				bline = strcmp(mail, "-b-");
-
-				if ((bline) == 0)
-				{
-					mail[0] = '\0';
-				}*/
-			PUTS((char *) textBuffer);
-                        fflush(NULL);
-                        PUTS("QUIT");
-                        fflush(NULL);
-			putErrmsg("write to stdout", NULL);
-                                        dtpc_close(sap);
-					putErrmsg("close sap", NULL);
-                                        fflush(NULL);
-                                        dtpc_detach();
-					putErrmsg("dtpc detach", NULL);
-
-                                        return 0;
-                                /*}
-				fflush(NULL);*/
-			
+			/*write payload to stdout*/
+			/*iputs(fileno(stdout), (char *) decompr);*/
+			iputs(fileno(stdout), (char *) textBuffer);
+			fflush(NULL);
+               		PUTS("QUIT");
+               		fflush(NULL);
+                        dtpc_close(sap);
+                        dtpc_detach();
+			return 0;
 		}
 
 	}
