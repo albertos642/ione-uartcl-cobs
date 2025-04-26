@@ -64,25 +64,6 @@ static int      checkElision(Object recordsList)
         return sdr_end_xn(sdr);
 }
 
-static int	_running(int *newState)
-{
-	int	state = 1;
-
-	if (newState)
-	{
-		state = *newState;
-	}
-
-	return state;
-}
-
-/*static void	handleQuit(int signum)
-{
-	int	stop = 0;
-
-
-	oK(_running(&stop));
-}*/
 
 void zerr(int ret)
 {
@@ -106,25 +87,17 @@ int	mailbundler(saddr a1, saddr a2, saddr a3, saddr a4, saddr a5,
 		saddr a6, saddr a7, saddr a8, saddr a9, saddr a10)
 {
 	char		*destEid = (char *) a1;
-
+	unsigned int             topicID = a2;
 #else
 int	main(int argc, char **argv)
 {
 	char		*destEid = NULL;
+	unsigned int             topicID = (argc > 2 ? atoi(argv[2]) : 0);
+	destEid = argv[1];
 
-	switch (argc)
-	{
-	case 1:
-		destEid = argv[1];
-	case 2:
-		destEid = argv[1];
-	default:
-		break;
-	}
 #endif
-	unsigned int	topicID = 26;
+	/*unsigned int	topicID = 26;*/
 	/*int		ret = 12;*/ 
-	int		stop;
 	Sdr		sdr;
 	/*unsigned char	*compr = 0;
 	uLong		comprLen = 0;*/
@@ -208,9 +181,10 @@ int	main(int argc, char **argv)
 	/*comprLen = compressBound(textBufferLength);*/
 	/*take enough for unsigned long too*/
 	/*compr = MTAKE(comprLen + 8);*/
-	/*ret = compress2(compr, &comprLen, (const unsigned char *) textBuffer, textBufferLength, 6);
-
-        if (ret != Z_OK)
+	/*compress from textBuffer to compr*/
+	/*ret = compress2(compr, &comprLen, (const unsigned char *) textBuffer, textBufferLength, 6);*/
+	/*check compression status*/
+        /*if (ret != Z_OK)
 	{
        	    zerr(ret);
 	}*/
@@ -242,13 +216,12 @@ int	main(int argc, char **argv)
 	{
 	case -1:
                 putErrmsg("Can't send adu.", NULL);
-                oK(_running(&stop));
-
+		break;
         case 0:         /* This payload does not fit in an adu  */
  		if (sdr_begin_xn(sdr) == 0)
         	{
                 	putErrmsg("Can't discard payload.", NULL);
-                        oK(_running(&stop));
+                        break;
                 }
 
                 sdr_free(sdr, extent);
@@ -256,23 +229,16 @@ int	main(int argc, char **argv)
 		if (sdr_end_xn(sdr) < 0)
                 {
                         putErrmsg("Can't discard payload.", NULL);
-                	oK(_running(&stop));
+                	break;
                 }
 
                 break;
-	case 1:
-
+	case 1:		/*success*/
 		MRELEASE(textBuffer);
 		/*MRELEASE(compr);*/
-		/*CHKZERO(sdr_begin_xn(sdr));
-		sdr_free(sdr, extent);
-		sdr_end_xn(sdr);*/
 	default:
 		break;
 	}
-	/*CHKZERO(sdr_begin_xn(sdr));
-	sdr_free(sdr, extent);
-	sdr_end_xn(sdr);*/
 	dtpc_close(sap);
 	dtpc_detach();
 	ionDetach();
