@@ -87,16 +87,15 @@ int	mailbundler(saddr a1, saddr a2, saddr a3, saddr a4, saddr a5,
 		saddr a6, saddr a7, saddr a8, saddr a9, saddr a10)
 {
 	char		*destEid = (char *) a1;
-	unsigned int             topicID = a2;
 #else
 int	main(int argc, char **argv)
 {
 	char		*destEid = NULL;
-	unsigned int             topicID = (argc > 2 ? atoi(argv[2]) : 0);
+
 	destEid = argv[1];
 
 #endif
-	/*unsigned int	topicID = 26;*/
+	unsigned int	topicID = 25;
 	/*int		ret = 12;*/ 
 	Sdr		sdr;
 	/*unsigned char	*compr = 0;
@@ -136,7 +135,7 @@ int	main(int argc, char **argv)
 	/*isignal(SIGINT, handleQuit);*/
 	fd = fileno(stdin);
 	char    	*text = MTAKE(4096);
-	char		*textBuffer = MTAKE(1000000);
+	char		*textBuffer = MTAKE(11000000);
 	/*loop to collect email from stdin line by line into buffer*/
 	while (igets(fd, text, 4096, &textLength) != NULL)
 	{
@@ -152,10 +151,11 @@ int	main(int argc, char **argv)
 		}
 
 		/*nono buffer overflow!*/
-		if (bufferLength + textLength + 1 > 1000000)
+		if (bufferLength + textLength + 1 > 11000000)
 		{
 			MRELEASE(text);
 			MRELEASE(textBuffer);
+			ionDetach();
 			break;
 		}
 		
