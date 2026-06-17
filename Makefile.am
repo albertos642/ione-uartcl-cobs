@@ -513,6 +513,7 @@ libici_la_SOURCES =	\
 	ici/library/libicinm.c \
 	ici/library/libipv6.c \
 	ici/library/libuart.c \
+	ici/library/libuartcobs.c \
 	ici/library/llcv.c \
 	ici/library/lyst.c \
 	ici/library/memmgr.c \
@@ -1854,7 +1855,9 @@ bpbin = \
 	udpcli6 \
 	udpclo6 \
 	uartcli \
-	uartclo
+	uartclo \
+	uartcobscli \
+	uartcobsclo
 
 if !WINDOWS
 bpbin += \
@@ -1876,7 +1879,8 @@ bplib = \
 	libstcpcla.la \
 	libudpcla.la \
 	libudpcla6.la \
-	libuartcla.la
+	libuartcla.la \
+	libuartcobscla.la
 
 bpinclude = \
 	bpv7/include/bp.h \
@@ -1902,7 +1906,8 @@ bpnoinst = \
 	bpv7/saga/saga.h \
 	bpv7/stcp/stcpcla.h \
 	bpv7/udp/udpcla.h \
-	bpv7/uart/uartcla.h
+	bpv7/uart/uartcla.h \
+	bpv7/uart-cobs/uartcobscla.h
 #	bpv7/include/bpsec.h 
 
 bpextra = \
@@ -2304,6 +2309,10 @@ libuartcla_la_SOURCES = bpv7/uart/libuartcla.c
 libuartcla_la_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 libuartcla_la_LIBADD = libbp.la libici.la
 
+libuartcobscla_la_SOURCES = bpv7/uart-cobs/libuartcobscla.c
+libuartcobscla_la_CFLAGS = $(bpcflags) $(AM_CFLAGS)
+libuartcobscla_la_LIBADD = libbp.la libici.la
+
 
 # --- Utility Programs --- #
 
@@ -2474,6 +2483,16 @@ uartcli_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 uartclo_SOURCES = bpv7/uart/uartclo.c
 uartclo_LDADD = libuartcla.la libici.la $(bplib)
 uartclo_CFLAGS = $(bpcflags) $(AM_CFLAGS)
+
+# --- UART-COBS Executables --- #
+
+uartcobscli_SOURCES = bpv7/uart-cobs/uartcobscli.c
+uartcobscli_LDADD = libuartcobscla.la libici.la $(bplib) $(PTHREAD_LIBS)
+uartcobscli_CFLAGS = $(bpcflags) $(AM_CFLAGS)
+
+uartcobsclo_SOURCES = bpv7/uart-cobs/uartcobsclo.c
+uartcobsclo_LDADD = libuartcobscla.la libici.la $(bplib)
+uartcobsclo_CFLAGS = $(bpcflags) $(AM_CFLAGS)
 
 # --- BIBE Executables --- #
 
