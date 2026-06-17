@@ -904,6 +904,17 @@ struct uartdescriptor
 
 extern int			parseUartSpec(char *socketSpec,
 					struct uartdescriptor *uart);
+
+struct uartcobsdescriptor
+{
+	char        uart_file_descriptor[50];
+	uint32_t    baud_rate;
+	int         isOpen;
+};
+
+extern int          parseUartCobsSpec(char *socketSpec,
+					struct uartcobsdescriptor *uart);
+
 extern void			printDottedString(unsigned int hostNbr,
 					char *buffer);
 

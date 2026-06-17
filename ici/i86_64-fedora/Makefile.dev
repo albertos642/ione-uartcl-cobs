@@ -79,7 +79,7 @@ UTILITIES = sdrwatch psmwatch ionadmin ionsecadmin sdrmend ionwarn ionunlock ion
 
 TESTPGMS = file2sm sm2file file2sdr sdr2file psmshell smlistsh smrbtsh owltsim owlttb
 
-ALL = check libici.so libicinm.so libuart.so rfxclock $(UTILITIES) $(TESTPGMS)
+ALL = check libici.so libicinm.so libuart.so libuartcobs.so rfxclock $(UTILITIES) $(TESTPGMS)
 
 all:		$(ALL)
 
@@ -193,6 +193,10 @@ libicinm.so:	libicinm.o $(INCL)/icinm.h
 libuart.so:	libuart.o
 		$(LD) -o libuart.so libuart.o
 		cp libuart.so ./lib
+
+libuartcobs.so: libuartcobs.o
+		$(LD) -o libuartcobs.so libuartcobs.o
+		cp libuartcobs.so ./lib
 
 #	-	-	Object modules	-	-	-	-	-
 

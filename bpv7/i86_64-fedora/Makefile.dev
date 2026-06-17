@@ -17,6 +17,7 @@ DGR = ../dgr
 BRS = ../brs
 UDP = ../udp
 UART = ../uart
+UARTCOBS = ../uart-cobs
 DCCP = ../dccp
 BIBE = ../bibe
 IPND = ../ipnd
@@ -27,7 +28,7 @@ UNIBO_CGR = 0
 # OPT = -O -Dlinux
 OPT = -g -Wall -Werror -Dlinux -fPIC -DSPACE_ORDER=3 -DENABLE_IMC -DBPSEC
 # OPT = -g -Wall -Werror -Dlinux -fPIC -DSPACE_ORDER=3 -DENABLE_IMC -DBPSEC -DUNIBO_CGR -DUNIBO_CGR_ENH_WITHOUT_EXP_EXTENSIONS
-CC = gcc $(OPT) -I$(IPN) -I$(IMC) -I$(SAGA) -I$(DTN2) -I$(API) -I$(API)/ext -I$(API)/ext/pnb -I$(API)/ext/bpq -I$(API)/ext/meb -I$(API)/ext/bae -I$(API)/ext/hcb -I$(API)/ext/bpsec -I$(BPSEC)/instr -I$(BPSEC)/policy -I$(BPSEC)/sci -I$(BPSEC)/utils -I$(API)/ext/snw -I$(API)/ext/imc -I$(API)/ext/ipt -I$(BIBE) -I$(STCP) -I$(UDP) -I$(UART) -I$(INCL) -I$(ROOT)/include -DBP_EXTENDED
+CC = gcc $(OPT) -I$(IPN) -I$(IMC) -I$(SAGA) -I$(DTN2) -I$(API) -I$(API)/ext -I$(API)/ext/pnb -I$(API)/ext/bpq -I$(API)/ext/meb -I$(API)/ext/bae -I$(API)/ext/hcb -I$(API)/ext/bpsec -I$(BPSEC)/instr -I$(BPSEC)/policy -I$(BPSEC)/sci -I$(BPSEC)/utils -I$(API)/ext/snw -I$(API)/ext/imc -I$(API)/ext/ipt -I$(BIBE) -I$(STCP) -I$(UDP) -I$(UART) -I$(UARTCOBS) -I$(INCL) -I$(ROOT)/include -DBP_EXTENDED
 LDFLAGS = -fPIC -shared
 LD = gcc $(LDFLAGS)
 
@@ -64,10 +65,10 @@ CGROBJS = libcgr.o
 
 LBP = -lbp -limcfw -lipnfw -ldtn2fw
 
-RUNTIMES = bpadmin bpsecadmin bpsink bpsource bpdriver bpecho bpcounter bpsendfile bprecvfile bpclock bptransit bpclm ipnadmin ipnfw ipnadminep dtn2admin dtn2fw dtn2adminep tcpcli tcpclo tcpcli6 tcpclo6 stcpcli stcpclo brsscla brsccla udpcli udpclo dgrcli dgrclo ltpcli ltpclo lgsend lgagent bptrace bpstats bplist bpcancel hmackeys bping bpstats2 bpchat imcfw imcadminep bsspcli bsspclo bibeclo bibeadmin bpnmtest ipnd cgrfetch bpversion cpsd uartcli uartclo irfadmin irfd
+RUNTIMES = bpadmin bpsecadmin bpsink bpsource bpdriver bpecho bpcounter bpsendfile bprecvfile bpclock bptransit bpclm ipnadmin ipnfw ipnadminep dtn2admin dtn2fw dtn2adminep tcpcli tcpclo tcpcli6 tcpclo6 stcpcli stcpclo brsscla brsccla udpcli udpclo dgrcli dgrclo ltpcli ltpclo lgsend lgagent bptrace bpstats bplist bpcancel hmackeys bping bpstats2 bpchat imcfw imcadminep bsspcli bsspclo bibeclo bibeadmin bpnmtest ipnd cgrfetch bpversion cpsd uartcli uartclo uartcobscli uartcobsclo irfadmin irfd
 # dccpcli dccpclo
 
-ALL = check $(BPLIBS) libcgr.so libipnfw.so libimcfw.so libdtn2fw.so libstcpcla.so libudpcla.so libuartcla.so $(RUNTIMES)
+ALL = check $(BPLIBS) libcgr.so libipnfw.so libimcfw.so libdtn2fw.so libstcpcla.so libudpcla.so libuartcla.so libuartcobscla.so $(RUNTIMES)
 
 all:		$(ALL)
 
@@ -280,6 +281,16 @@ uartclo:	uartclo.o $(BPLIBS) libuartcla.so
 		$(CC) -o uartclo uartclo.o -L./lib -L$(ROOT)/lib -luartcla $(LBP) -luart -lici -lpthread -lm
 		cp uartclo ./bin
 
+#	-	-	UART-COBS executables	-	-	-	-
+
+uartcobscli:	uartcobscli.o $(BPLIBS) libuartcobscla.so
+		$(CC) -o uartcobscli uartcobscli.o -L./lib -L$(ROOT)/lib -luartcobscla $(LBP) -luartcobs -lici -lpthread -lm
+		cp uartcobscli ./bin
+
+uartcobsclo:	uartcobsclo.o $(BPLIBS) libuartcobscla.so
+		$(CC) -o uartcobsclo uartcobsclo.o -L./lib -L$(ROOT)/lib -luartcobscla $(LBP) -luartcobs -lici -lpthread -lm
+		cp uartcobsclo ./bin
+
 #	-	-	BSSP executables	-	-	-	-
 
 bsspcli:	bsspcli.o $(BPLIBS)
@@ -403,6 +414,10 @@ libudpcla6.so:	libudpcla6.o
 libuartcla.so:	libuartcla.o
 		$(LD) -o libuartcla.so libuartcla.o
 		cp libuartcla.so ./lib
+
+libuartcobscla.so:	libuartcobscla.o
+		$(LD) -o libuartcobscla.so libuartcobscla.o
+		cp libuartcobscla.so ./lib
 
 #	-	-	Object modules	-	-	-	-	-
 
@@ -532,6 +547,9 @@ endif
 		$(CC) -c $<
 
 %.o:		$(UART)/%.c
+		$(CC) -c $<
+
+%.o:		$(UARTCOBS)/%.c
 		$(CC) -c $<
 
 #%.o:		$(DCCP)/%.c
