@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <termios.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 static int openUartCobsPort(int *uartPort, struct uartcobsdescriptor *uartDes,
                             int mode) {
@@ -122,6 +123,34 @@ int receiveFrameByUartCobs(int *bundleSocket,
 						uint16_t calculated_crc = compute_crc16(into_payload, decoded_len - 2);
 
 						if (received_crc == calculated_crc) {
+                            // muON proprietary extension: mcu timesync request handler
+                            if ((into_payload[0] & UARTCOBS_FLAG_SYNC) == UARTCOBS_FLAG_SYNC) {
+								struct timeval tv;
+								gettimeofday(&tv, NULL);
+								uint32_t dtn_time = (uint32_t)(tv.tv_sec - 946684800); // DTN Epoch
+
+								unsigned char sync_resp[7];
+								sync_resp[0] = UARTCOBS_VERSION_1 | UARTCOBS_FLAG_SYNC; 
+								sync_resp[1] = (dtn_time >> 24) & 0xFF;
+								sync_resp[2] = (dtn_time >> 16) & 0xFF;
+								sync_resp[3] = (dtn_time >> 8) & 0xFF;
+								sync_resp[4] = dtn_time & 0xFF;
+
+								uint16_t crc = compute_crc16(sync_resp, 5);
+								sync_resp[5] = (crc >> 8) & 0xFF;
+								sync_resp[6] = crc & 0xFF;
+
+								unsigned char cobs_resp[10];
+								size_t cobs_len = cobs_encode(sync_resp, 7, cobs_resp);
+								unsigned char zero = 0x00;
+
+								// direct response via UART
+								write(*bundleSocket, &zero, 1);
+								write(*bundleSocket, cobs_resp, cobs_len);
+								write(*bundleSocket, &zero, 1);
+								
+								return 0; // Consume event without involving ION
+							}
 							// extract payload
 							size_t payload_len = decoded_len - 3;
 							memmove(into_payload, into_payload + 1, payload_len);
