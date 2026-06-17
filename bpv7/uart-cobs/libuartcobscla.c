@@ -89,7 +89,7 @@ int sendBundleByUartCobs(struct uartcobsdescriptor *socketName,
     }
 }
 
-int receiveFramesByUartCobs(int *bundleSocket, 
+int receiveFrameByUartCobs(int *bundleSocket, 
     struct uartcobsdescriptor *socketName, unsigned char *into_payload)
 {
     static unsigned char raw_buffer[UARTCOBS_MAX_RAW_BUFSZ];
