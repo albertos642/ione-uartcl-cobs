@@ -45,6 +45,25 @@ static int openUartCobsPort(int *uartPort, struct uartcobsdescriptor *uartDes,
     return 0;
 }
 
+static ssize_t write_all(int fd, const void *buf, size_t count) {
+    size_t bytes_written = 0;
+    const uint8_t *ptr = (const uint8_t *)buf;
+    while (bytes_written < count) {
+        ssize_t n = write(fd, ptr + bytes_written, count - bytes_written);
+        if (n < 0) {
+            if (errno == EINTR) continue;
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                usleep(1000);
+                continue;
+            }
+            return -1;
+        }
+        if (n == 0) break;
+        bytes_written += (size_t)n;
+    }
+    return (ssize_t)bytes_written;
+}
+
 int sendBundleByUartCobs(struct uartcobsdescriptor *socketName, 
                         int *bundleSocket, unsigned int bundleLength,
                         Object bundleZco, unsigned char *cleartext_buffer)
@@ -75,18 +94,18 @@ int sendBundleByUartCobs(struct uartcobsdescriptor *socketName,
 
     size_t cobs_len = cobs_encode(cleartext_buffer, bundleLength + 3, cobs_buffer);
 
-    write(*bundleSocket, &zero, 1);
-    int bytesSent = write(*bundleSocket, cobs_buffer, cobs_len);
-    write(*bundleSocket, &zero, 1);
+    ssize_t w1 = write_all(*bundleSocket, &zero, 1);
+    ssize_t w2 = write_all(*bundleSocket, cobs_buffer, cobs_len);
+    ssize_t w3 = write_all(*bundleSocket, &zero, 1);
 
     MRELEASE(cobs_buffer);
 
-    if(bytesSent < 0) {
+    if (w1 < 0 || w2 < (ssize_t)cobs_len || w3 < 0) {
         bpHandleXmitFailure(bundleZco);
         return (*bundleSocket == -1) ? 0 : -1;
     } else {
         bpHandleXmitSuccess(bundleZco);
-        return bytesSent;
+        return (int)bundleLength;
     }
 }
 
@@ -98,7 +117,7 @@ int receiveFrameByUartCobs(int *bundleSocket,
     unsigned char byte;
 
     if (*bundleSocket < 0) {
-        if (openUartCobsPort(bundleSocket, socketName, O_RDONLY) < 0) return -1;
+        if (openUartCobsPort(bundleSocket, socketName, O_RDWR) < 0) return -1;
     }
     while (1) {
 		int r = read(*bundleSocket, &byte, 1);
@@ -116,8 +135,8 @@ int receiveFrameByUartCobs(int *bundleSocket,
 				size_t decoded_len = cobs_decode(raw_buffer, raw_len, into_payload);
 				raw_len = 0;
 
-				// validation
-				if (decoded_len >= 4) {
+				// validation: need at least version/flags (1B) + CRC-16 (2B) = 3B
+				if (decoded_len >= 3) {
 					if ((into_payload[0] & 0xF0) == UARTCOBS_VERSION_1) {
 						uint16_t received_crc = (into_payload[decoded_len - 2] << 8) | into_payload[decoded_len - 1];
 						uint16_t calculated_crc = compute_crc16(into_payload, decoded_len - 2);
@@ -145,16 +164,18 @@ int receiveFrameByUartCobs(int *bundleSocket,
 								unsigned char zero = 0x00;
 
 								// direct response via UART
-								write(*bundleSocket, &zero, 1);
-								write(*bundleSocket, cobs_resp, cobs_len);
-								write(*bundleSocket, &zero, 1);
+								write_all(*bundleSocket, &zero, 1);
+								write_all(*bundleSocket, cobs_resp, cobs_len);
+								write_all(*bundleSocket, &zero, 1);
 								
 								return 0; // Consume event without involving ION
 							}
-							// extract payload
-							size_t payload_len = decoded_len - 3;
-							memmove(into_payload, into_payload + 1, payload_len);
-							return (int)payload_len;
+							// For DATA frames, need at least 1 byte of CBOR payload (decoded_len >= 4)
+							if (decoded_len >= 4) {
+								size_t payload_len = decoded_len - 3;
+								memmove(into_payload, into_payload + 1, payload_len);
+								return (int)payload_len;
+							}
 						}
 					}
 				}
