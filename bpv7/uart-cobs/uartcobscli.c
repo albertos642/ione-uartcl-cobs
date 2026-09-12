@@ -34,7 +34,10 @@ static void *handleDatagrams(void *parm) {
 	while (rtp->running) {	
 		int bundleLength = receiveFrameByUartCobs(rtp->ductSocket, rtp->uartPort, buffer);
 		
-		if (bundleLength == -1) break; // Fatal Error
+		if (bundleLength < 0) {
+			snooze(1);
+			continue;
+		}
 
 		if (bundleLength > 0) {
 			// Valid frame received, pass raw payload to ION SDR

@@ -101,8 +101,12 @@ int sendBundleByUartCobs(struct uartcobsdescriptor *socketName,
     MRELEASE(cobs_buffer);
 
     if (w1 < 0 || w2 < (ssize_t)cobs_len || w3 < 0) {
+        if (*bundleSocket >= 0) {
+            close(*bundleSocket);
+            *bundleSocket = -1;
+        }
         bpHandleXmitFailure(bundleZco);
-        return (*bundleSocket == -1) ? 0 : -1;
+        return 0;
     } else {
         bpHandleXmitSuccess(bundleZco);
         return (int)bundleLength;
@@ -117,14 +121,24 @@ int receiveFrameByUartCobs(int *bundleSocket,
     unsigned char byte;
 
     if (*bundleSocket < 0) {
-        if (openUartCobsPort(bundleSocket, socketName, O_RDWR) < 0) return -1;
+        if (openUartCobsPort(bundleSocket, socketName, O_RDWR) < 0) {
+            usleep(250000);
+            return 0;
+        }
     }
     while (1) {
 		int r = read(*bundleSocket, &byte, 1);
 		
 		if (r < 0) {
 			if (errno == EAGAIN || errno == EWOULDBLOCK) return 0; // Yield to CLI loop
-			return -1; // Hardware fault
+			// Device disconnected or hardware fault: release fd immediately so Linux reclaims /dev/ttyACM0
+			if (*bundleSocket >= 0) {
+				close(*bundleSocket);
+				*bundleSocket = -1;
+			}
+			raw_len = 0;
+			usleep(250000);
+			return 0; // Yield and allow retry on next iteration
 		}
 		
 		if (r == 0) return 0; // No byte available, sm_TaskYield in CLI

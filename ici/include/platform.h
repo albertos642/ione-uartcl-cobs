@@ -907,7 +907,7 @@ extern int			parseUartSpec(char *socketSpec,
 
 struct uartcobsdescriptor
 {
-	char        uart_file_descriptor[50];
+	char        uart_file_descriptor[256];
 	uint32_t    baud_rate;
 	int         isOpen;
 };

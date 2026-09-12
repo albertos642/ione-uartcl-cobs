@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 		int bytesSent = sendBundleByUartCobs(&hostNbr, &ductSocket, bundleLength, bundleZco, buffer);
 		
 		if (bytesSent < (int)bundleLength) {
-			sm_SemEnd(uartcloSemaphore(NULL));
+			snooze(1);
 			continue;
 		}
 		sm_TaskYield();
