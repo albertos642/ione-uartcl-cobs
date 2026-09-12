@@ -4,6 +4,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <poll.h>
 
 static int openUartCobsPort(int *uartPort, struct uartcobsdescriptor *uartDes,
                             int mode) {
@@ -74,8 +75,22 @@ int sendBundleByUartCobs(struct uartcobsdescriptor *socketName,
 
     if (bundleLength > UARTCOBS_MAX_PAYLOAD) return -1;
 
+    if (*bundleSocket >= 0) {
+        struct pollfd pfd;
+        pfd.fd = *bundleSocket;
+        pfd.events = POLLOUT;
+        pfd.revents = 0;
+        if (poll(&pfd, 1, 0) < 0 || (pfd.revents & (POLLHUP | POLLERR | POLLNVAL))) {
+            close(*bundleSocket);
+            *bundleSocket = -1;
+        }
+    }
+
     if (*bundleSocket < 0) {
-        if (openUartCobsPort(bundleSocket, socketName, O_WRONLY) < 0) return 0;
+        if (openUartCobsPort(bundleSocket, socketName, O_WRONLY) < 0) {
+            usleep(250000);
+            return 0;
+        }
     }
 
     cleartext_buffer[0] = UARTCOBS_VERSION_1 | UARTCOBS_FLAG_DATA;
@@ -141,7 +156,21 @@ int receiveFrameByUartCobs(int *bundleSocket,
 			return 0; // Yield and allow retry on next iteration
 		}
 		
-		if (r == 0) return 0; // No byte available, sm_TaskYield in CLI
+		if (r == 0) {
+			struct pollfd pfd;
+			pfd.fd = *bundleSocket;
+			pfd.events = POLLIN;
+			pfd.revents = 0;
+			if (poll(&pfd, 1, 0) < 0 || (pfd.revents & (POLLHUP | POLLERR | POLLNVAL))) {
+				if (*bundleSocket >= 0) {
+					close(*bundleSocket);
+					*bundleSocket = -1;
+				}
+				raw_len = 0;
+				usleep(250000);
+			}
+			return 0; // No byte available, sm_TaskYield in CLI
+		}
 
 		if (byte == 0x00) {
 			if (raw_len > 0) {
